@@ -384,7 +384,7 @@ img {
 .hero {
     position: relative;
     z-index: 1;
-    padding: 140px 24px 80px;
+    padding: 120px 24px 40px;
     text-align: center;
 }
 
@@ -1667,7 +1667,7 @@ body.light-theme .search-input::placeholder {
 .featured-characters {
     position: relative;
     z-index: 1;
-    padding: 40px 0 60px;
+    padding: 20px 0 60px;
 }
 
 .section-header {

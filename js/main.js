@@ -284,7 +284,7 @@ function maskPhone(phone) {
 
 // ===== Render Guest Preview =====
 function renderGuestCharacters() {
-    const previewChars = allCharacters.slice(0, 8);
+    const previewChars = allCharacters.slice(0, 18);
     const html = previewChars.map(char => createCharacterCard(char, true)).join('');
     guestCharacterGrid.innerHTML = html;
     observeFadeInElements();
