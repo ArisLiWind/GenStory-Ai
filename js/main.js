@@ -1,5 +1,6 @@
 // ===== Auth State =====
 const AUTH_KEY = 'gensphere_user';
+const TOKEN_KEY = 'gensphere_token';
 const AUTO_LOGIN_KEY = 'gensphere_autologin';
 
 function getCurrentUser() {
@@ -10,6 +11,29 @@ function getCurrentUser() {
 function isLoggedIn() {
     const user = getCurrentUser();
     return user && user.phone && user.onboardingComplete;
+}
+
+// ===== Auto-login check on page load =====
+async function checkAutoLogin() {
+    const autoLogin = localStorage.getItem(AUTO_LOGIN_KEY);
+    const token = localStorage.getItem(TOKEN_KEY);
+    
+    if (autoLogin === 'true' && token) {
+        try {
+            const result = await GenSphereAPI.auth.autoLogin(token);
+            if (result.code === 0) {
+                // 更新本地用户信息
+                localStorage.setItem(AUTH_KEY, JSON.stringify(result.data.user));
+                localStorage.setItem(TOKEN_KEY, result.data.token);
+            } else {
+                // 自动登录失败，清除
+                localStorage.removeItem(TOKEN_KEY);
+                localStorage.setItem(AUTO_LOGIN_KEY, 'false');
+            }
+        } catch (e) {
+            console.error('Auto login failed:', e);
+        }
+    }
 }
 
 // ===== Character Data Generator =====
@@ -421,12 +445,18 @@ document.addEventListener('click', (e) => {
 });
 
 // ===== Logout =====
-logoutBtn.addEventListener('click', () => {
-    localStorage.removeItem(AUTH_KEY);
-    localStorage.setItem(AUTO_LOGIN_KEY, 'false');
+logoutBtn.addEventListener('click', async () => {
     userDropdown.classList.remove('visible');
     
-    // Reset and reinit
+    // 调用登出 API
+    await GenSphereAPI.auth.logout();
+    
+    // 清除本地状态
+    localStorage.removeItem(AUTH_KEY);
+    localStorage.removeItem(TOKEN_KEY);
+    localStorage.setItem(AUTO_LOGIN_KEY, 'false');
+    
+    // 重置并重新初始化
     characterGrid.innerHTML = '';
     guestCharacterGrid.innerHTML = '';
     initView();
@@ -625,7 +655,8 @@ searchInputs.forEach(input => {
 });
 
 // ===== Initialize =====
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
+    await checkAutoLogin();
     initView();
     setupBackToTop();
     setupThemeToggle();

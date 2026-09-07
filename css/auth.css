@@ -28,6 +28,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
+    gap: 12px;
     margin-bottom: 28px;
 }
 
@@ -41,6 +42,12 @@
     width: 48px;
     height: 48px;
     border-radius: 50%;
+}
+
+.auth-logo-text-img {
+    height: 36px;
+    width: auto;
+    display: block;
 }
 
 .auth-logo-text {

@@ -8,9 +8,13 @@ const nextBtn = document.getElementById('nextBtn');
 const usernameHint = document.getElementById('usernameHint');
 const suggestions = document.querySelectorAll('.username-suggestion');
 
+let currentUser = null;
+
 // ===== Check Auth =====
-window.addEventListener('DOMContentLoaded', () => {
-    const user = JSON.parse(localStorage.getItem(AUTH_KEY) || 'null');
+window.addEventListener('DOMContentLoaded', async () => {
+    const userStr = localStorage.getItem(AUTH_KEY);
+    const user = userStr ? JSON.parse(userStr) : null;
+    
     if (!user || !user.phone) {
         window.location.href = 'login.html';
         return;
@@ -18,7 +22,10 @@ window.addEventListener('DOMContentLoaded', () => {
     
     if (user.onboardingComplete) {
         window.location.href = 'index.html';
+        return;
     }
+    
+    currentUser = user;
 });
 
 // ===== Suggestion Click =====
@@ -64,29 +71,41 @@ function validateUsername() {
 }
 
 // ===== Form Submit =====
-usernameForm.addEventListener('submit', (e) => {
+usernameForm.addEventListener('submit', async (e) => {
     e.preventDefault();
     
     const username = usernameInput.value.trim();
     
-    if (!username || username.length < 2) {
+    if (!username || username.length < 2 || !currentUser) {
         return;
     }
     
-    // Save username
-    const user = JSON.parse(localStorage.getItem(AUTH_KEY) || '{}');
-    user.username = username;
-    localStorage.setItem(AUTH_KEY, JSON.stringify(user));
+    nextBtn.disabled = true;
+    nextBtn.innerHTML = '保存中...';
     
-    // Also update in users DB
-    const usersDB = JSON.parse(localStorage.getItem('gensphere_users_db') || '{}');
-    if (usersDB[user.phone]) {
-        usersDB[user.phone].username = username;
-        localStorage.setItem('gensphere_users_db', JSON.stringify(usersDB));
+    // 调用 API 更新用户名
+    const result = await GenSphereAPI.auth.updateUser(currentUser.phone, {
+        username
+    });
+    
+    if (result.code === 0) {
+        // 更新本地用户信息
+        const updatedUser = result.data;
+        localStorage.setItem(AUTH_KEY, JSON.stringify(updatedUser));
+        
+        // 下一步
+        window.location.href = 'onboarding-topics.html';
+    } else {
+        nextBtn.disabled = false;
+        nextBtn.innerHTML = `
+            下一步
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                <path d="M5 12h14M12 5l7 7-7 7"/>
+            </svg>
+        `;
+        usernameHint.textContent = result.message;
+        usernameHint.style.color = '#ef4444';
     }
-    
-    // Go to next step
-    window.location.href = 'onboarding-topics.html';
 });
 
 // ===== Go Back =====
@@ -95,21 +114,22 @@ function goBack() {
 }
 
 // ===== Skip Onboarding =====
-function skipOnboarding() {
+async function skipOnboarding() {
+    if (!currentUser) return;
+    
+    const randomName = '用户' + Math.floor(Math.random() * 10000);
+    
+    await GenSphereAPI.auth.updateUser(currentUser.phone, {
+        username: randomName,
+        topics: [],
+        onboardingComplete: true
+    });
+    
     const user = JSON.parse(localStorage.getItem(AUTH_KEY) || '{}');
-    user.username = user.username || '用户' + Math.floor(Math.random() * 10000);
-    user.topics = user.topics || [];
+    user.username = randomName;
+    user.topics = [];
     user.onboardingComplete = true;
     localStorage.setItem(AUTH_KEY, JSON.stringify(user));
-    
-    // Update DB
-    const usersDB = JSON.parse(localStorage.getItem('gensphere_users_db') || '{}');
-    if (usersDB[user.phone]) {
-        usersDB[user.phone].username = user.username;
-        usersDB[user.phone].onboardingComplete = true;
-        usersDB[user.phone].topics = user.topics;
-        localStorage.setItem('gensphere_users_db', JSON.stringify(usersDB));
-    }
     
     window.location.href = 'index.html';
 }

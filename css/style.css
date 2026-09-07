@@ -215,6 +215,12 @@ img {
     display: block;
 }
 
+.logo-text-img {
+    height: 28px;
+    width: auto;
+    display: block;
+}
+
 .logo-text {
     font-size: 22px;
     font-weight: 700;
@@ -1017,6 +1023,11 @@ img {
 
 .footer-logo .logo-full {
     height: 32px;
+    width: auto;
+}
+
+.footer-logo .logo-text-img {
+    height: 24px;
     width: auto;
 }
 

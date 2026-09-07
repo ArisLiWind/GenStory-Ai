@@ -1,103 +1,8 @@
 // ===== Login Page =====
-// ===== Auth State Management =====
 
 const AUTH_KEY = 'gensphere_user';
+const TOKEN_KEY = 'gensphere_token';
 const AUTO_LOGIN_KEY = 'gensphere_autologin';
-
-// ===== Auth API (Simulated Backend) =====
-const AuthAPI = {
-    // Mock user database
-    _users: JSON.parse(localStorage.getItem('gensphere_users_db') || '{}'),
-    
-    _saveDB() {
-        localStorage.setItem('gensphere_users_db', JSON.stringify(this._users));
-    },
-    
-    // Check if phone is registered
-    isUserExists(phone) {
-        return !!this._users[phone];
-    },
-    
-    // Send verification code
-    sendCode(phone) {
-        return new Promise((resolve) => {
-            // Simulate API delay
-            setTimeout(() => {
-                // Generate random 6-digit code
-                const code = Math.floor(100000 + Math.random() * 900000).toString();
-                // Store code for verification (expires in 5 min)
-                sessionStorage.setItem('verify_code_' + phone, code);
-                sessionStorage.setItem('verify_code_expire_' + phone, Date.now() + 5 * 60 * 1000);
-                console.log('[Dev] 验证码:', code); // For development testing
-                resolve({ success: true, code });
-            }, 800);
-        });
-    },
-    
-    // Verify code
-    verifyCode(phone, code) {
-        const savedCode = sessionStorage.getItem('verify_code_' + phone);
-        const expireTime = sessionStorage.getItem('verify_code_expire_' + phone);
-        
-        if (!savedCode || !expireTime) {
-            return { success: false, error: '请先获取验证码' };
-        }
-        
-        if (Date.now() > parseInt(expireTime)) {
-            sessionStorage.removeItem('verify_code_' + phone);
-            sessionStorage.removeItem('verify_code_expire_' + phone);
-            return { success: false, error: '验证码已过期，请重新获取' };
-        }
-        
-        if (savedCode !== code) {
-            return { success: false, error: '验证码错误' };
-        }
-        
-        // Code verified, consume it
-        sessionStorage.removeItem('verify_code_' + phone);
-        sessionStorage.removeItem('verify_code_expire_' + phone);
-        
-        return { success: true };
-    },
-    
-    // Login or register
-    login(phone) {
-        const isNewUser = !this.isUserExists(phone);
-        
-        if (isNewUser) {
-            // Auto create account
-            this._users[phone] = {
-                phone: phone,
-                username: '',
-                topics: [],
-                createdAt: Date.now(),
-                onboardingComplete: false
-            };
-            this._saveDB();
-        }
-        
-        return {
-            success: true,
-            isNewUser: isNewUser,
-            user: this._users[phone]
-        };
-    },
-    
-    // Get user info
-    getUser(phone) {
-        return this._users[phone] || null;
-    },
-    
-    // Update user info
-    updateUser(phone, data) {
-        if (this._users[phone]) {
-            this._users[phone] = { ...this._users[phone], ...data };
-            this._saveDB();
-            return true;
-        }
-        return false;
-    }
-};
 
 // ===== DOM Elements =====
 const loginForm = document.getElementById('loginForm');
@@ -112,23 +17,26 @@ const formHint = document.getElementById('formHint');
 let countdown = 0;
 let countdownTimer = null;
 
-// ===== Auto-login Check (on page load) =====
-window.addEventListener('DOMContentLoaded', () => {
+// ===== Auto-login Check =====
+window.addEventListener('DOMContentLoaded', async () => {
     const autoLogin = localStorage.getItem(AUTO_LOGIN_KEY);
-    if (autoLogin === 'true') {
-        const user = JSON.parse(localStorage.getItem(AUTH_KEY) || 'null');
-        if (user && user.phone) {
-            // Validate user exists in DB
-            const dbUser = AuthAPI.getUser(user.phone);
-            if (dbUser) {
-                // Redirect to home
-                redirectAfterLogin(dbUser, user.phone);
-                return;
-            }
+    const token = localStorage.getItem(TOKEN_KEY);
+    
+    if (autoLogin === 'true' && token) {
+        const result = await GenSphereAPI.auth.autoLogin(token);
+        if (result.code === 0) {
+            // 自动登录成功
+            saveUserSession(result.data.user, token);
+            redirectAfterLogin(result.data.user);
+            return;
+        } else {
+            // token 无效，清除
+            localStorage.removeItem(TOKEN_KEY);
+            localStorage.setItem(AUTO_LOGIN_KEY, 'false');
         }
     }
     
-    // Remember last phone number
+    // 记住上次手机号
     const lastPhone = localStorage.getItem('gensphere_last_phone');
     if (lastPhone) {
         phoneInput.value = lastPhone;
@@ -148,10 +56,10 @@ sendCodeBtn.addEventListener('click', async () => {
     sendCodeBtn.disabled = true;
     sendCodeBtn.textContent = '发送中...';
     
-    const result = await AuthAPI.sendCode(phone);
+    const result = await GenSphereAPI.auth.sendCode(phone);
     
-    if (result.success) {
-        // Start countdown
+    if (result.code === 0) {
+        // 开始倒计时
         countdown = 60;
         updateCountdown();
         
@@ -166,8 +74,11 @@ sendCodeBtn.addEventListener('click', async () => {
             }
         }, 1000);
         
-        const isNew = !AuthAPI.isUserExists(phone);
-        showHint(isNew ? '验证码已发送，登录后将自动创建账号' : '验证码已发送，请注意查收', 'success');
+        showHint('验证码已发送，请注意查收', 'success');
+    } else {
+        sendCodeBtn.disabled = false;
+        sendCodeBtn.textContent = '获取验证码';
+        showHint(result.message, 'error');
     }
 });
 
@@ -230,51 +141,43 @@ loginForm.addEventListener('submit', async (e) => {
     submitBtn.disabled = true;
     submitBtn.querySelector('.btn-text').textContent = '登录中...';
     
-    // Verify code
-    const verifyResult = AuthAPI.verifyCode(phone, code);
+    // 调用登录 API
+    const result = await GenSphereAPI.auth.login(phone, code);
     
-    if (!verifyResult.success) {
-        submitBtn.disabled = false;
-        submitBtn.querySelector('.btn-text').textContent = '登录';
-        showHint(verifyResult.error, 'error');
-        return;
-    }
-    
-    // Login / Register
-    const loginResult = AuthAPI.login(phone);
-    
-    if (loginResult.success) {
-        // Save phone for quick fill
+    if (result.code === 0) {
+        const { user, token, isNewUser } = result.data;
+        
+        // 保存手机号
         localStorage.setItem('gensphere_last_phone', phone);
         
-        // Save user session
-        const userData = {
-            phone: phone,
-            username: loginResult.user.username,
-            topics: loginResult.user.topics,
-            onboardingComplete: loginResult.user.onboardingComplete
-        };
-        localStorage.setItem(AUTH_KEY, JSON.stringify(userData));
+        // 保存 token 和用户信息
+        saveUserSession(user, token);
         
-        // Auto login preference
-        if (autoLoginCheck.checked) {
-            localStorage.setItem(AUTO_LOGIN_KEY, 'true');
-        } else {
-            localStorage.setItem(AUTO_LOGIN_KEY, 'false');
-        }
+        // 自动登录设置
+        localStorage.setItem(AUTO_LOGIN_KEY, autoLoginCheck.checked ? 'true' : 'false');
         
-        // Redirect
-        redirectAfterLogin(loginResult.user, phone);
+        // 跳转
+        redirectAfterLogin(user);
+    } else {
+        submitBtn.disabled = false;
+        submitBtn.querySelector('.btn-text').textContent = '登录';
+        showHint(result.message, 'error');
     }
 });
 
+// ===== Save User Session =====
+function saveUserSession(user, token) {
+    localStorage.setItem(TOKEN_KEY, token);
+    localStorage.setItem(AUTH_KEY, JSON.stringify(user));
+}
+
 // ===== Redirect Logic =====
-function redirectAfterLogin(user, phone) {
+function redirectAfterLogin(user) {
     if (user.onboardingComplete) {
-        // Existing user -> home
+        // 老用户 → 首页
         window.location.href = 'index.html';
     } else {
-        // New user -> onboarding
+        // 新用户 → 新手引导
         window.location.href = 'onboarding-username.html';
     }
 }

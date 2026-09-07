@@ -7,10 +7,13 @@ const selectedCountEl = document.getElementById('selectedCount');
 const finishBtn = document.getElementById('finishBtn');
 
 let selectedTopics = [];
+let currentUser = null;
 
 // ===== Check Auth =====
-window.addEventListener('DOMContentLoaded', () => {
-    const user = JSON.parse(localStorage.getItem(AUTH_KEY) || 'null');
+window.addEventListener('DOMContentLoaded', async () => {
+    const userStr = localStorage.getItem(AUTH_KEY);
+    const user = userStr ? JSON.parse(userStr) : null;
+    
     if (!user || !user.phone) {
         window.location.href = 'login.html';
         return;
@@ -18,7 +21,10 @@ window.addEventListener('DOMContentLoaded', () => {
     
     if (user.onboardingComplete) {
         window.location.href = 'index.html';
+        return;
     }
+    
+    currentUser = user;
 });
 
 // ===== Topic Click =====
@@ -27,11 +33,9 @@ topicItems.forEach(item => {
         const topic = item.dataset.topic;
         
         if (selectedTopics.includes(topic)) {
-            // Deselect
             selectedTopics = selectedTopics.filter(t => t !== topic);
             item.classList.remove('selected');
         } else {
-            // Select
             selectedTopics.push(topic);
             item.classList.add('selected');
         }
@@ -46,24 +50,34 @@ function updateCount() {
 }
 
 // ===== Finish Onboarding =====
-function finishOnboarding() {
-    if (selectedTopics.length === 0) return;
+async function finishOnboarding() {
+    if (selectedTopics.length === 0 || !currentUser) return;
     
-    const user = JSON.parse(localStorage.getItem(AUTH_KEY) || '{}');
-    user.topics = selectedTopics;
-    user.onboardingComplete = true;
-    localStorage.setItem(AUTH_KEY, JSON.stringify(user));
+    finishBtn.disabled = true;
+    finishBtn.innerHTML = '设置中...';
     
-    // Update DB
-    const usersDB = JSON.parse(localStorage.getItem('gensphere_users_db') || '{}');
-    if (usersDB[user.phone]) {
-        usersDB[user.phone].topics = selectedTopics;
-        usersDB[user.phone].onboardingComplete = true;
-        localStorage.setItem('gensphere_users_db', JSON.stringify(usersDB));
+    // 调用 API 更新用户信息
+    const result = await GenSphereAPI.auth.updateUser(currentUser.phone, {
+        topics: selectedTopics,
+        onboardingComplete: true
+    });
+    
+    if (result.code === 0) {
+        // 更新本地用户信息
+        localStorage.setItem(AUTH_KEY, JSON.stringify(result.data));
+        
+        // 进入首页
+        window.location.href = 'index.html';
+    } else {
+        finishBtn.disabled = false;
+        finishBtn.innerHTML = `
+            开始探索
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                <path d="M5 12h14M12 5l7 7-7 7"/>
+            </svg>
+        `;
+        alert(result.message);
     }
-    
-    // Go to home page
-    window.location.href = 'index.html';
 }
 
 // ===== Go Back =====
@@ -72,21 +86,18 @@ function goBack() {
 }
 
 // ===== Skip Onboarding =====
-function skipOnboarding() {
+async function skipOnboarding() {
+    if (!currentUser) return;
+    
+    await GenSphereAPI.auth.updateUser(currentUser.phone, {
+        topics: [],
+        onboardingComplete: true
+    });
+    
     const user = JSON.parse(localStorage.getItem(AUTH_KEY) || '{}');
-    user.username = user.username || '用户' + Math.floor(Math.random() * 10000);
-    user.topics = user.topics || [];
+    user.topics = [];
     user.onboardingComplete = true;
     localStorage.setItem(AUTH_KEY, JSON.stringify(user));
-    
-    // Update DB
-    const usersDB = JSON.parse(localStorage.getItem('gensphere_users_db') || '{}');
-    if (usersDB[user.phone]) {
-        usersDB[user.phone].username = user.username;
-        usersDB[user.phone].onboardingComplete = true;
-        usersDB[user.phone].topics = user.topics;
-        localStorage.setItem('gensphere_users_db', JSON.stringify(usersDB));
-    }
     
     window.location.href = 'index.html';
 }
