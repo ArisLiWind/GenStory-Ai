@@ -237,6 +237,7 @@ const endOfList = document.getElementById('endOfList');
 const backToTopBtn = document.getElementById('backToTop');
 const themeToggle = document.getElementById('themeToggle');
 const themeToggleLogged = document.getElementById('themeToggleLogged');
+const darkModeSwitch = document.getElementById('darkModeSwitch');
 const navbar = document.querySelector('.navbar');
 
 // ===== Initialize View Based on Auth State =====
@@ -642,12 +643,42 @@ window.addEventListener('scroll', () => {
 
 // ===== Theme toggle =====
 function setupThemeToggle() {
+    // 从本地存储读取主题偏好
+    const savedTheme = localStorage.getItem('theme');
+    if (savedTheme === 'light') {
+        document.body.classList.add('light-theme');
+        if (darkModeSwitch) darkModeSwitch.checked = false;
+    } else {
+        if (darkModeSwitch) darkModeSwitch.checked = true;
+    }
+    
     const toggles = [themeToggle, themeToggleLogged].filter(Boolean);
     toggles.forEach(btn => {
         btn.addEventListener('click', () => {
-            document.body.classList.toggle('light-theme');
+            toggleTheme();
         });
     });
+    
+    if (darkModeSwitch) {
+        darkModeSwitch.addEventListener('change', () => {
+            if (darkModeSwitch.checked) {
+                document.body.classList.remove('light-theme');
+                localStorage.setItem('theme', 'dark');
+            } else {
+                document.body.classList.add('light-theme');
+                localStorage.setItem('theme', 'light');
+            }
+        });
+    }
+}
+
+function toggleTheme() {
+    document.body.classList.toggle('light-theme');
+    const isLight = document.body.classList.contains('light-theme');
+    localStorage.setItem('theme', isLight ? 'light' : 'dark');
+    if (darkModeSwitch) {
+        darkModeSwitch.checked = !isLight;
+    }
 }
 
 // ===== Scroll Animation =====
