@@ -166,6 +166,24 @@
     margin-top: -12px;
 }
 
+.auth-options {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-top: -8px;
+}
+
+.forgot-link {
+    font-size: 13px;
+    color: var(--accent-primary);
+    text-decoration: none;
+    transition: var(--transition-fast);
+}
+
+.forgot-link:hover {
+    text-decoration: underline;
+}
+
 .btn-submit {
     display: flex;
     align-items: center;

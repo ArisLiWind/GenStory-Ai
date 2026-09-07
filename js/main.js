@@ -1,3 +1,17 @@
+// ===== Auth State =====
+const AUTH_KEY = 'gensphere_user';
+const AUTO_LOGIN_KEY = 'gensphere_autologin';
+
+function getCurrentUser() {
+    const user = localStorage.getItem(AUTH_KEY);
+    return user ? JSON.parse(user) : null;
+}
+
+function isLoggedIn() {
+    const user = getCurrentUser();
+    return user && user.phone && user.onboardingComplete;
+}
+
 // ===== Character Data Generator =====
 function generateCharacters(count, startId = 1) {
     const titles = [
@@ -25,16 +39,16 @@ function generateCharacters(count, startId = 1) {
         ["male", "oc", "fictional", "sweet"],
         ["male", "female", "fictional", "multi"],
         ["male", "oc", "fictional"],
-        ["game", "anime", "fantasy", "drama", "rpg"],
+        ["game", "anime", "fantasy", "drama"],
         ["male", "oc", "fictional", "sweet"],
         ["male", "multi", "drama"],
         ["male", "fictional", "drama"],
         ["multi", "sweet", "oc"],
         ["female", "oc", "drama"],
-        ["fantasy", "rpg", "anime", "drama"],
-        ["scifi", "drama", "rpg", "male"],
+        ["fantasy", "anime", "drama"],
+        ["scifi", "drama", "male"],
         ["ancient", "drama", "male"],
-        ["fantasy", "rpg", "male"],
+        ["fantasy", "male"],
         ["scifi", "horror", "drama"],
         ["fantasy", "drama", "male", "female"],
         ["sweet", "drama", "modern"],
@@ -47,9 +61,9 @@ function generateCharacters(count, startId = 1) {
         ["fantasy", "drama", "male", "female"],
         ["fantasy", "male", "horror"],
         ["anime", "female", "fantasy"],
-        ["ancient", "male", "action"],
-        ["adventure", "multi"],
-        ["anime", "school", "fantasy"],
+        ["ancient", "male"],
+        ["multi"],
+        ["anime", "fantasy"],
         ["horror", "drama", "modern"],
         ["comedy", "modern", "male"],
         ["modern", "female", "drama"],
@@ -60,10 +74,10 @@ function generateCharacters(count, startId = 1) {
         ["modern", "sweet", "female"],
         ["sweet", "modern"],
         ["multi", "male", "drama"],
-        ["female", "tsundere", "modern"],
+        ["female", "modern"],
         ["male", "sweet", "modern"],
-        ["female", "yandere", "drama"],
-        ["male", "smart", "school"]
+        ["female", "drama"],
+        ["male", "school"]
     ];
     
     const tags = [
@@ -71,16 +85,16 @@ function generateCharacters(count, startId = 1) {
         ["男性", "OC", "虚构", "甜"],
         ["男性", "女性", "虚构", "多人"],
         ["男性", "OC", "虚构"],
-        ["无限制", "游戏", "动漫", "魔法", "剧情", "RPG"],
+        ["无限制", "游戏", "动漫", "魔法", "剧情"],
         ["无限制", "男性", "OC", "虚构", "甜"],
         ["男性", "多人"],
         ["男性", "虚构", "剧情"],
         ["多人", "甜", "OC"],
         ["女性", "OC", "剧情"],
-        ["魔法", "RPG", "动漫", "剧情"],
-        ["科幻", "剧情", "RPG", "英雄"],
+        ["魔法", "动漫", "剧情"],
+        ["科幻", "剧情", "英雄"],
         ["古风", "剧情", "男性", "武侠"],
-        ["奇幻", "RPG", "冒险"],
+        ["奇幻", "冒险"],
         ["科幻", "末世", "生存"],
         ["奇幻", "吸血鬼", "恋爱"],
         ["甜", "校园", "恋爱"],
@@ -159,7 +173,7 @@ function formatViews(num) {
 }
 
 // ===== State =====
-let allCharacters = generateCharacters(200); // Generate 200 characters total
+let allCharacters = generateCharacters(200);
 let filteredCharacters = [...allCharacters];
 let currentPage = 1;
 const pageSize = 12;
@@ -172,7 +186,24 @@ let currentSort = 'hot';
 let currentSortBy = 'views';
 
 // ===== DOM Elements =====
+const guestView = document.getElementById('guestView');
+const loggedView = document.getElementById('loggedView');
+const authButtons = document.getElementById('authButtons');
+const userMenu = document.getElementById('userMenu');
+const userAvatar = document.getElementById('userAvatar');
+const userAvatarText = document.getElementById('userAvatarText');
+const userDropdown = document.getElementById('userDropdown');
+const dropdownUsername = document.getElementById('dropdownUsername');
+const dropdownPhone = document.getElementById('dropdownPhone');
+const dropdownAvatarText = document.getElementById('dropdownAvatarText');
+const logoutBtn = document.getElementById('logoutBtn');
+
+const loginModal = document.getElementById('loginModal');
+const modalClose = document.getElementById('modalClose');
+const modalOverlay = document.querySelector('.login-modal-overlay');
+
 const characterGrid = document.getElementById('characterGrid');
+const guestCharacterGrid = document.getElementById('guestCharacterGrid');
 const categoryTags = document.querySelectorAll('.category-tag');
 const filterTabs = document.querySelectorAll('.filter-tab');
 const sortTabs = document.querySelectorAll('.sort-tab');
@@ -181,7 +212,58 @@ const scrollIndicator = document.getElementById('scrollIndicator');
 const endOfList = document.getElementById('endOfList');
 const backToTopBtn = document.getElementById('backToTop');
 const themeToggle = document.getElementById('themeToggle');
+const themeToggleLogged = document.getElementById('themeToggleLogged');
 const navbar = document.querySelector('.navbar');
+
+// ===== Initialize View Based on Auth State =====
+function initView() {
+    const loggedIn = isLoggedIn();
+    const user = getCurrentUser();
+    
+    if (loggedIn && user) {
+        // Logged in view
+        guestView.style.display = 'none';
+        loggedView.style.display = 'block';
+        authButtons.style.display = 'none';
+        userMenu.style.display = 'flex';
+        
+        // Update user info
+        const firstChar = user.username ? user.username.charAt(0).toUpperCase() : 'U';
+        userAvatarText.textContent = firstChar;
+        dropdownAvatarText.textContent = firstChar;
+        dropdownUsername.textContent = user.username || '用户';
+        dropdownPhone.textContent = user.phone ? maskPhone(user.phone) : '';
+        
+        // Render character grid
+        if (characterGrid.children.length === 0) {
+            renderCharacters(true);
+            setupInfiniteScroll();
+        }
+    } else {
+        // Guest view
+        guestView.style.display = 'block';
+        loggedView.style.display = 'none';
+        authButtons.style.display = 'flex';
+        userMenu.style.display = 'none';
+        
+        // Render guest preview (8 cards)
+        if (guestCharacterGrid.children.length === 0) {
+            renderGuestCharacters();
+        }
+    }
+}
+
+function maskPhone(phone) {
+    return phone.slice(0, 3) + '****' + phone.slice(7);
+}
+
+// ===== Render Guest Preview =====
+function renderGuestCharacters() {
+    const previewChars = allCharacters.slice(0, 8);
+    const html = previewChars.map(char => createCharacterCard(char, true)).join('');
+    guestCharacterGrid.innerHTML = html;
+    observeFadeInElements();
+}
 
 // ===== Render Characters =====
 function renderCharacters(reset = false) {
@@ -203,7 +285,7 @@ function renderCharacters(reset = false) {
         return;
     }
     
-    const html = pageChars.map(char => createCharacterCard(char)).join('');
+    const html = pageChars.map(char => createCharacterCard(char, false)).join('');
     characterGrid.insertAdjacentHTML('beforeend', html);
     
     currentPage++;
@@ -217,13 +299,15 @@ function renderCharacters(reset = false) {
     observeFadeInElements();
 }
 
-function createCharacterCard(char) {
+function createCharacterCard(char, isGuest = false) {
     const tagsHtml = char.tags.slice(0, 4).map(tag => `
         <span class="card-tag">${tag}</span>
     `).join('');
     
+    const clickClass = isGuest ? 'card-guest' : '';
+    
     return `
-        <div class="character-card fade-in" data-id="${char.id}">
+        <div class="character-card fade-in ${clickClass}" data-id="${char.id}" ${isGuest ? 'data-require-login="true"' : ''}>
             <div class="card-image-wrapper">
                 <img src="${char.image}" alt="${char.title}" class="card-image" loading="lazy">
                 <div class="card-image-overlay"></div>
@@ -278,14 +362,12 @@ function createCharacterCard(char) {
 function applyFilters() {
     filteredCharacters = [...allCharacters];
     
-    // Category filter
     if (currentCategory !== 'all') {
         filteredCharacters = filteredCharacters.filter(char => 
             char.category.includes(currentCategory)
         );
     }
     
-    // Sort
     if (currentSortBy === 'views') {
         filteredCharacters.sort((a, b) => parseViews(b.views) - parseViews(a.views));
     } else if (currentSortBy === 'rating') {
@@ -306,22 +388,94 @@ function parseViews(viewsStr) {
     return parseFloat(viewsStr);
 }
 
+// ===== Login Modal =====
+function showLoginModal() {
+    loginModal.classList.add('visible');
+    document.body.style.overflow = 'hidden';
+}
+
+function hideLoginModal() {
+    loginModal.classList.remove('visible');
+    document.body.style.overflow = '';
+}
+
+modalClose.addEventListener('click', hideLoginModal);
+modalOverlay.addEventListener('click', hideLoginModal);
+
+document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && loginModal.classList.contains('visible')) {
+        hideLoginModal();
+    }
+});
+
+// ===== User Dropdown =====
+userAvatar.addEventListener('click', (e) => {
+    e.stopPropagation();
+    userDropdown.classList.toggle('visible');
+});
+
+document.addEventListener('click', (e) => {
+    if (!userDropdown.contains(e.target) && !userAvatar.contains(e.target)) {
+        userDropdown.classList.remove('visible');
+    }
+});
+
+// ===== Logout =====
+logoutBtn.addEventListener('click', () => {
+    localStorage.removeItem(AUTH_KEY);
+    localStorage.setItem(AUTO_LOGIN_KEY, 'false');
+    userDropdown.classList.remove('visible');
+    
+    // Reset and reinit
+    characterGrid.innerHTML = '';
+    guestCharacterGrid.innerHTML = '';
+    initView();
+    window.scrollTo({ top: 0 });
+});
+
+// ===== Card Click: Guest shows login modal =====
+document.addEventListener('click', (e) => {
+    const card = e.target.closest('[data-require-login="true"]');
+    if (card) {
+        showLoginModal();
+        return;
+    }
+    
+    // Category tags require login
+    if (!isLoggedIn() && e.target.closest('.category-tag')) {
+        showLoginModal();
+    }
+    
+    // Filter tabs require login
+    if (!isLoggedIn() && e.target.closest('.filter-tab')) {
+        showLoginModal();
+    }
+    
+    // Sort tabs/options require login
+    if (!isLoggedIn() && (e.target.closest('.sort-tab') || e.target.closest('.sort-option'))) {
+        showLoginModal();
+    }
+});
+
 // ===== Event Listeners =====
 
 // Category tags
 categoryTags.forEach(tag => {
     tag.addEventListener('click', () => {
+        if (!isLoggedIn()) return;
+        
         categoryTags.forEach(t => t.classList.remove('active'));
         tag.classList.add('active');
         currentCategory = tag.dataset.category;
         applyFilters();
-        window.scrollTo({ top: 0, behavior: 'smooth' });
     });
 });
 
 // Filter tabs
 filterTabs.forEach(tab => {
     tab.addEventListener('click', () => {
+        if (!isLoggedIn()) return;
+        
         filterTabs.forEach(t => t.classList.remove('active'));
         tab.classList.add('active');
         currentFilter = tab.dataset.filter;
@@ -331,6 +485,8 @@ filterTabs.forEach(tab => {
 // Sort tabs
 sortTabs.forEach(tab => {
     tab.addEventListener('click', () => {
+        if (!isLoggedIn()) return;
+        
         sortTabs.forEach(t => t.classList.remove('active'));
         tab.classList.add('active');
         currentSort = tab.dataset.sort;
@@ -340,6 +496,8 @@ sortTabs.forEach(tab => {
 // Sort options
 sortOptions.forEach(option => {
     option.addEventListener('click', () => {
+        if (!isLoggedIn()) return;
+        
         sortOptions.forEach(o => o.classList.remove('active'));
         option.classList.add('active');
         currentSortBy = option.dataset.sortBy;
@@ -349,6 +507,8 @@ sortOptions.forEach(option => {
 
 // ===== Infinite Scroll =====
 function setupInfiniteScroll() {
+    if (!scrollIndicator) return;
+    
     const observer = new IntersectionObserver((entries) => {
         entries.forEach(entry => {
             if (entry.isIntersecting && hasMore && !isLoading) {
@@ -369,7 +529,6 @@ function loadMore() {
     isLoading = true;
     scrollIndicator.classList.remove('hidden');
     
-    // Simulate network delay
     setTimeout(() => {
         renderCharacters();
         isLoading = false;
@@ -401,9 +560,14 @@ window.addEventListener('scroll', () => {
 });
 
 // ===== Theme toggle =====
-themeToggle.addEventListener('click', () => {
-    document.body.classList.toggle('light-theme');
-});
+function setupThemeToggle() {
+    const toggles = [themeToggle, themeToggleLogged].filter(Boolean);
+    toggles.forEach(btn => {
+        btn.addEventListener('click', () => {
+            document.body.classList.toggle('light-theme');
+        });
+    });
+}
 
 // ===== Scroll Animation =====
 function observeFadeInElements() {
@@ -424,17 +588,6 @@ function observeFadeInElements() {
     elements.forEach(el => observer.observe(el));
 }
 
-// ===== Card Click Effect =====
-characterGrid.addEventListener('click', (e) => {
-    const card = e.target.closest('.character-card');
-    if (card) {
-        card.style.transform = 'scale(0.98)';
-        setTimeout(() => {
-            card.style.transform = '';
-        }, 150);
-    }
-});
-
 // ===== Search Functionality =====
 const searchInputs = document.querySelectorAll('.search-input');
 let searchTimeout = null;
@@ -445,6 +598,11 @@ searchInputs.forEach(input => {
         const query = e.target.value.toLowerCase();
         
         searchTimeout = setTimeout(() => {
+            if (!isLoggedIn()) {
+                showLoginModal();
+                return;
+            }
+            
             if (query.length > 0) {
                 filteredCharacters = allCharacters.filter(char => 
                     char.title.toLowerCase().includes(query) ||
@@ -457,11 +615,18 @@ searchInputs.forEach(input => {
             }
         }, 200);
     });
+    
+    input.addEventListener('focus', () => {
+        if (!isLoggedIn()) {
+            showLoginModal();
+            input.blur();
+        }
+    });
 });
 
 // ===== Initialize =====
 document.addEventListener('DOMContentLoaded', () => {
-    renderCharacters(true);
-    setupInfiniteScroll();
+    initView();
     setupBackToTop();
+    setupThemeToggle();
 });

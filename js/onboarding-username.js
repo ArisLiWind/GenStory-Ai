@@ -1,10 +1,25 @@
 // ===== Onboarding: Username Setup =====
 
+const AUTH_KEY = 'gensphere_user';
+
 const usernameForm = document.getElementById('usernameForm');
 const usernameInput = document.getElementById('usernameInput');
 const nextBtn = document.getElementById('nextBtn');
 const usernameHint = document.getElementById('usernameHint');
 const suggestions = document.querySelectorAll('.username-suggestion');
+
+// ===== Check Auth =====
+window.addEventListener('DOMContentLoaded', () => {
+    const user = JSON.parse(localStorage.getItem(AUTH_KEY) || 'null');
+    if (!user || !user.phone) {
+        window.location.href = 'login.html';
+        return;
+    }
+    
+    if (user.onboardingComplete) {
+        window.location.href = 'index.html';
+    }
+});
 
 // ===== Suggestion Click =====
 suggestions.forEach(suggestion => {
@@ -59,9 +74,16 @@ usernameForm.addEventListener('submit', (e) => {
     }
     
     // Save username
-    const user = JSON.parse(localStorage.getItem('gensphere_user') || '{}');
+    const user = JSON.parse(localStorage.getItem(AUTH_KEY) || '{}');
     user.username = username;
-    localStorage.setItem('gensphere_user', JSON.stringify(user));
+    localStorage.setItem(AUTH_KEY, JSON.stringify(user));
+    
+    // Also update in users DB
+    const usersDB = JSON.parse(localStorage.getItem('gensphere_users_db') || '{}');
+    if (usersDB[user.phone]) {
+        usersDB[user.phone].username = username;
+        localStorage.setItem('gensphere_users_db', JSON.stringify(usersDB));
+    }
     
     // Go to next step
     window.location.href = 'onboarding-topics.html';
@@ -74,11 +96,20 @@ function goBack() {
 
 // ===== Skip Onboarding =====
 function skipOnboarding() {
-    const user = JSON.parse(localStorage.getItem('gensphere_user') || '{}');
+    const user = JSON.parse(localStorage.getItem(AUTH_KEY) || '{}');
     user.username = user.username || '用户' + Math.floor(Math.random() * 10000);
     user.topics = user.topics || [];
     user.onboardingComplete = true;
-    localStorage.setItem('gensphere_user', JSON.stringify(user));
+    localStorage.setItem(AUTH_KEY, JSON.stringify(user));
+    
+    // Update DB
+    const usersDB = JSON.parse(localStorage.getItem('gensphere_users_db') || '{}');
+    if (usersDB[user.phone]) {
+        usersDB[user.phone].username = user.username;
+        usersDB[user.phone].onboardingComplete = true;
+        usersDB[user.phone].topics = user.topics;
+        localStorage.setItem('gensphere_users_db', JSON.stringify(usersDB));
+    }
     
     window.location.href = 'index.html';
 }
