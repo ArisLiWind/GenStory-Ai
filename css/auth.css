@@ -28,8 +28,13 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 12px;
-    margin-bottom: 32px;
+    margin-bottom: 28px;
+}
+
+.auth-logo-full {
+    height: 44px;
+    width: auto;
+    display: block;
 }
 
 .auth-logo-icon {
@@ -163,14 +168,14 @@
 .form-hint {
     font-size: 12px;
     color: var(--text-muted);
-    margin-top: -12px;
+    margin-top: 6px;
 }
 
 .auth-options {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    margin-top: -8px;
+    margin-top: 12px;
 }
 
 .forgot-link {
@@ -199,7 +204,7 @@
     font-weight: 600;
     cursor: pointer;
     transition: var(--transition-fast);
-    margin-top: 8px;
+    margin-top: 20px;
 }
 
 .btn-submit:hover:not(:disabled) {
@@ -223,7 +228,7 @@
 }
 
 .auth-agreement {
-    margin-top: -4px;
+    margin-top: 12px;
 }
 
 .checkbox-label {

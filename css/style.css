@@ -209,6 +209,12 @@ img {
     border-radius: 50%;
 }
 
+.logo-full {
+    height: 36px;
+    width: auto;
+    display: block;
+}
+
 .logo-text {
     font-size: 22px;
     font-weight: 700;
@@ -1007,6 +1013,11 @@ img {
 .footer-logo .logo-icon {
     width: 32px;
     height: 32px;
+}
+
+.footer-logo .logo-full {
+    height: 32px;
+    width: auto;
 }
 
 .footer-logo .logo-text {
