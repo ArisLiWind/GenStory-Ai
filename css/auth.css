@@ -109,9 +109,7 @@
 .auth-logo-text-img {
     height: 28px;
     width: auto;
-    /* 白底蓝字 → 黑底白字 */
-    filter: brightness(0) invert(1);
-    opacity: 0.95;
+    display: block;
 }
 
 .auth-title {
