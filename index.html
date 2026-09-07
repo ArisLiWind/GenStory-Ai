@@ -44,11 +44,11 @@
                     </div>
                     <!-- 已登录状态 -->
                     <div class="user-menu" id="userMenu" style="display: none;">
-                        <button class="btn-create" id="btnCreate">
+                        <button class="btn-create" id="btnCreate" onclick="location.href='create-character.html'">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                 <path d="M12 5v14M5 12h14"/>
                             </svg>
-                            创建
+                            创造角色
                         </button>
                         <div class="user-avatar" id="userAvatar">
                             <span id="userAvatarText">U</span>
@@ -167,13 +167,6 @@
                         </div>
                     </div>
                     <div class="filter-right">
-                        <span class="character-count-mobile"><strong id="charCountMobile">50</strong> 个角色</span>
-                        <div class="sort-dropdown-mobile" id="sortDropdownMobile">
-                            <span>热门</span>
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <polyline points="6 9 12 15 18 9"/>
-                            </svg>
-                        </div>
                         <span class="sort-label">排序：</span>
                         <button class="sort-option active" data-sort-by="views">热度</button>
                         <button class="sort-option" data-sort-by="rating">评分</button>
