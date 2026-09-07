@@ -289,39 +289,95 @@ function renderGuestCharacters() {
     observeFadeInElements();
 }
 
-// ===== Render Characters =====
-function renderCharacters(reset = false) {
-    if (reset) {
-        characterGrid.innerHTML = '';
-        currentPage = 1;
-        hasMore = true;
-        endOfList.style.display = 'none';
-    }
+// ===== Render Characters (Pagination) =====
+function renderCharacters(page = 1) {
+    currentPage = page;
+    const totalPages = Math.ceil(filteredCharacters.length / pageSize);
+    
+    if (currentPage < 1) currentPage = 1;
+    if (currentPage > totalPages) currentPage = totalPages;
     
     const start = (currentPage - 1) * pageSize;
     const end = start + pageSize;
     const pageChars = filteredCharacters.slice(start, end);
     
-    if (pageChars.length === 0 || start >= filteredCharacters.length) {
-        hasMore = false;
-        scrollIndicator.classList.add('hidden');
-        endOfList.style.display = 'block';
-        return;
-    }
-    
     const html = pageChars.map(char => createCharacterCard(char, false)).join('');
-    characterGrid.insertAdjacentHTML('beforeend', html);
+    characterGrid.innerHTML = html;
     
-    currentPage++;
+    // 更新分页
+    renderPagination(totalPages);
     
-    if (end >= filteredCharacters.length) {
-        hasMore = false;
-        scrollIndicator.classList.add('hidden');
-        endOfList.style.display = 'block';
-    }
+    // 滚动到顶部
+    window.scrollTo({ top: document.querySelector('.main-content').offsetTop - 80, behavior: 'smooth' });
     
     observeFadeInElements();
 }
+
+// ===== 渲染分页组件 =====
+function renderPagination(totalPages) {
+    const pagination = document.getElementById('pagination');
+    const pageNumbers = document.getElementById('pageNumbers');
+    const prevBtn = document.getElementById('prevPage');
+    const nextBtn = document.getElementById('nextPage');
+    
+    if (totalPages <= 1) {
+        pagination.style.display = 'none';
+        return;
+    }
+    
+    pagination.style.display = 'flex';
+    
+    // 上一页按钮状态
+    prevBtn.disabled = currentPage === 1;
+    nextBtn.disabled = currentPage === totalPages;
+    
+    // 生成页码
+    let pages = [];
+    const delta = 2; // 当前页左右各显示2个
+    
+    for (let i = 1; i <= totalPages; i++) {
+        if (
+            i === 1 ||
+            i === totalPages ||
+            (i >= currentPage - delta && i <= currentPage + delta)
+        ) {
+            pages.push(i);
+        } else if (pages[pages.length - 1] !== '...') {
+            pages.push('...');
+        }
+    }
+    
+    pageNumbers.innerHTML = pages.map(p => {
+        if (p === '...') {
+            return '<span class="page-ellipsis">...</span>';
+        }
+        return `<button class="page-number ${p === currentPage ? 'active' : ''}" data-page="${p}">${p}</button>`;
+    }).join('');
+    
+    // 绑定页码点击
+    pageNumbers.querySelectorAll('.page-number').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const page = parseInt(btn.dataset.page);
+            if (page !== currentPage) {
+                renderCharacters(page);
+            }
+        });
+    });
+}
+
+// ===== 上一页/下一页 =====
+document.getElementById('prevPage').addEventListener('click', () => {
+    if (currentPage > 1) {
+        renderCharacters(currentPage - 1);
+    }
+});
+
+document.getElementById('nextPage').addEventListener('click', () => {
+    const totalPages = Math.ceil(filteredCharacters.length / pageSize);
+    if (currentPage < totalPages) {
+        renderCharacters(currentPage + 1);
+    }
+});
 
 function createCharacterCard(char, isGuest = false) {
     const tagsHtml = char.tags.slice(0, 4).map(tag => `
@@ -400,7 +456,8 @@ function applyFilters() {
         filteredCharacters.sort((a, b) => b.id - a.id);
     }
     
-    renderCharacters(true);
+    // 筛选后重置到第一页
+    renderCharacters(1);
 }
 
 function parseViews(viewsStr) {
@@ -534,36 +591,6 @@ sortOptions.forEach(option => {
         applyFilters();
     });
 });
-
-// ===== Infinite Scroll =====
-function setupInfiniteScroll() {
-    if (!scrollIndicator) return;
-    
-    const observer = new IntersectionObserver((entries) => {
-        entries.forEach(entry => {
-            if (entry.isIntersecting && hasMore && !isLoading) {
-                loadMore();
-            }
-        });
-    }, {
-        rootMargin: '200px 0px',
-        threshold: 0.1
-    });
-    
-    observer.observe(scrollIndicator);
-}
-
-function loadMore() {
-    if (isLoading || !hasMore) return;
-    
-    isLoading = true;
-    scrollIndicator.classList.remove('hidden');
-    
-    setTimeout(() => {
-        renderCharacters();
-        isLoading = false;
-    }, 500);
-}
 
 // ===== Back to Top =====
 function setupBackToTop() {

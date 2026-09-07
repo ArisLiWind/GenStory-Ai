@@ -30,6 +30,7 @@
     --radius-lg: 16px;
     --radius-xl: 24px;
     --radius-full: 9999px;
+    /* 统一圆角规范：所有按钮、输入框、卡片等主要交互元素使用 --radius-md (12px) */
     
     --transition-fast: 0.15s ease;
     --transition-normal: 0.3s ease;
@@ -104,10 +105,7 @@ img {
 }
 
 .glow-orb {
-    position: absolute;
-    border-radius: 50%;
-    filter: blur(100px);
-    opacity: 0.3;
+    display: none;
 }
 
 .orb-1 {
@@ -257,7 +255,7 @@ img {
     padding: 10px 16px 10px 44px;
     background: var(--bg-glass);
     border: 1px solid var(--border-color);
-    border-radius: var(--radius-full);
+    border-radius: var(--radius-md);
     color: var(--text-primary);
     font-size: 14px;
     outline: none;
@@ -304,7 +302,7 @@ img {
 .btn-login,
 .btn-register {
     padding: 8px 20px;
-    border-radius: var(--radius-full);
+    border-radius: var(--radius-md);
     font-size: 14px;
     font-weight: 500;
     transition: var(--transition-fast);
@@ -416,7 +414,7 @@ img {
     padding: 14px 32px;
     background: var(--text-primary);
     color: var(--bg-primary);
-    border-radius: var(--radius-full);
+    border-radius: var(--radius-md);
     font-size: 16px;
     font-weight: 600;
     transition: var(--transition-fast);
@@ -446,7 +444,7 @@ img {
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 40px;
+    gap: 32px;
     flex-wrap: wrap;
 }
 
@@ -454,27 +452,18 @@ img {
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 4px;
+    gap: 2px;
 }
 
 .stat-number {
-    font-size: 28px;
-    font-weight: 700;
-    background: var(--accent-gradient);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--text-primary);
 }
 
 .stat-label {
-    font-size: 14px;
+    font-size: 13px;
     color: var(--text-muted);
-}
-
-.stat-divider {
-    width: 1px;
-    height: 40px;
-    background: var(--border-color);
 }
 
 /* ===== Categories ===== */
@@ -1128,6 +1117,7 @@ img {
     
     .nav-search-row {
         display: block;
+        margin-top: 16px;
     }
     
     .hero {
@@ -1189,8 +1179,8 @@ img {
     }
     
     .hero-stats {
-        flex-direction: column;
-        gap: 16px;
+        flex-direction: row;
+        gap: 20px;
     }
     
     .character-grid {
@@ -1285,6 +1275,91 @@ img {
     padding: 32px 0;
     color: var(--text-muted);
     font-size: 13px;
+}
+
+/* ===== Pagination ===== */
+.pagination {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    margin-top: 48px;
+    margin-bottom: 20px;
+}
+
+.page-btn {
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.page-btn:hover:not(:disabled) {
+    border-color: var(--accent-primary);
+    color: var(--accent-primary);
+}
+
+.page-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+.page-btn svg {
+    width: 18px;
+    height: 18px;
+}
+
+.page-numbers {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.page-number {
+    min-width: 40px;
+    height: 40px;
+    padding: 0 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+    color: var(--text-secondary);
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    user-select: none;
+}
+
+.page-number:hover {
+    border-color: var(--accent-primary);
+    color: var(--accent-primary);
+}
+
+.page-number.active {
+    background: var(--accent-primary);
+    border-color: var(--accent-primary);
+    color: white;
+}
+
+.page-ellipsis {
+    min-width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-muted);
+    font-size: 14px;
+    user-select: none;
 }
 
 /* ===== Back to Top Button ===== */
@@ -1399,7 +1474,7 @@ img {
     padding: 8px 16px;
     background: var(--accent-gradient-soft);
     border: 1px solid var(--accent-primary);
-    border-radius: var(--radius-full);
+    border-radius: var(--radius-md);
     color: var(--accent-primary);
     font-size: 14px;
     font-weight: 500;

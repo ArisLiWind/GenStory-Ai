@@ -6,7 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>GenSphere - 创建、分享与探索</title>
     <link rel="stylesheet" href="css/style.css">
-    <link rel="icon" type="image/png" href="assets/logo.png">
+    <link rel="icon" type="image/png" href="assets/logo-icon.png">
 </head>
 <body>
     <!-- 背景装饰 -->
@@ -23,7 +23,7 @@
                 <div class="nav-left">
                     <a href="#" class="logo">
                         <img src="assets/logo-icon.png" alt="GenSphere 图标" class="logo-icon">
-                        <img src="assets/logo-text.png" alt="GenSphere" class="logo-text-img">
+                        <img src="assets/logo-text-light.png" alt="GenSphere" class="logo-text-img">
                     </a>
                 </div>
 
@@ -93,25 +93,15 @@
                     与独一无二的 AI 角色展开沉浸式互动。自定义角色、创造故事，
                     在 GenSphere 开创一段全新历险！
                 </p>
-                <div class="hero-cta">
-                    <a href="login.html" class="btn-primary">
-                        登录
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-                            <path d="M5 12h14M12 5l7 7-7 7"/>
-                        </svg>
-                    </a>
-                </div>
                 <div class="hero-stats">
                     <div class="stat-item">
                         <span class="stat-number">1500万+</span>
                         <span class="stat-label">活跃用户</span>
                     </div>
-                    <div class="stat-divider"></div>
                     <div class="stat-item">
                         <span class="stat-number">50万+</span>
                         <span class="stat-label">AI 角色</span>
                     </div>
-                    <div class="stat-divider"></div>
                     <div class="stat-item">
                         <span class="stat-number">10亿+</span>
                         <span class="stat-label">聊天次数</span>
@@ -129,14 +119,6 @@
                 </div>
                 <div class="character-grid" id="guestCharacterGrid">
                     <!-- 卡片通过 JS 生成 -->
-                </div>
-                <div class="guest-cta-bottom">
-                    <a href="login.html" class="btn-primary btn-large">
-                        登录查看更多角色
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-                            <path d="M5 12h14M12 5l7 7-7 7"/>
-                        </svg>
-                    </a>
                 </div>
             </div>
         </section>
@@ -194,15 +176,21 @@
                     <!-- 卡片将通过 JS 动态生成 -->
                 </div>
 
-                <!-- 无限加载指示器 -->
-                <div class="infinite-scroll-indicator" id="scrollIndicator">
-                    <div class="loading-spinner"></div>
-                    <span>加载中...</span>
-                </div>
-
-                <!-- 到底了提示 -->
-                <div class="end-of-list" id="endOfList" style="display: none;">
-                    <span>— 已经到底啦 —</span>
+                <!-- 分页 -->
+                <div class="pagination" id="pagination">
+                    <button class="page-btn prev-btn" id="prevPage" disabled>
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                            <path d="M15 18l-6-6 6-6"/>
+                        </svg>
+                    </button>
+                    <div class="page-numbers" id="pageNumbers">
+                        <!-- 页码通过 JS 生成 -->
+                    </div>
+                    <button class="page-btn next-btn" id="nextPage">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                            <path d="M9 18l6-6-6-6"/>
+                        </svg>
+                    </button>
                 </div>
             </div>
         </main>
@@ -296,7 +284,7 @@
                 <div class="footer-brand">
                     <div class="footer-logo">
                         <img src="assets/logo-icon.png" alt="GenSphere 图标" class="logo-icon">
-                        <img src="assets/logo-text.png" alt="GenSphere" class="logo-text-img">
+                        <img src="assets/logo-text-light.png" alt="GenSphere" class="logo-text-img">
                     </div>
                     <p class="footer-desc">创建、分享、探索，开创属于你的全新世界！</p>
                     <div class="social-links">
