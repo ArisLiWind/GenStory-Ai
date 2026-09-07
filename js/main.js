@@ -490,20 +490,44 @@ document.addEventListener('keydown', (e) => {
 });
 
 // ===== User Dropdown =====
+const drawerOverlay = document.getElementById('drawerOverlay');
+
+function openUserDropdown() {
+    userDropdown.classList.add('visible');
+    if (drawerOverlay && window.innerWidth <= 768) {
+        drawerOverlay.classList.add('visible');
+    }
+}
+
+function closeUserDropdown() {
+    userDropdown.classList.remove('visible');
+    if (drawerOverlay) {
+        drawerOverlay.classList.remove('visible');
+    }
+}
+
 userAvatar.addEventListener('click', (e) => {
     e.stopPropagation();
-    userDropdown.classList.toggle('visible');
+    if (userDropdown.classList.contains('visible')) {
+        closeUserDropdown();
+    } else {
+        openUserDropdown();
+    }
 });
 
 document.addEventListener('click', (e) => {
     if (!userDropdown.contains(e.target) && !userAvatar.contains(e.target)) {
-        userDropdown.classList.remove('visible');
+        closeUserDropdown();
     }
 });
 
+if (drawerOverlay) {
+    drawerOverlay.addEventListener('click', closeUserDropdown);
+}
+
 // ===== Logout =====
 logoutBtn.addEventListener('click', async () => {
-    userDropdown.classList.remove('visible');
+    closeUserDropdown();
     
     // 调用登出 API
     await GenSphereAPI.auth.logout();
