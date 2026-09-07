@@ -205,8 +205,6 @@ const filterTabs = document.querySelectorAll('.filter-tab');
 const sortTabs = document.querySelectorAll('.sort-tab');
 const sortOptions = document.querySelectorAll('.sort-option');
 const loadMoreBtn = document.getElementById('loadMoreBtn');
-const mobileMenuBtn = document.getElementById('mobileMenuBtn');
-const mobileMenu = document.getElementById('mobileMenu');
 const themeToggle = document.getElementById('themeToggle');
 const navbar = document.querySelector('.navbar');
 
@@ -367,21 +365,6 @@ loadMoreBtn.addEventListener('click', () => {
     displayedCount += 4;
     renderCharacters();
     observeFadeInElements();
-});
-
-// Mobile menu toggle
-mobileMenuBtn.addEventListener('click', () => {
-    mobileMenu.classList.toggle('active');
-    const spans = mobileMenuBtn.querySelectorAll('span');
-    if (mobileMenu.classList.contains('active')) {
-        spans[0].style.transform = 'rotate(45deg) translate(5px, 5px)';
-        spans[1].style.opacity = '0';
-        spans[2].style.transform = 'rotate(-45deg) translate(5px, -5px)';
-    } else {
-        spans[0].style.transform = 'none';
-        spans[1].style.opacity = '1';
-        spans[2].style.transform = 'none';
-    }
 });
 
 // Navbar scroll effect

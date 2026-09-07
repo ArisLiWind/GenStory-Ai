@@ -175,10 +175,22 @@ img {
     max-width: 1400px;
     margin: 0 auto;
     padding: 12px 24px;
+}
+
+.nav-main-row {
     display: flex;
     align-items: center;
     justify-content: space-between;
     gap: 24px;
+}
+
+.nav-search-row {
+    display: none;
+    margin-top: 10px;
+}
+
+.search-box-mobile {
+    width: 100%;
 }
 
 .nav-left {
@@ -1079,18 +1091,25 @@ img {
 }
 
 @media (max-width: 768px) {
-    .nav-center,
+    .nav-center {
+        display: none;
+    }
+    
     .nav-right .theme-toggle,
     .nav-right .btn-login {
         display: none;
     }
     
-    .mobile-menu-btn {
-        display: flex;
+    .nav-right .btn-register {
+        display: inline-block;
+    }
+    
+    .nav-search-row {
+        display: block;
     }
     
     .hero {
-        padding: 100px 24px 60px;
+        padding: 140px 24px 60px;
     }
     
     .hero-stats {
@@ -1144,7 +1163,7 @@ img {
     }
     
     .hero {
-        padding: 80px 16px 40px;
+        padding: 140px 16px 40px;
     }
     
     .hero-stats {
