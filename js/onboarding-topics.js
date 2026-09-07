@@ -54,7 +54,7 @@ async function finishOnboarding() {
     if (selectedTopics.length === 0 || !currentUser) return;
     
     finishBtn.disabled = true;
-    finishBtn.innerHTML = '设置中...';
+    finishBtn.innerHTML = '<span class="btn-text">设置中...</span>';
     
     // 调用 API 更新用户信息
     const result = await GenSphereAPI.auth.updateUser(currentUser.phone, {
@@ -71,7 +71,7 @@ async function finishOnboarding() {
     } else {
         finishBtn.disabled = false;
         finishBtn.innerHTML = `
-            开始探索
+            <span class="btn-text">开始探索</span>
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
                 <path d="M5 12h14M12 5l7 7-7 7"/>
             </svg>

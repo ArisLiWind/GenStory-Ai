@@ -81,7 +81,7 @@ usernameForm.addEventListener('submit', async (e) => {
     }
     
     nextBtn.disabled = true;
-    nextBtn.innerHTML = '保存中...';
+    nextBtn.innerHTML = '<span class="btn-text">保存中...</span>';
     
     // 调用 API 更新用户名
     const result = await GenSphereAPI.auth.updateUser(currentUser.phone, {
@@ -98,7 +98,7 @@ usernameForm.addEventListener('submit', async (e) => {
     } else {
         nextBtn.disabled = false;
         nextBtn.innerHTML = `
-            下一步
+            <span class="btn-text">下一步</span>
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
                 <path d="M5 12h14M12 5l7 7-7 7"/>
             </svg>

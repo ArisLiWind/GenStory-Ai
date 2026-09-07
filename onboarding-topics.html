@@ -4,40 +4,32 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>选择你感兴趣的话题 - GenSphere</title>
-    <link rel="stylesheet" href="css/style.css">
+    <title>选择感兴趣的话题 - GenSphere</title>
     <link rel="stylesheet" href="css/auth.css">
-    <link rel="icon" type="image/png" href="assets/logo.png">
+    <link rel="icon" type="image/png" href="assets/logo-icon.png">
 </head>
 <body class="auth-body">
     <!-- 背景装饰 -->
-    <div class="bg-decoration">
-        <div class="glow-orb orb-1"></div>
-        <div class="glow-orb orb-2"></div>
-        <div class="glow-orb orb-3"></div>
+    <div class="auth-bg">
+        <div class="auth-bg-gradient"></div>
+        <div class="auth-bg-glow glow-top"></div>
     </div>
 
-    <div class="auth-container">
-        <div class="auth-card">
-            <!-- Header -->
-            <div class="onboarding-header">
-                <div class="onboarding-step">
-                    步骤 <strong>2</strong> / 2
+    <div class="auth-page">
+        <div class="auth-container auth-container-wide">
+            <!-- 顶部 Logo + 标题 -->
+            <div class="auth-header">
+                <div class="auth-logo">
+                    <img src="assets/logo-icon.png" alt="GenSphere" class="auth-logo-icon">
+                    <img src="assets/logo-text-light.png" alt="GenSphere" class="auth-logo-text-img">
                 </div>
-                <button class="onboarding-skip" onclick="skipOnboarding()">跳过</button>
+                <div class="onboarding-step">步骤 <strong>2</strong> / 2</div>
+                <h1 class="auth-title">你对什么感兴趣？</h1>
+                <p class="onboarding-sub">选择你喜欢的话题，我们将为你推荐更符合口味的角色</p>
+                <p class="selected-count">已选择 <strong id="selectedCount">0</strong> 个话题（至少选1个）</p>
             </div>
 
-            <!-- Welcome -->
-            <h1 class="onboarding-title">你对什么感兴趣？</h1>
-            <p class="onboarding-subtitle">
-                选择你喜欢的话题，我们将为你推荐更符合口味的角色
-            </p>
-
-            <p class="selected-count">
-                已选择 <strong id="selectedCount">0</strong> 个话题（至少选1个）
-            </p>
-
-            <!-- Topic Grid -->
+            <!-- 话题选择 -->
             <div class="topic-grid" id="topicGrid">
                 <div class="topic-item" data-topic="male">
                     <div class="topic-check">
@@ -160,19 +152,18 @@
                 </div>
             </div>
 
-            <!-- Footer -->
-            <div class="onboarding-footer">
-                <button type="button" class="btn-back" onclick="goBack()">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M19 12H5M12 19l-7-7 7-7"/>
-                    </svg>
-                </button>
-                <button type="button" class="btn-next" id="finishBtn" onclick="finishOnboarding()" disabled>
-                    开始探索
+            <!-- 底部按钮 -->
+            <div class="onboarding-bottom">
+                <button type="button" class="btn-submit" id="finishBtn" onclick="finishOnboarding()" disabled>
+                    <span class="btn-text">开始探索</span>
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
                         <path d="M5 12h14M12 5l7 7-7 7"/>
                     </svg>
                 </button>
+
+                <div class="onboarding-skip-wrap">
+                    <button type="button" class="btn-skip" onclick="skipOnboarding()">跳过</button>
+                </div>
             </div>
         </div>
     </div>
