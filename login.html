@@ -13,8 +13,6 @@
     <div class="auth-bg">
         <div class="auth-bg-gradient"></div>
         <div class="auth-bg-glow glow-top"></div>
-        <div class="auth-bg-glow glow-bottom"></div>
-        <div class="auth-bg-noise"></div>
     </div>
 
     <div class="auth-page">
@@ -26,7 +24,6 @@
                     <img src="assets/logo-text-light.png" alt="GenSphere" class="auth-logo-text-img">
                 </div>
                 <h1 class="auth-title">欢迎回来</h1>
-                <p class="auth-subtitle">输入手机号，开启你的 AI 角色扮演之旅</p>
             </div>
 
             <!-- 登录表单 -->
@@ -67,35 +64,30 @@
                     </svg>
                 </button>
 
-                <!-- 选项行 -->
-                <div class="auth-options">
-                    <label class="checkbox-label">
-                        <input type="checkbox" id="autoLoginCheck" checked>
-                        <span class="checkbox-custom"></span>
-                        <span class="checkbox-text">自动登录</span>
-                    </label>
-                    <a href="#" class="link-text">遇到问题？</a>
-                </div>
+                <!-- 自动登录 -->
+                <label class="checkbox-label auto-login-label">
+                    <input type="checkbox" id="autoLoginCheck" checked>
+                    <span class="checkbox-custom"></span>
+                    <span class="checkbox-text">自动登录</span>
+                </label>
 
                 <!-- 用户协议 -->
-                <div class="auth-agreement">
-                    <label class="checkbox-label agreement-label">
-                        <input type="checkbox" id="agreeCheck" checked>
-                        <span class="checkbox-custom"></span>
-                        <span class="agreement-text">
-                            我已阅读并同意
-                            <a href="#" class="link-text">《用户协议》</a>
-                            和
-                            <a href="#" class="link-text">《隐私政策》</a>
-                        </span>
-                    </label>
-                </div>
+                <label class="checkbox-label agreement-label">
+                    <input type="checkbox" id="agreeCheck" checked>
+                    <span class="checkbox-custom"></span>
+                    <span class="agreement-text">
+                        我已阅读并同意
+                        <a href="#" class="link-text">《用户协议》</a>
+                        和
+                        <a href="#" class="link-text">《隐私政策》</a>
+                    </span>
+                </label>
             </form>
 
             <!-- 其他登录方式 -->
             <div class="auth-social-section">
                 <div class="divider">
-                    <span>其他登录方式</span>
+                    <span>or</span>
                 </div>
                 <div class="auth-social">
                     <button class="social-btn" title="微信登录">
