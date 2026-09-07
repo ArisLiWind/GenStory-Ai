@@ -495,25 +495,44 @@ img {
 .category-tag {
     flex-shrink: 0;
     padding: 8px 18px;
-    background: var(--bg-glass);
-    border: 1px solid var(--border-color);
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(99, 102, 241, 0.2);
     border-radius: var(--radius-full);
     color: var(--text-secondary);
     font-size: 14px;
     font-weight: 500;
-    transition: var(--transition-fast);
+    transition: all 0.2s ease;
     white-space: nowrap;
+    position: relative;
+    overflow: hidden;
+}
+
+.category-tag::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.05), transparent);
+    transition: left 0.5s ease;
 }
 
 .category-tag:hover {
-    border-color: var(--border-hover);
+    border-color: rgba(139, 92, 246, 0.5);
     color: var(--text-primary);
+    background: rgba(255, 255, 255, 0.08);
+}
+
+.category-tag:hover::before {
+    left: 100%;
 }
 
 .category-tag.active {
-    background: var(--accent-primary);
-    border-color: var(--accent-primary);
+    background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+    border-color: transparent;
     color: white;
+    box-shadow: 0 2px 12px rgba(99, 102, 241, 0.4);
 }
 
 /* ===== Characters Section ===== */
@@ -612,8 +631,8 @@ img {
 
 .character-card {
     position: relative;
-    background: var(--bg-card);
-    border: 1px solid var(--border-color);
+    background: linear-gradient(180deg, rgba(40, 40, 70, 0.5) 0%, rgba(20, 20, 35, 0.8) 100%);
+    border: 1px solid rgba(99, 102, 241, 0.25);
     border-radius: var(--radius-lg);
     overflow: hidden;
     cursor: pointer;
@@ -622,11 +641,28 @@ img {
     -webkit-backdrop-filter: blur(10px);
 }
 
+.character-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(167, 139, 250, 0.5), transparent);
+    z-index: 2;
+    opacity: 0;
+    transition: opacity var(--transition-normal);
+}
+
 .character-card:hover {
     transform: translateY(-6px);
-    border-color: var(--border-hover);
-    box-shadow: var(--shadow-lg);
-    background: var(--bg-card-hover);
+    border-color: rgba(139, 92, 246, 0.6);
+    box-shadow: 0 8px 32px rgba(99, 102, 241, 0.25), 0 0 60px rgba(99, 102, 241, 0.1);
+    background: linear-gradient(180deg, rgba(50, 50, 85, 0.6) 0%, rgba(25, 25, 45, 0.9) 100%);
+}
+
+.character-card:hover::before {
+    opacity: 1;
 }
 
 .card-image-wrapper {
@@ -655,8 +691,8 @@ img {
     bottom: 0;
     left: 0;
     right: 0;
-    height: 50%;
-    background: linear-gradient(to top, rgba(10, 10, 20, 0.9), transparent);
+    height: 60%;
+    background: linear-gradient(to top, rgba(10, 10, 20, 0.95) 0%, rgba(10, 10, 20, 0.5) 50%, transparent 100%);
     pointer-events: none;
 }
 
@@ -732,12 +768,13 @@ img {
     font-size: 14px;
     font-weight: 600;
     margin-bottom: 6px;
-    color: var(--text-primary);
+    color: #ffffff;
     line-height: 1.4;
     display: -webkit-box;
     -webkit-line-clamp: 1;
     -webkit-box-orient: vertical;
     overflow: hidden;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
 }
 
 .card-description {
@@ -763,12 +800,19 @@ img {
     align-items: center;
     gap: 4px;
     padding: 4px 10px;
-    background: var(--accent-gradient-soft);
-    border: 1px solid var(--border-color);
+    background: linear-gradient(135deg, rgba(99, 102, 241, 0.15) 0%, rgba(139, 92, 246, 0.15) 100%);
+    border: 1px solid rgba(99, 102, 241, 0.3);
     border-radius: var(--radius-full);
     font-size: 11px;
     font-weight: 500;
-    color: var(--accent-tertiary);
+    color: #c4b5fd;
+    transition: all var(--transition-fast);
+}
+
+.card-tag:hover {
+    background: linear-gradient(135deg, rgba(99, 102, 241, 0.25) 0%, rgba(139, 92, 246, 0.25) 100%);
+    border-color: rgba(139, 92, 246, 0.5);
+    color: #ddd6fe;
 }
 
 .card-tag svg {
@@ -1784,7 +1828,15 @@ img {
 /* ===== Responsive: User Menu ===== */
 @media (max-width: 768px) {
     .user-menu .btn-create {
-        display: none;
+        display: flex;
+        padding: 8px 10px;
+        font-size: 0;
+        gap: 0;
+    }
+    
+    .user-menu .btn-create svg {
+        width: 18px;
+        height: 18px;
     }
     
     .user-dropdown {

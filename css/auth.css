@@ -593,19 +593,72 @@
     }
     
     .topic-grid {
-        grid-template-columns: repeat(3, 1fr);
-        gap: 10px;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px 10px;
+        margin-top: 20px;
+        margin-bottom: 28px;
     }
     
     .topic-item {
-        padding: 16px 8px;
+        position: relative;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 8px 14px;
+        background: rgba(255, 255, 255, 0.06);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 9999px;
+        text-align: left;
+        transition: all 0.2s ease;
+    }
+    
+    .topic-item:hover {
+        background: rgba(255, 255, 255, 0.1);
+        border-color: rgba(255, 255, 255, 0.15);
+    }
+    
+    .topic-item.active {
+        background: rgba(99, 102, 241, 0.2);
+        border-color: #6366f1;
+    }
+    
+    .topic-check {
+        position: static;
+        width: 16px;
+        height: 16px;
+        opacity: 0;
+        transform: scale(0.5);
+        flex-shrink: 0;
+        order: -1;
+    }
+    
+    .topic-item.active .topic-check {
+        opacity: 1;
+        transform: scale(1);
+    }
+    
+    .topic-check svg {
+        width: 10px;
+        height: 10px;
     }
     
     .topic-icon {
-        font-size: 28px;
+        font-size: 16px;
+        margin-bottom: 0;
+        order: 0;
     }
     
     .topic-name {
-        font-size: 12px;
+        font-size: 13px;
+        font-weight: 500;
+        color: rgba(255, 255, 255, 0.8);
+        order: 1;
+        white-space: nowrap;
+    }
+    
+    .topic-item.active .topic-name {
+        color: #ffffff;
+        font-weight: 500;
     }
 }

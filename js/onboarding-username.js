@@ -4,9 +4,8 @@ const AUTH_KEY = 'gensphere_user';
 
 const usernameForm = document.getElementById('usernameForm');
 const usernameInput = document.getElementById('usernameInput');
-const nextBtn = document.getElementById('nextBtn');
 const usernameHint = document.getElementById('usernameHint');
-const suggestions = document.querySelectorAll('.username-suggestion');
+const nextBtn = document.getElementById('nextBtn');
 
 let currentUser = null;
 
@@ -26,15 +25,6 @@ window.addEventListener('DOMContentLoaded', async () => {
     }
     
     currentUser = user;
-});
-
-// ===== Suggestion Click =====
-suggestions.forEach(suggestion => {
-    suggestion.addEventListener('click', () => {
-        usernameInput.value = suggestion.dataset.name;
-        validateUsername();
-        usernameInput.focus();
-    });
 });
 
 // ===== Real-time Validation =====
