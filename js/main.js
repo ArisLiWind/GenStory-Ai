@@ -388,17 +388,10 @@ function createCharacterCard(char, isGuest = false) {
     
     return `
         <div class="character-card fade-in ${clickClass}" data-id="${char.id}" ${isGuest ? 'data-require-login="true"' : ''}>
+            <div class="card-header">${char.title}</div>
             <div class="card-image-wrapper">
                 <img src="${char.image}" alt="${char.title}" class="card-image" loading="lazy">
-                <div class="card-image-overlay"></div>
                 <div class="card-badges">
-                    <span class="badge-views">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
-                            <circle cx="12" cy="12" r="3"/>
-                        </svg>
-                        ${char.views}
-                    </span>
                     <span class="badge-chats">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
@@ -410,9 +403,8 @@ function createCharacterCard(char, isGuest = false) {
             <div class="card-content">
                 <div class="card-creator">
                     <span class="card-creator-name">@${char.creator}</span>
-                    ${char.verified ? '<svg class="verified-badge" viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M12 2L9.19 8.63 2 9.24l5.46 4.73L5.82 21 12 17.27 18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2z"/></svg>' : ''}
+                    ${char.verified ? '<svg class="verified-badge" viewBox="0 0 24 24" width="12" height="12" fill="currentColor"><path d="M12 2L9.19 8.63 2 9.24l5.46 4.73L5.82 21 12 17.27 18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2z"/></svg>' : ''}
                 </div>
-                <h3 class="card-title">${char.title}</h3>
                 <p class="card-description">${char.description}</p>
                 <div class="card-tags">
                     ${tagsHtml}
@@ -420,17 +412,9 @@ function createCharacterCard(char, isGuest = false) {
                 <div class="card-footer">
                     <span class="card-tokens">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <path d="M12 2L2 7l10 5 10-5-10-5z"/>
-                            <path d="M2 17l10 5 10-5"/>
-                            <path d="M2 12l10 5 10-5"/>
+                            <path d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/>
                         </svg>
                         ${char.tokens} 个 Token
-                    </span>
-                    <span class="card-rating">
-                        <svg viewBox="0 0 24 24">
-                            <path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2z"/>
-                        </svg>
-                        ${char.rating}
                     </span>
                 </div>
             </div>

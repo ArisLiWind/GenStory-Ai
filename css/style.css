@@ -1,36 +1,35 @@
 /* ===== CSS Variables ===== */
 :root {
-    --bg-primary: #0a0a14;
-    --bg-secondary: #12121f;
-    --bg-card: rgba(30, 30, 50, 0.6);
+    --bg-primary: #313338;
+    --bg-secondary: #2b2d31;
+    --bg-card: #1e1e2e;
     --bg-card-hover: rgba(40, 40, 70, 0.8);
     --bg-glass: rgba(255, 255, 255, 0.05);
     
     --text-primary: #ffffff;
-    --text-secondary: #a0a0c0;
-    --text-muted: #6b6b8a;
+    --text-secondary: #dbdee1;
+    --text-muted: #b5bac1;
     
-    --accent-primary: #6366f1;
-    --accent-secondary: #8b5cf6;
-    --accent-tertiary: #a78bfa;
-    --accent-gradient: linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #a78bfa 100%);
-    --accent-gradient-soft: linear-gradient(135deg, rgba(99, 102, 241, 0.1) 0%, rgba(139, 92, 246, 0.1) 100%);
+    --accent-primary: #a78bfa;
+    --accent-secondary: #c084fc;
+    --accent-tertiary: #e9d5ff;
+    --accent-gradient: linear-gradient(135deg, #a78bfa 0%, #c084fc 50%, #e9d5ff 100%);
+    --accent-gradient-soft: linear-gradient(135deg, rgba(167, 139, 250, 0.1) 0%, rgba(192, 132, 252, 0.1) 100%);
     
-    --border-color: rgba(99, 102, 241, 0.2);
-    --border-hover: rgba(99, 102, 241, 0.5);
-    --border-glow: rgba(99, 102, 241, 0.3);
+    --border-color: rgba(167, 139, 250, 0.3);
+    --border-hover: rgba(192, 132, 252, 0.6);
+    --border-glow: rgba(167, 139, 250, 0.4);
     
     --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.3);
     --shadow-md: 0 4px 20px rgba(0, 0, 0, 0.4);
-    --shadow-lg: 0 8px 40px rgba(99, 102, 241, 0.15);
-    --shadow-glow: 0 0 30px rgba(99, 102, 241, 0.3);
+    --shadow-lg: 0 8px 40px rgba(167, 139, 250, 0.15);
+    --shadow-glow: 0 0 30px rgba(167, 139, 250, 0.3);
     
-    --radius-sm: 8px;
-    --radius-md: 12px;
-    --radius-lg: 16px;
-    --radius-xl: 24px;
+    --radius-sm: 6px;
+    --radius-md: 10px;
+    --radius-lg: 14px;
+    --radius-xl: 20px;
     --radius-full: 9999px;
-    /* 统一圆角规范：所有按钮、输入框、卡片等主要交互元素使用 --radius-md (12px) */
     
     --transition-fast: 0.15s ease;
     --transition-normal: 0.3s ease;
@@ -626,50 +625,42 @@ img {
 /* ===== Character Grid ===== */
 .character-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
-    gap: 20px;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 16px;
 }
 
 .character-card {
     position: relative;
-    background: linear-gradient(180deg, rgba(40, 40, 70, 0.5) 0%, rgba(20, 20, 35, 0.8) 100%);
-    border: 1px solid rgba(99, 102, 241, 0.25);
+    background: linear-gradient(180deg, rgba(88, 28, 135, 0.6) 0%, rgba(30, 27, 75, 0.9) 100%);
+    border: 1.5px solid rgba(167, 139, 250, 0.5);
     border-radius: var(--radius-lg);
     overflow: hidden;
     cursor: pointer;
     transition: all var(--transition-normal);
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
-}
-
-.character-card::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    height: 1px;
-    background: linear-gradient(90deg, transparent, rgba(167, 139, 250, 0.5), transparent);
-    z-index: 2;
-    opacity: 0;
-    transition: opacity var(--transition-normal);
 }
 
 .character-card:hover {
-    transform: translateY(-6px);
-    border-color: rgba(139, 92, 246, 0.6);
-    box-shadow: 0 8px 32px rgba(99, 102, 241, 0.25), 0 0 60px rgba(99, 102, 241, 0.1);
-    background: linear-gradient(180deg, rgba(50, 50, 85, 0.6) 0%, rgba(25, 25, 45, 0.9) 100%);
+    transform: translateY(-4px);
+    border-color: rgba(192, 132, 252, 0.8);
+    box-shadow: 0 8px 32px rgba(167, 139, 250, 0.3);
 }
 
-.character-card:hover::before {
-    opacity: 1;
+.card-header {
+    padding: 10px 12px;
+    font-size: 14px;
+    font-weight: 600;
+    color: #c084fc;
+    line-height: 1.3;
+    display: -webkit-box;
+    -webkit-line-clamp: 1;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
 }
 
 .card-image-wrapper {
     position: relative;
     width: 100%;
-    padding-top: 130%;
+    padding-top: 120%;
     overflow: hidden;
 }
 
@@ -680,102 +671,55 @@ img {
     width: 100%;
     height: 100%;
     object-fit: cover;
-    transition: transform var(--transition-slow);
-}
-
-.character-card:hover .card-image {
-    transform: scale(1.05);
-}
-
-.card-image-overlay {
-    position: absolute;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    height: 60%;
-    background: linear-gradient(to top, rgba(10, 10, 20, 0.95) 0%, rgba(10, 10, 20, 0.5) 50%, transparent 100%);
-    pointer-events: none;
 }
 
 .card-badges {
     position: absolute;
-    top: 12px;
-    left: 12px;
-    right: 12px;
+    top: 10px;
+    right: 10px;
     display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
+    gap: 6px;
     z-index: 2;
-}
-
-.badge-views {
-    display: flex;
-    align-items: center;
-    gap: 4px;
-    padding: 4px 10px;
-    background: rgba(0, 0, 0, 0.6);
-    backdrop-filter: blur(10px);
-    border-radius: var(--radius-full);
-    font-size: 12px;
-    font-weight: 500;
-    color: white;
-}
-
-.badge-views svg {
-    width: 14px;
-    height: 14px;
 }
 
 .badge-chats {
     display: flex;
     align-items: center;
     gap: 4px;
-    padding: 4px 10px;
-    background: rgba(99, 102, 241, 0.8);
-    backdrop-filter: blur(10px);
+    padding: 3px 8px;
+    background: rgba(139, 92, 246, 0.9);
     border-radius: var(--radius-full);
-    font-size: 12px;
+    font-size: 11px;
     font-weight: 500;
     color: white;
 }
 
 .badge-chats svg {
-    width: 14px;
-    height: 14px;
+    width: 12px;
+    height: 12px;
 }
 
 .card-content {
-    padding: 12px;
+    padding: 10px 12px;
 }
 
 .card-creator {
     display: flex;
     align-items: center;
-    gap: 6px;
-    margin-bottom: 6px;
+    gap: 4px;
+    margin-bottom: 8px;
     font-size: 12px;
     color: var(--text-muted);
 }
 
 .card-creator-name {
     font-weight: 500;
+    color: #a78bfa;
 }
 
 .verified-badge {
-    color: var(--accent-primary);
-}
-
-.card-title {
-    font-size: 14px;
-    font-weight: 600;
-    margin-bottom: 6px;
-    color: #ffffff;
-    line-height: 1.4;
-    display: -webkit-box;
-    -webkit-line-clamp: 1;
-    -webkit-box-orient: vertical;
-    overflow: hidden;
-    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+    color: #22d3ee;
+    font-size: 10px;
 }
 
 .card-description {
@@ -784,78 +728,57 @@ img {
     line-height: 1.5;
     margin-bottom: 10px;
     display: -webkit-box;
-    -webkit-line-clamp: 2;
+    -webkit-line-clamp: 3;
     -webkit-box-orient: vertical;
     overflow: hidden;
+    opacity: 0.9;
 }
 
 .card-tags {
     display: flex;
     flex-wrap: wrap;
     gap: 6px;
-    margin-bottom: 12px;
+    margin-bottom: 10px;
 }
 
 .card-tag {
     display: inline-flex;
     align-items: center;
     gap: 4px;
-    padding: 4px 10px;
-    background: linear-gradient(135deg, rgba(99, 102, 241, 0.15) 0%, rgba(139, 92, 246, 0.15) 100%);
-    border: 1px solid rgba(99, 102, 241, 0.3);
+    padding: 3px 8px;
+    background: rgba(167, 139, 250, 0.15);
+    border: 1px solid rgba(167, 139, 250, 0.3);
     border-radius: var(--radius-full);
     font-size: 11px;
     font-weight: 500;
     color: #c4b5fd;
-    transition: all var(--transition-fast);
-}
-
-.card-tag:hover {
-    background: linear-gradient(135deg, rgba(99, 102, 241, 0.25) 0%, rgba(139, 92, 246, 0.25) 100%);
-    border-color: rgba(139, 92, 246, 0.5);
-    color: #ddd6fe;
 }
 
 .card-tag svg {
-    width: 12px;
-    height: 12px;
+    width: 11px;
+    height: 11px;
 }
 
 .card-footer {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding-top: 12px;
-    border-top: 1px solid var(--border-color);
+    padding-top: 8px;
+    border-top: 1px solid rgba(167, 139, 250, 0.2);
 }
 
 .card-tokens {
     display: flex;
     align-items: center;
     gap: 4px;
-    font-size: 12px;
+    font-size: 11px;
     color: var(--text-muted);
 }
 
 .card-tokens svg {
-    width: 14px;
-    height: 14px;
-    color: var(--accent-primary);
-}
-
-.card-rating {
-    display: flex;
-    align-items: center;
-    gap: 4px;
-    font-size: 12px;
-    font-weight: 500;
-    color: #fbbf24;
-}
-
-.card-rating svg {
-    width: 14px;
-    height: 14px;
-    fill: currentColor;
+    width: 12px;
+    height: 12px;
+    color: #22c55e;
 }
 
 /* ===== Load More ===== */
