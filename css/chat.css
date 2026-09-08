@@ -182,18 +182,6 @@
     gap: 16px;
 }
 
-/* Disclaimer */
-.chat-disclaimer {
-    text-align: center;
-    font-size: 13px;
-    color: #b5bac1;
-    background: rgba(139, 92, 246, 0.15);
-    border: 1px solid rgba(139, 92, 246, 0.3);
-    border-radius: 8px;
-    padding: 10px 16px;
-    margin-bottom: 8px;
-}
-
 /* ===== Message Styles ===== */
 .message {
     display: flex;
