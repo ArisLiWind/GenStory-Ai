@@ -955,24 +955,365 @@
 
 @media (max-width: 768px) {
     .char-detail {
-        padding: 16px 12px;
+        padding: 12px 12px 24px;
     }
     
     .char-detail-container {
         grid-template-columns: 1fr;
-        gap: 24px;
+        gap: 16px;
     }
     
     .char-info {
         position: static;
     }
     
+    .char-card {
+        box-shadow: none;
+    }
+    
     .char-card-title {
-        font-size: 24px;
-        padding: 14px 16px 10px;
+        font-size: 20px;
+        padding: 12px 14px 8px;
+    }
+    
+    .char-image-wrapper {
+        margin: 0 12px 12px;
+        aspect-ratio: 3/4;
+    }
+    
+    .char-stats-badge {
+        top: 8px;
+        right: 8px;
+        padding: 3px 8px;
+        gap: 6px;
+    }
+    
+    .char-stat-badge {
+        font-size: 11px;
+    }
+    
+    .char-stat-badge svg {
+        width: 12px;
+        height: 12px;
+    }
+    
+    .char-creator-row {
+        padding: 0 14px 10px;
+        gap: 8px;
+    }
+    
+    .char-creator-avatar {
+        width: 30px;
+        height: 30px;
+        font-size: 12px;
+    }
+    
+    .char-creator-name {
+        font-size: 12px;
+    }
+    
+    .char-description-box {
+        padding: 0 14px 12px;
+        font-size: 12px;
+        line-height: 1.5;
+    }
+    
+    .char-date-info {
+        padding: 0 14px 10px;
+        gap: 6px;
+    }
+    
+    .char-date-tag {
+        font-size: 10px;
+        padding: 3px 8px;
+    }
+    
+    .char-tags-row {
+        padding: 0 14px 10px;
+        gap: 4px;
+    }
+    
+    .char-tag {
+        font-size: 10px;
+        padding: 3px 8px;
+    }
+    
+    .char-agent-badge {
+        margin: 0 14px 10px;
+        font-size: 11px;
+        padding: 5px 10px;
+    }
+    
+    .char-persona-selector {
+        margin: 0 14px 10px;
+        padding: 8px 12px;
+    }
+    
+    .char-persona-icon {
+        font-size: 16px;
+    }
+    
+    .char-persona-label {
+        font-size: 10px;
+    }
+    
+    .char-persona-name {
+        font-size: 12px;
+    }
+    
+    .char-persona-arrow svg {
+        width: 14px;
+        height: 14px;
+    }
+    
+    .char-chat-btn-wrapper {
+        padding: 0 14px 8px;
+    }
+    
+    .btn-chat-primary {
+        padding: 10px 20px;
+        font-size: 13px;
+    }
+    
+    .btn-chat-primary svg {
+        width: 14px;
+        height: 14px;
+    }
+    
+    .char-favorite-btn-wrapper {
+        padding: 0 14px 14px;
+    }
+    
+    .btn-favorite {
+        padding: 8px 20px;
+        font-size: 12px;
+    }
+    
+    .btn-favorite svg {
+        width: 14px;
+        height: 14px;
+    }
+    
+    .btn-continue-chat {
+        padding: 8px 20px;
+        font-size: 12px;
+        margin-bottom: 12px !important;
+    }
+    
+    /* 右侧内容 */
+    .char-content {
+        gap: 16px;
+    }
+    
+    .char-section {
+        margin-bottom: 16px;
+    }
+    
+    .char-section-title {
+        font-size: 12px;
+        margin-bottom: 10px;
+    }
+    
+    .char-content-header {
+        margin-bottom: 4px;
+    }
+    
+    .char-content-title {
+        font-size: 18px;
+    }
+    
+    .char-content-title-count {
+        font-size: 13px;
+    }
+    
+    .char-sort-tab {
+        padding: 5px 12px;
+        font-size: 12px;
+    }
+    
+    /* 已发布聊天 */
+    .published-chats-scroll {
+        gap: 10px;
     }
     
     .published-chat-card {
-        width: 240px;
+        width: 220px;
+        padding: 10px;
+    }
+    
+    .published-chat-header {
+        font-size: 12px;
+        margin-bottom: 6px;
+    }
+    
+    .published-chat-preview {
+        font-size: 11px;
+        margin-bottom: 8px;
+    }
+    
+    .published-chat-footer {
+        font-size: 10px;
+    }
+    
+    .published-chat-creator-avatar {
+        width: 16px;
+        height: 16px;
+        font-size: 8px;
+    }
+    
+    /* Lorebook */
+    .lorebook-card {
+        padding: 12px;
+        margin-bottom: 10px;
+    }
+    
+    .lorebook-title {
+        font-size: 13px;
+    }
+    
+    .lorebook-badge {
+        font-size: 10px;
+        padding: 2px 6px;
+    }
+    
+    .lorebook-desc {
+        font-size: 12px;
+        margin-bottom: 8px;
+    }
+    
+    .lorebook-footer {
+        font-size: 10px;
+    }
+    
+    /* 音乐播放器 */
+    .music-player {
+        margin-bottom: 12px;
+        font-size: 12px;
+        gap: 10px;
+    }
+    
+    .music-play-btn {
+        width: 22px;
+        height: 22px;
+    }
+    
+    /* 手风琴 */
+    .char-accordion {
+        margin-bottom: 6px;
+    }
+    
+    .char-accordion-header {
+        padding: 10px 14px;
+    }
+    
+    .char-accordion-title {
+        font-size: 12px;
+    }
+    
+    .char-accordion-token {
+        font-size: 11px;
+    }
+    
+    .char-accordion-arrow svg {
+        width: 14px;
+        height: 14px;
+    }
+    
+    .char-accordion-body {
+        padding: 0 14px 14px;
+        font-size: 12px;
+        line-height: 1.6;
+        padding-top: 10px;
+    }
+    
+    /* 评论区 */
+    .char-comments-section {
+        margin-top: 12px;
+    }
+    
+    .char-comment-input-wrapper {
+        margin-bottom: 14px;
+    }
+    
+    .char-comment-textarea {
+        min-height: 50px;
+        padding: 10px 12px;
+        font-size: 13px;
+    }
+    
+    .char-comment-submit-btn {
+        padding: 7px 20px;
+        font-size: 12px;
+    }
+    
+    .char-comments-list {
+        gap: 10px;
+    }
+    
+    .char-comment-item {
+        padding: 12px 14px;
+    }
+    
+    .char-comment-avatar {
+        width: 28px;
+        height: 28px;
+        font-size: 11px;
+    }
+    
+    .char-comment-username {
+        font-size: 12px;
+    }
+    
+    .char-comment-date {
+        font-size: 10px;
+    }
+    
+    .char-comment-content {
+        font-size: 13px;
+        line-height: 1.5;
+        margin-bottom: 8px;
+    }
+    
+    .char-comment-actions {
+        gap: 12px;
+    }
+    
+    .char-comment-like-btn,
+    .char-comment-reply-btn {
+        font-size: 11px;
+    }
+    
+    .char-comment-like-btn svg,
+    .char-comment-reply-btn svg {
+        width: 13px;
+        height: 13px;
+    }
+    
+    .char-reply-item {
+        padding-left: 36px;
+    }
+    
+    .char-reply-avatar {
+        width: 22px;
+        height: 22px;
+        font-size: 9px;
+    }
+    
+    .char-reply-username {
+        font-size: 11px;
+    }
+    
+    .char-reply-content {
+        font-size: 12px;
+        padding-left: 28px;
+    }
+    
+    .char-load-more {
+        margin-top: 14px;
+    }
+    
+    .char-load-more-btn {
+        padding: 8px 20px;
+        font-size: 12px;
     }
 }

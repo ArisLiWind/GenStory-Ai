@@ -1307,6 +1307,48 @@ body.light-theme .filter-btn-mobile {
         display: inline-block;
     }
     
+    .nav-container {
+        padding: 10px 16px;
+    }
+    
+    .nav-main-row {
+        gap: 12px;
+    }
+    
+    .logo {
+        gap: 8px;
+    }
+    
+    .logo-icon {
+        width: 30px;
+        height: 30px;
+    }
+    
+    .logo-text-img {
+        height: 22px;
+    }
+    
+    .user-menu {
+        gap: 8px;
+    }
+    
+    .btn-create {
+        padding: 6px 12px;
+        font-size: 12px;
+        gap: 4px;
+    }
+    
+    .btn-create svg {
+        width: 14px;
+        height: 14px;
+    }
+    
+    .user-avatar {
+        width: 32px;
+        height: 32px;
+        font-size: 13px;
+    }
+    
     .nav-search-row {
         display: flex;
         align-items: center;
@@ -1466,15 +1508,68 @@ body.light-theme .filter-btn-mobile {
     
     .character-grid {
         grid-template-columns: repeat(2, 1fr);
-        gap: 12px;
+        gap: 10px;
+    }
+    
+    .card-header {
+        padding: 6px 8px;
+        font-size: 12px;
+    }
+    
+    .card-image-wrapper {
+        padding-top: 120%;
+    }
+    
+    .card-content {
+        padding: 6px 8px 8px;
+    }
+    
+    .card-creator {
+        font-size: 10px;
+        margin-bottom: 4px;
+    }
+    
+    .card-creator-name {
+        font-size: 10px;
     }
     
     .card-description {
-        -webkit-line-clamp: 2;
+        display: none;
     }
     
     .card-tags {
         display: none;
+    }
+    
+    .card-footer {
+        padding-top: 4px;
+        border-top-width: 1px;
+    }
+    
+    .card-tokens {
+        font-size: 10px;
+    }
+    
+    .card-tokens svg {
+        width: 10px;
+        height: 10px;
+    }
+    
+    .badge-chats {
+        font-size: 10px;
+        padding: 2px 6px;
+        gap: 2px;
+    }
+    
+    .badge-chats svg {
+        width: 10px;
+        height: 10px;
+    }
+    
+    .card-badges {
+        top: 6px;
+        right: 6px;
+        gap: 4px;
     }
     
     .footer-inner {
@@ -1490,43 +1585,147 @@ body.light-theme .filter-btn-mobile {
 
 @media (max-width: 480px) {
     .nav-container {
-        padding: 10px 16px;
+        padding: 8px 12px;
+    }
+    
+    .logo-icon {
+        width: 28px;
+        height: 28px;
+    }
+    
+    .logo-text-img {
+        height: 20px;
+    }
+    
+    .btn-create {
+        padding: 5px 10px;
+        font-size: 11px;
+    }
+    
+    .user-avatar {
+        width: 30px;
+        height: 30px;
+        font-size: 12px;
     }
     
     .container {
-        padding: 0 16px;
+        padding: 0 12px;
+    }
+    
+    .main-content {
+        padding-top: 70px;
+        padding-bottom: 32px;
     }
     
     .hero {
-        padding: 140px 16px 40px;
+        padding: 100px 12px 32px;
+    }
+    
+    .hero-title {
+        font-size: 24px;
+    }
+    
+    .hero-subtitle {
+        font-size: 13px;
     }
     
     .hero-stats {
         flex-direction: row;
-        gap: 20px;
+        gap: 16px;
+        margin-top: 20px;
+    }
+    
+    .stat-number {
+        font-size: 18px;
+    }
+    
+    .stat-label {
+        font-size: 10px;
+    }
+    
+    .category-section {
+        margin-bottom: 10px;
+    }
+    
+    .category-tags {
+        gap: 4px;
+    }
+    
+    .category-tag {
+        padding: 4px 10px;
+        font-size: 11px;
+    }
+    
+    .filter-bar {
+        gap: 8px;
+        margin-bottom: 12px;
+    }
+    
+    .filter-tab {
+        padding: 5px 12px;
+        font-size: 12px;
+    }
+    
+    .sort-tab {
+        padding: 5px 10px;
+        font-size: 11px;
     }
     
     .character-grid {
         grid-template-columns: repeat(2, 1fr);
-        gap: 12px;
+        gap: 8px;
+    }
+    
+    .card-header {
+        padding: 5px 6px;
+        font-size: 11px;
     }
     
     .card-content {
-        padding: 12px;
+        padding: 5px 6px 6px;
     }
     
-    .card-title {
-        font-size: 14px;
+    .card-creator {
+        font-size: 9px;
+        margin-bottom: 3px;
     }
     
-    .card-description {
-        display: none;
+    .card-creator-name {
+        font-size: 9px;
+    }
+    
+    .card-footer {
+        padding-top: 3px;
+    }
+    
+    .card-tokens {
+        font-size: 9px;
+    }
+    
+    .card-tokens svg {
+        width: 9px;
+        height: 9px;
+    }
+    
+    .badge-chats {
+        font-size: 9px;
+        padding: 1px 5px;
+    }
+    
+    .badge-chats svg {
+        width: 9px;
+        height: 9px;
+    }
+    
+    .card-badges {
+        top: 4px;
+        right: 4px;
     }
     
     .filter-left {
         flex-direction: column;
         align-items: flex-start;
-        gap: 12px;
+        gap: 10px;
     }
     
     .footer-inner {
@@ -1539,7 +1738,7 @@ body.light-theme .filter-btn-mobile {
     
     .features,
     .cta-section {
-        padding: 48px 0;
+        padding: 40px 0;
     }
 }
 
