@@ -1,40 +1,10 @@
-// ===== Chat Page =====
+// ===== Chat Page - Janitor AI Style =====
 
 let currentCharacter = null;
 let currentChatId = null;
 let messages = [];
 let isSending = false;
-
-// Mock chat list
-const mockChats = [
-    {
-        id: 'chat1',
-        characterId: 'demo_mafia_boss',
-        characterName: 'Mafia Boss',
-        characterAvatar: '',
-        preview: '你好，我知道你在找什么...',
-        time: '刚刚',
-        unread: 0
-    },
-    {
-        id: 'chat2',
-        characterId: 'demo_mafia_boss',
-        characterName: 'Mafia Boss',
-        characterAvatar: '',
-        preview: '这件事你最好不要插手...',
-        time: '昨天',
-        unread: 0
-    },
-    {
-        id: 'chat3',
-        characterId: 'demo_witch',
-        characterName: '神秘女巫',
-        characterAvatar: '',
-        preview: '命运的齿轮已经开始转动了',
-        time: '3天前',
-        unread: 2
-    }
-];
+let charInfoExpanded = false;
 
 document.addEventListener('DOMContentLoaded', () => {
     initChatPage();
@@ -47,8 +17,9 @@ function initChatPage() {
     if (characterId) {
         loadCharacterAndStartChat(characterId);
     } else {
-        // No character selected, show empty state
-        renderChatList();
+        // Fallback to mock character
+        loadMockCharacter('demo_mafia_boss');
+        startNewChat();
     }
     
     setupEventListeners();
@@ -56,38 +27,56 @@ function initChatPage() {
 
 function setupEventListeners() {
     // Send button
-    document.getElementById('sendBtn').addEventListener('click', sendMessage);
+    const sendBtn = document.getElementById('sendBtn');
+    if (sendBtn) {
+        sendBtn.addEventListener('click', sendMessage);
+    }
     
     // Enter to send (Shift+Enter for new line)
     const chatInput = document.getElementById('chatInput');
-    chatInput.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter' && !e.shiftKey) {
-            e.preventDefault();
-            sendMessage();
-        }
-    });
-    
-    // Input event to adjust height
-    chatInput.addEventListener('input', autoResizeTextarea);
-    
-    // Sidebar toggle
-    window.toggleSidebar = function() {
-        const sidebar = document.getElementById('chatSidebar');
-        sidebar.classList.toggle('open');
-    };
-    
-    // Go to character page
-    window.goToCharacter = function() {
-        if (currentCharacter) {
-            window.location.href = 'character.html?id=' + currentCharacter.id;
-        }
-    };
+    if (chatInput) {
+        chatInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                sendMessage();
+            }
+        });
+        
+        // Input event to adjust height
+        chatInput.addEventListener('input', autoResizeTextarea);
+    }
 }
 
+// ===== Navigation =====
+window.goBack = function() {
+    if (currentCharacter) {
+        window.location.href = 'character.html?id=' + currentCharacter.id;
+    } else {
+        window.location.href = 'index.html';
+    }
+};
+
+window.toggleCharacterInfo = function() {
+    const panel = document.getElementById('charInfoPanel');
+    charInfoExpanded = !charInfoExpanded;
+    
+    if (charInfoExpanded) {
+        panel.style.display = 'block';
+        setTimeout(() => {
+            panel.style.maxHeight = '200px';
+        }, 10);
+    } else {
+        panel.style.maxHeight = '0';
+        setTimeout(() => {
+            panel.style.display = 'none';
+        }, 300);
+    }
+};
+
+// ===== Character Loading =====
 function loadCharacterAndStartChat(characterId) {
     // Try to load from API, fallback to mock
     loadMockCharacter(characterId);
-    renderChatList();
     startNewChat();
 }
 
@@ -98,7 +87,9 @@ function loadMockCharacter(id) {
             title: 'Mafia Boss',
             chatName: 'Mafia Boss',
             image: '',
-            firstMessage: '他从阴影中缓缓走出，指尖的雪茄冒出袅袅烟雾。锐利的目光如同猎鹰般锁定着你，空气中弥漫着压迫感。\n\n"我听说...你有我想要的情报。"他的声音低沉而冰冷，"不要试图对我撒谎，我知道的可能比你想象的更多。"'
+            description: '一位认为你掌握着他敌人情报的黑手党老大。无论你是否无辜，他都在密切监视着你。',
+            firstMessage: 'A member of the mafia pushed you into an interrogation chair as a man clad in a black suit walked into the room.\n\nHis grayish-green eyes focused on you as he sat down on the other side of the table. He moved with elegance, poise and power. He didn\'t smile or even allow a bit of comforting warmth as he stared. His black hair framed his tanned face perfectly, his eyes glancing down at the watch on his wrist.\n\n"So you must know why you\'re here?" he hummed coldly. "I suggest not lying. It\'s boring for me and it won\'t go well for you. Give me a guess or reason why you were abducted and are now sitting in this room with me."',
+            creatorVerified: true
         };
     } else {
         currentCharacter = {
@@ -106,105 +97,31 @@ function loadMockCharacter(id) {
             title: '角色名称',
             chatName: '角色',
             image: '',
-            firstMessage: '你好，很高兴见到你。'
+            description: '角色描述',
+            firstMessage: '你好，很高兴见到你。',
+            creatorVerified: false
         };
     }
     
     // Update header
-    document.getElementById('headerName').textContent = currentCharacter.title;
-    document.getElementById('headerStatus').textContent = '在线';
-    const headerAvatar = document.getElementById('headerAvatar');
-    if (currentCharacter.image) {
-        headerAvatar.src = currentCharacter.image;
-        headerAvatar.alt = currentCharacter.title;
+    const headerName = document.getElementById('headerCharName');
+    if (headerName) {
+        headerName.textContent = currentCharacter.title;
+    }
+    
+    // Update character info panel
+    const panelName = document.getElementById('panelCharName');
+    const panelDesc = document.getElementById('panelCharDesc');
+    const panelAvatar = document.getElementById('panelAvatar');
+    
+    if (panelName) panelName.textContent = currentCharacter.title;
+    if (panelDesc) panelDesc.textContent = currentCharacter.description;
+    if (panelAvatar && currentCharacter.image) {
+        panelAvatar.src = currentCharacter.image;
     }
 }
 
-function renderChatList() {
-    const chatList = document.getElementById('chatList');
-    
-    // Group by date
-    const today = mockChats.slice(0, 1);
-    const yesterday = mockChats.slice(1, 2);
-    const earlier = mockChats.slice(2);
-    
-    let html = '';
-    
-    if (today.length > 0) {
-        html += `
-            <div class="chat-list-section">
-                <div class="chat-list-section-title">今天</div>
-                ${today.map(chat => renderChatItem(chat)).join('')}
-            </div>
-        `;
-    }
-    
-    if (yesterday.length > 0) {
-        html += `
-            <div class="chat-list-section">
-                <div class="chat-list-section-title">昨天</div>
-                ${yesterday.map(chat => renderChatItem(chat)).join('')}
-            </div>
-        `;
-    }
-    
-    if (earlier.length > 0) {
-        html += `
-            <div class="chat-list-section">
-                <div class="chat-list-section-title">更早</div>
-                ${earlier.map(chat => renderChatItem(chat)).join('')}
-            </div>
-        `;
-    }
-    
-    chatList.innerHTML = html;
-    
-    // Bind click events
-    document.querySelectorAll('.chat-item').forEach(item => {
-        item.addEventListener('click', () => {
-            const chatId = item.dataset.id;
-            selectChat(chatId);
-        });
-    });
-}
-
-function renderChatItem(chat) {
-    const avatarText = chat.characterName.charAt(0).toUpperCase();
-    const avatarHtml = chat.characterAvatar 
-        ? `<img src="${chat.characterAvatar}" alt="${chat.characterName}">`
-        : avatarText;
-    
-    return `
-        <div class="chat-item ${chat.id === currentChatId ? 'active' : ''}" data-id="${chat.id}">
-            <div class="chat-item-avatar">${avatarHtml}</div>
-            <div class="chat-item-info">
-                <div class="chat-item-name">${chat.characterName}</div>
-                <div class="chat-item-preview">${chat.preview}</div>
-            </div>
-            <div class="chat-item-time">${chat.time}</div>
-        </div>
-    `;
-}
-
-function selectChat(chatId) {
-    currentChatId = chatId;
-    renderChatList();
-    
-    // Load chat messages (mock)
-    messages = [
-        {
-            id: 'm1',
-            role: 'bot',
-            name: currentCharacter?.title || '角色',
-            content: currentCharacter?.firstMessage || '你好！',
-            timestamp: Date.now() - 3600000
-        }
-    ];
-    
-    renderMessages();
-    showInputArea();
-}
-
+// ===== Chat Functions =====
 function startNewChat() {
     currentChatId = 'new_' + Date.now();
     
@@ -215,36 +132,31 @@ function startNewChat() {
             role: 'bot',
             name: currentCharacter?.title || '角色',
             content: currentCharacter?.firstMessage || '你好！',
-            timestamp: Date.now()
+            timestamp: Date.now(),
+            verified: currentCharacter?.creatorVerified
         }
     ];
     
     renderMessages();
-    showInputArea();
-}
-
-function showInputArea() {
-    const inputArea = document.getElementById('chatInputArea');
-    inputArea.style.display = 'block';
 }
 
 function renderMessages() {
-    const messagesContainer = document.getElementById('chatMessages');
+    const messagesContainer = document.getElementById('messagesList');
+    
+    if (!messagesContainer) return;
     
     if (messages.length === 0) {
-        messagesContainer.innerHTML = `
-            <div class="chat-empty">
-                <div class="chat-empty-icon">💬</div>
-                <div>选择一个角色开始聊天</div>
-            </div>
-        `;
+        messagesContainer.innerHTML = '';
         return;
     }
     
     messagesContainer.innerHTML = messages.map(msg => renderMessage(msg)).join('');
     
     // Scroll to bottom
-    messagesContainer.scrollTop = messagesContainer.scrollHeight;
+    const msgArea = document.querySelector('.messages-area');
+    if (msgArea) {
+        msgArea.scrollTop = msgArea.scrollHeight;
+    }
 }
 
 function renderMessage(msg) {
@@ -255,7 +167,16 @@ function renderMessage(msg) {
         <div class="message ${isUser ? 'user' : 'bot'}">
             <div class="message-avatar">${avatarText}</div>
             <div class="message-content">
-                ${!isUser ? `<div class="message-name">${msg.name}</div>` : ''}
+                ${!isUser ? `
+                    <div class="message-header">
+                        <span class="message-name">${msg.name}</span>
+                        ${msg.verified ? `
+                            <svg class="message-verified" viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
+                            </svg>
+                        ` : ''}
+                    </div>
+                ` : ''}
                 <div class="message-bubble">${escapeHtml(msg.content)}</div>
                 <div class="message-actions">
                     ${!isUser ? `
@@ -276,13 +197,10 @@ function renderMessage(msg) {
                                 <path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"/>
                             </svg>
                         </button>
-                        <button class="message-action-btn" title="分享对话" onclick="shareMessage('${msg.id}')">
+                        <button class="message-action-btn" title="删除" onclick="deleteMessage('${msg.id}')">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <circle cx="18" cy="5" r="3"/>
-                                <circle cx="6" cy="12" r="3"/>
-                                <circle cx="18" cy="19" r="3"/>
-                                <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/>
-                                <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
+                                <polyline points="3 6 5 6 21 6"/>
+                                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
                             </svg>
                         </button>
                     ` : `
@@ -346,7 +264,8 @@ async function sendMessage() {
                 role: 'bot',
                 name: currentCharacter.title,
                 content: res.data.reply,
-                timestamp: Date.now()
+                timestamp: Date.now(),
+                verified: currentCharacter.creatorVerified
             };
             messages.push(botMsg);
         } else {
@@ -356,7 +275,8 @@ async function sendMessage() {
                 role: 'bot',
                 name: currentCharacter.title,
                 content: generateMockResponse(text),
-                timestamp: Date.now()
+                timestamp: Date.now(),
+                verified: currentCharacter.creatorVerified
             };
             messages.push(botMsg);
         }
@@ -370,7 +290,8 @@ async function sendMessage() {
             role: 'bot',
             name: currentCharacter.title,
             content: generateMockResponse(text),
-            timestamp: Date.now()
+            timestamp: Date.now(),
+            verified: currentCharacter.creatorVerified
         };
         messages.push(botMsg);
     }
@@ -380,7 +301,9 @@ async function sendMessage() {
 }
 
 function showTypingIndicator() {
-    const messagesContainer = document.getElementById('chatMessages');
+    const messagesContainer = document.getElementById('messagesList');
+    if (!messagesContainer) return;
+    
     const typingEl = document.createElement('div');
     typingEl.id = 'typingIndicator';
     typingEl.className = 'typing-indicator';
@@ -397,7 +320,11 @@ function showTypingIndicator() {
     `;
     
     messagesContainer.appendChild(typingEl);
-    messagesContainer.scrollTop = messagesContainer.scrollHeight;
+    
+    const msgArea = document.querySelector('.messages-area');
+    if (msgArea) {
+        msgArea.scrollTop = msgArea.scrollHeight;
+    }
 }
 
 function removeTypingIndicator() {
@@ -419,17 +346,17 @@ function generateMockResponse(userMessage) {
 
 function autoResizeTextarea() {
     const input = document.getElementById('chatInput');
+    if (!input) return;
+    
     input.style.height = 'auto';
-    input.style.height = Math.min(input.scrollHeight, 150) + 'px';
+    input.style.height = Math.min(input.scrollHeight, 200) + 'px';
 }
 
 // ===== Message Actions =====
 function regenerateMessage(msgId) {
-    // Mock regeneration
     const msg = messages.find(m => m.id === msgId);
     if (!msg || msg.role !== 'bot') return;
     
-    // Remove the message and show typing
     const index = messages.findIndex(m => m.id === msgId);
     if (index > -1) {
         messages.splice(index, 1);
@@ -445,7 +372,8 @@ function regenerateMessage(msgId) {
             role: 'bot',
             name: currentCharacter.title,
             content: generateMockResponse('regenerate'),
-            timestamp: Date.now()
+            timestamp: Date.now(),
+            verified: currentCharacter.creatorVerified
         };
         messages.splice(index, 0, newMsg);
         renderMessages();
@@ -456,20 +384,13 @@ function copyMessage(msgId) {
     const msg = messages.find(m => m.id === msgId);
     if (msg) {
         navigator.clipboard.writeText(msg.content).then(() => {
-            // Could show a toast
             console.log('Message copied');
         }).catch(() => {});
     }
 }
 
 function likeMessage(msgId) {
-    // Mock like
     console.log('Liked message:', msgId);
-}
-
-function shareMessage(msgId) {
-    // Mock share
-    alert('分享功能开发中...');
 }
 
 function editMessage(msgId) {
