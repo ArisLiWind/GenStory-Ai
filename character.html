@@ -189,35 +189,246 @@
                 </div>
             </aside>
 
-            <!-- 右侧：社区评论/已发布聊天 -->
+            <!-- 右侧：详细信息 (Janitor AI 风格) -->
             <div class="char-content">
-                <div class="char-content-header">
-                    <h2 class="char-content-title">
+                <!-- Persona 选择器 -->
+                <div class="char-persona-selector">
+                    <div class="char-persona-info">
+                        <div class="char-persona-icon">👤</div>
+                        <div class="char-persona-text">
+                            <span class="char-persona-label">Persona</span>
+                            <span class="char-persona-name">Default</span>
+                        </div>
+                    </div>
+                    <div class="char-persona-arrow">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <polyline points="6 9 12 15 18 9"/>
+                        </svg>
+                    </div>
+                </div>
+
+                <!-- 继续聊天按钮 -->
+                <button class="btn-continue-chat" style="width:100%;margin-bottom:16px;">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+                    </svg>
+                    继续之前的聊天
+                </button>
+
+                <!-- 已发布聊天 -->
+                <div class="char-section">
+                    <div class="char-section-title">
                         已发布聊天
-                        <span class="char-content-title-count" id="commentCount">0</span>
-                    </h2>
-                    <div class="char-sort-tabs">
-                        <button class="char-sort-tab active" data-sort="likes">最高</button>
-                        <button class="char-sort-tab" data-sort="newest">最新</button>
+                        <span class="char-section-title-count" id="publishedChatsCount">128</span>
+                    </div>
+                    <div class="published-chats-scroll">
+                        <div class="published-chat-card">
+                            <div class="published-chat-header">第一次见面</div>
+                            <div class="published-chat-preview">"你以为你能轻易逃脱我的手掌心吗？"他缓缓走近，冰冷的目光让你不寒而栗...</div>
+                            <div class="published-chat-footer">
+                                <div class="published-chat-creator">
+                                    <div class="published-chat-creator-avatar">星</div>
+                                    <span>@星河入梦</span>
+                                </div>
+                                <span>· 3天前</span>
+                            </div>
+                        </div>
+                        <div class="published-chat-card">
+                            <div class="published-chat-header">办公室对峙</div>
+                            <div class="published-chat-preview">他坐在真皮办公椅上，手指轻轻敲击着桌面，"说吧，你到底知道多少？"</div>
+                            <div class="published-chat-footer">
+                                <div class="published-chat-creator">
+                                    <div class="published-chat-creator-avatar">月</div>
+                                    <span>@月光宝盒</span>
+                                </div>
+                                <span>· 1周前</span>
+                            </div>
+                        </div>
+                        <div class="published-chat-card">
+                            <div class="published-chat-header">雨夜相遇</div>
+                            <div class="published-chat-preview">滂沱大雨中，他的黑色轿车停在你面前，车窗缓缓降下，"上车。"</div>
+                            <div class="published-chat-footer">
+                                <div class="published-chat-creator">
+                                    <div class="published-chat-creator-avatar">夜</div>
+                                    <span>@夜行者</span>
+                                </div>
+                                <span>· 2周前</span>
+                            </div>
+                        </div>
+                        <div class="published-chat-card">
+                            <div class="published-chat-header">意外的温柔</div>
+                            <div class="published-chat-preview">当你受伤时，他表面上冷冰冰的，却悄悄为你处理伤口，动作意外地轻柔...</div>
+                            <div class="published-chat-footer">
+                                <div class="published-chat-creator">
+                                    <div class="published-chat-creator-avatar">南</div>
+                                    <span>@南风知我意</span>
+                                </div>
+                                <span>· 3周前</span>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
-                <!-- 发表评论 -->
-                <div class="char-comment-input-wrapper">
-                    <textarea class="char-comment-textarea" id="commentInput" placeholder="分享你与这个角色的有趣对话..." maxlength="500"></textarea>
-                    <div class="char-comment-submit-row">
-                        <button class="char-comment-submit-btn" id="submitCommentBtn" disabled>发表评论</button>
+                <!-- Lorebook -->
+                <div class="char-section">
+                    <div class="char-section-title">
+                        Lorebook
+                        <span class="char-section-title-count">3 个条目</span>
+                    </div>
+                    <div class="lorebook-card">
+                        <div class="lorebook-header">
+                            <span class="lorebook-title">关于黑手党家族</span>
+                            <span class="lorebook-badge">384 Token</span>
+                        </div>
+                        <div class="lorebook-desc">他是意大利黑手党家族的现任头目，接管家族业务已有5年。家族主要从事地下交易和情报收集...</div>
+                        <div class="lorebook-footer">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14">
+                                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                                <circle cx="12" cy="12" r="3"/>
+                            </svg>
+                            <span>2.3万 次触发</span>
+                        </div>
+                    </div>
+                    <div class="lorebook-card">
+                        <div class="lorebook-header">
+                            <span class="lorebook-title">他的过去</span>
+                            <span class="lorebook-badge">256 Token</span>
+                        </div>
+                        <div class="lorebook-desc">年轻时曾是街头混混，凭借过人的胆识和智谋一步步爬到今天的位置。他的上位之路充满了血腥与背叛...</div>
+                        <div class="lorebook-footer">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14">
+                                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                                <circle cx="12" cy="12" r="3"/>
+                            </svg>
+                            <span>1.8万 次触发</span>
+                        </div>
                     </div>
                 </div>
 
-                <!-- 评论列表 -->
-                <div class="char-comments-list" id="commentsList">
-                    <!-- 由 JS 动态生成 -->
+                <!-- 音乐播放器 -->
+                <div class="char-section">
+                    <div class="char-section-title">背景音乐</div>
+                    <div class="music-player">
+                        <button class="music-play-btn">
+                            <svg viewBox="0 0 24 24" fill="currentColor">
+                                <polygon points="5 3 19 12 5 21 5 3"/>
+                            </svg>
+                        </button>
+                        <div class="music-title">Midnight Rendezvous - 悬疑氛围</div>
+                    </div>
                 </div>
 
-                <!-- 加载更多 -->
-                <div class="char-load-more" id="loadMoreSection" style="display:none;">
-                    <button class="char-load-more-btn" id="loadMoreBtn">加载更多</button>
+                <!-- 手风琴面板 -->
+                <div class="char-section">
+                    <div class="char-accordion open">
+                        <div class="char-accordion-header">
+                            <span class="char-accordion-title">
+                                Persona
+                                <span class="char-accordion-token">786 Token</span>
+                            </span>
+                            <span class="char-accordion-arrow">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <polyline points="6 9 12 15 18 9"/>
+                                </svg>
+                            </span>
+                        </div>
+                        <div class="char-accordion-content">
+                            <div class="char-accordion-body">
+                                你是一位冷酷无情的黑手党老大，在地下世界拥有极高的威望和权力。你行事果断，从不拖泥带水，对敌人毫不留情。然而在你冰冷的外表下，隐藏着一段不为人知的过去...
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="char-accordion">
+                        <div class="char-accordion-header">
+                            <span class="char-accordion-title">
+                                Scenario
+                                <span class="char-accordion-token">512 Token</span>
+                            </span>
+                            <span class="char-accordion-arrow">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <polyline points="6 9 12 15 18 9"/>
+                                </svg>
+                            </span>
+                        </div>
+                        <div class="char-accordion-content">
+                            <div class="char-accordion-body">
+                                你掌握了一些关于他敌对势力的情报，这些情报可能会影响到整个地下世界的格局。他得知了这个消息，派人把你"请"到了他的地盘。现在你正坐在他的办公室里，面对这位传说中的黑手党老大...
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="char-accordion">
+                        <div class="char-accordion-header">
+                            <span class="char-accordion-title">
+                                Example messages
+                                <span class="char-accordion-token">1.2k Token</span>
+                            </span>
+                            <span class="char-accordion-arrow">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <polyline points="6 9 12 15 18 9"/>
+                                </svg>
+                            </span>
+                        </div>
+                        <div class="char-accordion-content">
+                            <div class="char-accordion-body">
+                                <p><strong>他：</strong>"你以为你能轻易逃脱我的手掌心吗？"他缓缓走近，冰冷的目光让你不寒而栗。</p>
+                                <p style="margin-top:8px;"><strong>他：</strong>"说吧，你到底知道多少？关于我那些'老朋友'的事。"他坐在办公椅上，手指轻轻敲击着桌面。</p>
+                                <p style="margin-top:8px;"><strong>他：</strong>"别跟我玩花样，你应该知道和我作对的下场。"他的语气平静却带着不容置疑的威胁。</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="char-accordion">
+                        <div class="char-accordion-header">
+                            <span class="char-accordion-title">
+                                Creator's note
+                                <span class="char-accordion-token">256 Token</span>
+                            </span>
+                            <span class="char-accordion-arrow">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <polyline points="6 9 12 15 18 9"/>
+                                </svg>
+                            </span>
+                        </div>
+                        <div class="char-accordion-content">
+                            <div class="char-accordion-body">
+                                这个角色适合喜欢暗黑风格和权力博弈的玩家。角色有一定的难度，需要玩家有足够的智慧和勇气才能与之抗衡。建议从情报交易的角度切入，逐步建立关系。
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 评论区 -->
+                <div class="char-comments-section">
+                    <div class="char-content-header">
+                        <h2 class="char-content-title">
+                            社区评论
+                            <span class="char-content-title-count" id="commentCount">0</span>
+                        </h2>
+                        <div class="char-sort-tabs">
+                            <button class="char-sort-tab active" data-sort="likes">最高</button>
+                            <button class="char-sort-tab" data-sort="newest">最新</button>
+                        </div>
+                    </div>
+
+                    <!-- 发表评论 -->
+                    <div class="char-comment-input-wrapper">
+                        <textarea class="char-comment-textarea" id="commentInput" placeholder="分享你与这个角色的有趣对话..." maxlength="500"></textarea>
+                        <div class="char-comment-submit-row">
+                            <button class="char-comment-submit-btn" id="submitCommentBtn" disabled>发表评论</button>
+                        </div>
+                    </div>
+
+                    <!-- 评论列表 -->
+                    <div class="char-comments-list" id="commentsList">
+                        <!-- 由 JS 动态生成 -->
+                    </div>
+
+                    <!-- 加载更多 -->
+                    <div class="char-load-more" id="loadMoreSection" style="display:none;">
+                        <button class="char-load-more-btn" id="loadMoreBtn">加载更多</button>
+                    </div>
                 </div>
             </div>
         </div>

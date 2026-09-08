@@ -158,29 +158,67 @@ async function loadCharacterDetail(id) {
         const res = await GenSphereAPI.characters.getDetail(id);
         if (res.code === 0 && res.data) {
             currentCharacter = res.data;
+            // 确保有图片
+            if (!currentCharacter.image) {
+                currentCharacter.image = `https://picsum.photos/seed/char${id}/400/520`;
+            }
             renderCharacter(res.data);
             loadComments(id);
         } else {
-            loadMockCharacter();
+            loadMockCharacter(id);
         }
     } catch (error) {
         console.error('Failed to load character:', error);
-        loadMockCharacter();
+        loadMockCharacter(id);
     }
 }
 
-function loadMockCharacter() {
+function loadMockCharacter(id = 1) {
+    const titles = [
+        "Mafia Boss", "Willson Wáng", "Neglectful family", "Ayato Hiroshi",
+        "Second Life Isekai", "Giovanni Moretti", "Your Three Older Brothers",
+        "Your tyrant father", "Best friends trio", "Snow your edgy sister",
+        "Another Magic Academy", "星际指挥官", "古代剑客", "龙骑士传说",
+        "末世幸存者", "吸血鬼恋人", "校园恋爱物语", "赛博朋克2077",
+        "神秘侦探", "精灵王子", "机械少女", "时空旅行者", "海底王国",
+        "天使与恶魔", "狼人传说", "魔法少女", "忍者物语", "海盗冒险",
+        "超能力学院", "幽灵公寓", "美食厨师", "偶像练习生", "电竞选手",
+        "医生与患者", "师生恋曲", "总裁的秘书", "邻家女孩", "青梅竹马",
+        "双胞胎兄弟", "傲娇大小姐", "忠犬男友", "病娇女友", "高冷学霸"
+    ];
+    const creators = [
+        "KLOOMSY", "Shxou_Huang", "hornybite", "Rowlemal", "Hurricanezer",
+        "Emi Yuu", "Лик.", "scifiauthor", "wuxiamaster", "storyweaver",
+        "edgyqueen", "wizardmaster", "digitalartist", "fantasywriter",
+        "romanceking", "darklord", "cutemaker", "sama_senpai"
+    ];
+    const tagsList = [
+        ['男性', 'OC', '虚构', '反派', '无限制'],
+        ['男性', 'OC', '虚构', '甜'],
+        ['男性', '女性', '虚构', '多人'],
+        ['男性', 'OC', '虚构'],
+        ['无限制', '游戏', '动漫', '魔法', '剧情'],
+        ['无限制', '男性', 'OC', '虚构', '甜'],
+        ['男性', '多人', '剧情'],
+        ['男性', '虚构', '剧情'],
+        ['多人', '甜', 'OC'],
+        ['女性', 'OC', '剧情']
+    ];
+    
+    const numericId = parseInt(id) || 1;
+    const idx = (numericId - 1) % titles.length;
+    
     currentCharacter = {
-        id: 'demo_mafia_boss',
-        title: 'Mafia Boss',
-        chatName: 'Mafia Boss',
-        description: '一位认为你掌握着他敌人情报的黑手党老大。\n无论你是否无辜，他都在密切监视着你。',
-        image: '',
-        tags: ['男性', 'OC', '虚构', '反派', '无限制'],
-        creator: 'KLOOMSY',
-        creatorVerified: true,
-        views: 840000,
-        chats: 38140000,
+        id: id,
+        title: titles[idx],
+        chatName: titles[idx],
+        description: '一位神秘的角色，有着不为人知的过去和令人着迷的性格。在这个充满奇幻色彩的世界里，你们将展开一段难忘的冒险。',
+        image: `https://picsum.photos/seed/char${numericId}/400/520`,
+        tags: tagsList[idx % tagsList.length],
+        creator: creators[idx % creators.length],
+        creatorVerified: Math.random() > 0.6,
+        views: Math.floor(Math.random() * 5000000) + 100000,
+        chats: Math.floor(Math.random() * 500000) + 5000,
         createdAt: '2023年6月4日',
         updatedAt: '2024年10月24日',
         allowAgent: true
@@ -271,6 +309,14 @@ function setupEventListeners() {
     
     // Load more
     document.getElementById('loadMoreBtn').addEventListener('click', loadMoreComments);
+    
+    // Accordion panels
+    document.querySelectorAll('.char-accordion-header').forEach(header => {
+        header.addEventListener('click', () => {
+            const accordion = header.parentElement;
+            accordion.classList.toggle('open');
+        });
+    });
 }
 
 function toggleFavorite() {

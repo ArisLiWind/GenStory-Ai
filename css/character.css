@@ -268,8 +268,7 @@
 }
 
 .btn-chat-primary:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 6px 20px rgba(167, 139, 250, 0.4);
+    opacity: 0.9;
 }
 
 .btn-chat-primary svg {
@@ -694,8 +693,7 @@
 }
 
 .char-comment-submit-btn:hover:not(:disabled) {
-    transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(167, 139, 250, 0.3);
+    opacity: 0.9;
 }
 
 .char-comment-submit-btn:disabled {

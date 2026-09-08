@@ -640,9 +640,7 @@ img {
 }
 
 .character-card:hover {
-    transform: translateY(-4px);
     border-color: rgba(192, 132, 252, 0.8);
-    box-shadow: 0 8px 32px rgba(167, 139, 250, 0.3);
 }
 
 .card-header {
