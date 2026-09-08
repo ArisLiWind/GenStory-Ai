@@ -15,12 +15,14 @@
     grid-template-columns: 400px 1fr;
     gap: 32px;
     align-items: start;
+    min-width: 0;
 }
 
 /* ===== Left: Character Card ===== */
 .char-info {
     position: sticky;
     top: 86px;
+    min-width: 0;
 }
 
 .char-card {
@@ -29,6 +31,7 @@
     border-radius: var(--radius-lg);
     overflow: hidden;
     box-shadow: 0 8px 40px rgba(167, 139, 250, 0.2);
+    width: 100%;
 }
 
 .char-card-title {
@@ -342,6 +345,7 @@
     display: flex;
     flex-direction: column;
     gap: 24px;
+    min-width: 0;
 }
 
 .char-content-header {
@@ -420,6 +424,7 @@
     overflow-x: auto;
     padding-bottom: 8px;
     scrollbar-width: thin;
+    min-width: 0;
 }
 
 .published-chats-scroll::-webkit-scrollbar {

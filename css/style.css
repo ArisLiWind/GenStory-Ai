@@ -627,6 +627,7 @@ img {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
     gap: 16px;
+    min-width: 0;
 }
 
 .character-card {
@@ -637,6 +638,8 @@ img {
     overflow: hidden;
     cursor: pointer;
     transition: all var(--transition-normal);
+    min-width: 0;
+    width: 100%;
 }
 
 .character-card:hover {
