@@ -49,10 +49,11 @@ function setupEventListeners() {
 
 // ===== Navigation =====
 window.goBack = function() {
-    if (currentCharacter) {
-        window.location.href = 'character.html?id=' + currentCharacter.id;
+    const basePath = window.location.pathname.replace(/[^/]*$/, '');
+    if (currentCharacter && currentCharacter.id) {
+        window.location.href = basePath + 'character.html?id=' + encodeURIComponent(currentCharacter.id);
     } else {
-        window.location.href = 'index.html';
+        window.location.href = basePath + 'index.html';
     }
 };
 
@@ -81,24 +82,40 @@ function loadCharacterAndStartChat(characterId) {
 }
 
 function loadMockCharacter(id) {
+    const titles = [
+        "Mafia Boss", "Willson Wáng", "Neglectful family", "Ayato Hiroshi",
+        "Second Life Isekai", "Giovanni Moretti", "Your Three Older Brothers",
+        "Your tyrant father", "Best friends trio", "Snow your edgy sister",
+        "Another Magic Academy", "星际指挥官", "古代剑客", "龙骑士传说",
+        "末世幸存者", "吸血鬼恋人", "校园恋爱物语", "赛博朋克2077",
+        "神秘侦探", "精灵王子", "机械少女", "时空旅行者", "海底王国",
+        "天使与恶魔", "狼人传说", "魔法少女", "忍者物语", "海盗冒险",
+        "超能力学院", "幽灵公寓", "美食厨师", "偶像练习生", "电竞选手",
+        "医生与患者", "师生恋曲", "总裁的秘书", "邻家女孩", "青梅竹马",
+        "双胞胎兄弟", "傲娇大小姐", "忠犬男友", "病娇女友", "高冷学霸"
+    ];
+    
     if (id === 'demo_mafia_boss') {
         currentCharacter = {
             id: 'demo_mafia_boss',
             title: 'Mafia Boss',
             chatName: 'Mafia Boss',
-            image: '',
+            image: 'https://picsum.photos/seed/char1/400/520',
             description: '一位认为你掌握着他敌人情报的黑手党老大。无论你是否无辜，他都在密切监视着你。',
             firstMessage: 'A member of the mafia pushed you into an interrogation chair as a man clad in a black suit walked into the room.\n\nHis grayish-green eyes focused on you as he sat down on the other side of the table. He moved with elegance, poise and power. He didn\'t smile or even allow a bit of comforting warmth as he stared. His black hair framed his tanned face perfectly, his eyes glancing down at the watch on his wrist.\n\n"So you must know why you\'re here?" he hummed coldly. "I suggest not lying. It\'s boring for me and it won\'t go well for you. Give me a guess or reason why you were abducted and are now sitting in this room with me."',
             creatorVerified: true
         };
     } else {
+        const numericId = parseInt(id) || 1;
+        const idx = (numericId - 1) % titles.length;
+        const title = titles[idx];
         currentCharacter = {
             id: id,
-            title: '角色名称',
-            chatName: '角色',
-            image: '',
-            description: '角色描述',
-            firstMessage: '你好，很高兴见到你。',
+            title: title,
+            chatName: title,
+            image: `https://picsum.photos/seed/char${numericId}/400/520`,
+            description: '一位神秘的角色，有着不为人知的过去和令人着迷的性格。在这个充满奇幻色彩的世界里，你们将展开一段难忘的冒险。',
+            firstMessage: '你好，很高兴见到你。我是' + title + '，有什么我可以帮你的吗？',
             creatorVerified: false
         };
     }

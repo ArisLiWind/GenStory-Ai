@@ -278,9 +278,11 @@ function renderTags(tags) {
 
 function setupEventListeners() {
     // Start chat button
-    document.getElementById('startChatBtn').addEventListener('click', () => {
-        if (currentCharacter) {
-            window.location.href = 'chat.html?character=' + currentCharacter.id;
+    document.getElementById('startChatBtn').addEventListener('click', (e) => {
+        e.preventDefault();
+        if (currentCharacter && currentCharacter.id) {
+            const basePath = window.location.pathname.replace(/[^/]*$/, '');
+            window.location.href = basePath + 'chat.html?character=' + encodeURIComponent(currentCharacter.id);
         }
     });
     

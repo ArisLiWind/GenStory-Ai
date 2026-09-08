@@ -539,7 +539,8 @@ document.addEventListener('click', (e) => {
             return;
         }
         if (charId) {
-            window.location.href = `character.html?id=${charId}`;
+            const basePath = window.location.pathname.replace(/[^/]*$/, '');
+            window.location.href = basePath + 'character.html?id=' + encodeURIComponent(charId);
         }
         return;
     }
