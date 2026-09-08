@@ -849,24 +849,34 @@ body.light-theme .token-info strong {
     .create-container {
         flex-direction: column;
         padding: 20px 16px 40px;
-        gap: 24px;
+        gap: 20px;
     }
     
     .create-sidebar {
         width: 100%;
         position: static;
-        order: 2;
+        order: 1;
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
     }
     
     .create-main {
+        order: 2;
+    }
+    
+    .back-link {
         order: 1;
     }
     
-    .create-title {
-        font-size: 24px;
+    .preview-section {
+        order: 2;
+        max-width: 280px;
+        margin: 0 auto;
     }
     
     .side-nav {
+        order: 3;
         flex-direction: row;
         overflow-x: auto;
         scrollbar-width: none;
@@ -886,9 +896,8 @@ body.light-theme .token-info strong {
         border-radius: 10px 10px 0 0;
     }
     
-    .preview-section {
-        max-width: 280px;
-        margin: 0 auto;
+    .create-title {
+        font-size: 24px;
     }
     
     .rating-options {
