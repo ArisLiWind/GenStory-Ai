@@ -1,16 +1,90 @@
 // ===== Create Character Page =====
 
+let selectedTags = [];
+let editingId = null;
+const maxTags = 10;
+
 document.addEventListener('DOMContentLoaded', () => {
     initCreatePage();
 });
 
 function initCreatePage() {
+    // Check if editing
+    const params = new URLSearchParams(window.location.search);
+    editingId = params.get('edit');
+    
     setupTabNavigation();
     setupImageUpload();
     setupTags();
     setupPreviewSync();
     setupFormValidation();
     setupCreateButton();
+    
+    // If editing, load character data
+    if (editingId) {
+        loadCharacterForEdit(editingId);
+    }
+}
+
+// ===== Load Character for Edit =====
+async function loadCharacterForEdit(id) {
+    try {
+        const res = await GenSphereAPI.characters.getDetail(id);
+        if (res.code === 0 && res.data) {
+            const char = res.data;
+            
+            // Fill form
+            document.getElementById('charTitle').value = char.title || '';
+            document.getElementById('charName').value = char.chatName || '';
+            document.getElementById('charDesc').value = char.description || '';
+            document.getElementById('charPersonality').value = char.personality || '';
+            document.getElementById('charScene').value = char.scenario || '';
+            document.getElementById('charFirstMsg').value = char.firstMessage || '';
+            document.getElementById('charExample').value = char.exampleDialogue || '';
+            
+            // Set tags
+            if (char.tags && Array.isArray(char.tags)) {
+                selectedTags = [...char.tags];
+                renderTags();
+                updatePreviewTags();
+            }
+            
+            // Set rating
+            const ratingVal = char.contentRating === 'mature' ? 'nsfw' : 'sfw';
+            const radio = document.querySelector(`input[name="rating"][value="${ratingVal}"]`);
+            if (radio) radio.checked = true;
+            
+            // Set image
+            if (char.image) {
+                const previewImage = document.getElementById('previewImage');
+                previewImage.innerHTML = `<img src="${char.image}" alt="角色头像" style="position:absolute;top:0;left:0;width:100%;height:100%;object-fit:cover;">`;
+                const cardImgWrapper = document.querySelector('.preview-card .card-image-wrapper');
+                if (cardImgWrapper) {
+                    const existingImg = cardImgWrapper.querySelector('img');
+                    if (existingImg) {
+                        existingImg.src = char.image;
+                    } else {
+                        const img = document.createElement('img');
+                        img.src = char.image;
+                        img.className = 'card-image';
+                        cardImgWrapper.insertBefore(img, cardImgWrapper.firstChild);
+                    }
+                }
+            }
+            
+            // Update button text
+            document.getElementById('createCharBtn').textContent = '保存修改';
+            document.querySelector('.create-title').textContent = '编辑角色';
+            
+            // Update preview
+            document.getElementById('previewTitle').textContent = char.title || '角色标题';
+            document.getElementById('previewDesc').textContent = char.description || '角色简介将显示在这里...';
+            
+            validateForm();
+        }
+    } catch (error) {
+        console.error('Failed to load character for edit:', error);
+    }
 }
 
 // ===== Tab Navigation =====
@@ -95,18 +169,14 @@ function setupTags() {
     const tagInput = document.getElementById('tagInput');
     const tagSuggestions = document.getElementById('tagSuggestions');
     const selectedTagsContainer = document.getElementById('selectedTags');
-    const previewTags = document.getElementById('previewTags');
     
     if (!tagInput || !selectedTagsContainer) return;
-    
-    let selectedTags = [];
-    const maxTags = 10;
     
     // Click on suggestion chips
     const chips = tagSuggestions.querySelectorAll('.tag-chip');
     chips.forEach(chip => {
         chip.addEventListener('click', () => {
-            addTag(chip.textContent);
+            addTag(chip.textContent.trim());
         });
     });
     
@@ -121,48 +191,54 @@ function setupTags() {
             }
         }
     });
+}
+
+function isValidTag(tag) {
+    const regex = /^[a-zA-Z0-9\u4e00-\u9fa5]{2,21}$/;
+    return regex.test(tag) && !selectedTags.includes(tag) && selectedTags.length < maxTags;
+}
+
+function addTag(tag) {
+    if (selectedTags.length >= maxTags) return;
+    if (selectedTags.includes(tag)) return;
     
-    function isValidTag(tag) {
-        const regex = /^[a-zA-Z0-9\u4e00-\u9fa5]{2,21}$/;
-        return regex.test(tag) && !selectedTags.includes(tag) && selectedTags.length < maxTags;
-    }
+    selectedTags.push(tag);
+    renderTags();
+    updatePreviewTags();
+}
+
+function removeTag(tag) {
+    selectedTags = selectedTags.filter(t => t !== tag);
+    renderTags();
+    updatePreviewTags();
+}
+
+function renderTags() {
+    const selectedTagsContainer = document.getElementById('selectedTags');
+    if (!selectedTagsContainer) return;
     
-    function addTag(tag) {
-        if (selectedTags.length >= maxTags) return;
-        if (selectedTags.includes(tag)) return;
-        
-        selectedTags.push(tag);
-        renderTags();
-        updatePreviewTags();
-    }
+    selectedTagsContainer.innerHTML = selectedTags.map(tag => `
+        <span class="selected-tag">
+            ${tag}
+            <button class="remove-tag" data-tag="${tag}">&times;</button>
+        </span>
+    `).join('');
     
-    function removeTag(tag) {
-        selectedTags = selectedTags.filter(t => t !== tag);
-        renderTags();
-        updatePreviewTags();
-    }
+    selectedTagsContainer.querySelectorAll('.remove-tag').forEach(btn => {
+        btn.addEventListener('click', () => removeTag(btn.dataset.tag));
+    });
+}
+
+function updatePreviewTags() {
+    const previewTags = document.getElementById('previewTags');
+    if (!previewTags) return;
     
-    function renderTags() {
-        selectedTagsContainer.innerHTML = selectedTags.map(tag => `
-            <span class="selected-tag">
-                ${tag}
-                <button class="remove-tag" data-tag="${tag}">&times;</button>
-            </span>
-        `).join('');
-        
-        selectedTagsContainer.querySelectorAll('.remove-tag').forEach(btn => {
-            btn.addEventListener('click', () => removeTag(btn.dataset.tag));
-        });
-    }
-    
-    function updatePreviewTags() {
-        if (selectedTags.length === 0) {
-            previewTags.innerHTML = '<span class="card-tag">标签</span>';
-        } else {
-            previewTags.innerHTML = selectedTags.slice(0, 3).map(tag => 
-                `<span class="card-tag">${tag}</span>`
-            ).join('');
-        }
+    if (selectedTags.length === 0) {
+        previewTags.innerHTML = '<span class="card-tag">标签</span>';
+    } else {
+        previewTags.innerHTML = selectedTags.slice(0, 3).map(tag => 
+            `<span class="card-tag">${tag}</span>`
+        ).join('');
     }
 }
 
@@ -176,7 +252,7 @@ function setupPreviewSync() {
     const previewCreator = document.getElementById('previewCreator');
     
     // Get username
-    const userData = localStorage.getItem('currentUser');
+    const userData = localStorage.getItem('gensphere_user');
     if (userData) {
         const user = JSON.parse(userData);
         if (previewCreator && user.username) {
@@ -238,40 +314,61 @@ function setupCreateButton() {
     const createBtn = document.getElementById('createCharBtn');
     if (!createBtn) return;
     
-    createBtn.addEventListener('click', () => {
+    createBtn.addEventListener('click', async () => {
         if (!validateForm()) return;
         
-        const character = {
-            id: 'char_' + Date.now(),
-            title: document.getElementById('charTitle').value.trim(),
-            name: document.getElementById('charName').value.trim(),
-            description: document.getElementById('charDesc').value.trim(),
-            personality: document.getElementById('charPersonality').value.trim(),
-            scene: document.getElementById('charScene').value.trim(),
-            firstMessage: document.getElementById('charFirstMsg').value.trim(),
-            exampleDialogue: document.getElementById('charExample').value.trim(),
-            rating: document.querySelector('input[name="rating"]:checked')?.value || 'nsfw',
-            tags: Array.from(document.querySelectorAll('.selected-tag')).map(t => t.textContent.trim().replace('×', '').trim()),
-            image: document.querySelector('.preview-card .card-image')?.src || '',
-            creator: JSON.parse(localStorage.getItem('currentUser') || '{}').username || '匿名',
-            createdAt: new Date().toISOString(),
-            views: 0,
-            chats: 0,
-            rating: 0
-        };
+        const createBtn = document.getElementById('createCharBtn');
+        const originalText = createBtn.textContent;
+        createBtn.disabled = true;
+        createBtn.textContent = editingId ? '保存中...' : '创建中...';
         
-        // Save to my characters
-        const myChars = JSON.parse(localStorage.getItem('myCharacters') || '[]');
-        myChars.unshift(character);
-        localStorage.setItem('myCharacters', JSON.stringify(myChars));
-        
-        // Also add to allCharacters for global display
-        const allChars = JSON.parse(localStorage.getItem('allCharacters') || '[]');
-        allChars.unshift(character);
-        localStorage.setItem('allCharacters', JSON.stringify(allChars));
-        
-        // Show success
-        alert('角色创建成功！');
-        window.location.href = 'my-characters.html';
+        try {
+            // Get image data
+            const previewImg = document.querySelector('.preview-card .card-image');
+            const imageData = previewImg ? previewImg.src : '';
+            
+            // Get content rating
+            const ratingValue = document.querySelector('input[name="rating"]:checked')?.value || 'nsfw';
+            const contentRating = ratingValue === 'nsfw' ? 'mature' : 'general';
+            
+            const characterData = {
+                title: document.getElementById('charTitle').value.trim(),
+                chatName: document.getElementById('charName').value.trim(),
+                description: document.getElementById('charDesc').value.trim(),
+                personality: document.getElementById('charPersonality').value.trim(),
+                scenario: document.getElementById('charScene').value.trim(),
+                firstMessage: document.getElementById('charFirstMsg').value.trim(),
+                exampleDialogue: document.getElementById('charExample').value.trim(),
+                image: imageData,
+                tags: selectedTags,
+                categories: [],
+                contentRating: contentRating,
+                status: 'published',
+                isPublic: 1
+            };
+            
+            let res;
+            if (editingId) {
+                // Update existing character
+                res = await GenSphereAPI.characters.update(editingId, characterData);
+            } else {
+                // Create new character
+                res = await GenSphereAPI.characters.create(characterData);
+            }
+            
+            if (res.code === 0) {
+                alert(editingId ? '角色修改成功！' : '角色创建成功！');
+                window.location.href = 'my-characters.html';
+            } else {
+                alert((editingId ? '修改失败：' : '创建失败：') + (res.message || '未知错误'));
+                createBtn.disabled = false;
+                createBtn.textContent = originalText;
+            }
+        } catch (error) {
+            console.error('Create/Update error:', error);
+            alert((editingId ? '修改失败：' : '创建失败：') + '网络错误，请稍后重试');
+            createBtn.disabled = false;
+            createBtn.textContent = originalText;
+        }
     });
 }

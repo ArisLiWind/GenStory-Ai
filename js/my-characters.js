@@ -10,49 +10,48 @@ function initMyCharactersPage() {
     setupSearch();
 }
 
-function loadMyCharacters() {
+async function loadMyCharacters() {
     const grid = document.getElementById('myCharsGrid');
     const emptyState = document.getElementById('emptyState');
     
-    // Get my characters from localStorage
-    let myChars = JSON.parse(localStorage.getItem('myCharacters') || '[]');
+    // Show loading state
+    grid.style.display = 'none';
+    emptyState.style.display = 'none';
+    grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:60px 0;color:rgba(255,255,255,0.4);">加载中...</div>';
+    grid.style.display = 'grid';
     
-    // If no user-created chars, show some demo data
-    if (myChars.length === 0) {
-        myChars = [
-            {
-                id: 'demo_1',
-                title: '神秘女巫',
-                description: '一位拥有千年智慧的魔法使者，擅长占卜与咒语。',
-                image: '',
-                status: 'public',
-                views: 1234,
-                chats: 89,
-                createdAt: '2024-01-15'
-            },
-            {
-                id: 'demo_2',
-                title: '赛博侦探',
-                description: '未来都市中的私家侦探，破解各种离奇案件。',
-                image: '',
-                status: 'draft',
-                views: 0,
-                chats: 0,
-                createdAt: '2024-01-20'
-            }
-        ];
-    }
-    
-    if (myChars.length === 0) {
+    try {
+        const res = await GenSphereAPI.characters.getMine();
+        
+        if (res.code === 0 && res.data && res.data.items && res.data.items.length > 0) {
+            const chars = res.data.items.map(item => ({
+                id: item.id,
+                title: item.title,
+                description: item.description,
+                image: item.image,
+                status: item.status === 'published' ? 'public' : (item.status === 'private' ? 'private' : 'draft'),
+                views: item.viewCount || 0,
+                chats: item.chatCount || 0,
+                createdAt: item.createdAt,
+                tags: item.tags || []
+            }));
+            
+            renderCharacters(chars);
+            grid.style.display = 'grid';
+            emptyState.style.display = 'none';
+        } else {
+            grid.style.display = 'none';
+            emptyState.style.display = 'block';
+        }
+    } catch (error) {
+        console.error('Failed to load characters:', error);
         grid.style.display = 'none';
         emptyState.style.display = 'block';
-        return;
+        const emptyDesc = emptyState.querySelector('p');
+        if (emptyDesc) {
+            emptyDesc.textContent = '加载角色失败，请刷新重试';
+        }
     }
-    
-    grid.style.display = 'grid';
-    emptyState.style.display = 'none';
-    
-    renderCharacters(myChars);
 }
 
 function renderCharacters(chars) {
@@ -70,7 +69,7 @@ function renderCharacters(chars) {
                </div>`;
         
         return `
-            <div class="my-char-card" data-id="${char.id}" data-status="${char.status || 'public'}">
+            <div class="my-char-card" data-id="${char.id}" data-status="${char.status || 'public'}" onclick="goToCharacterDetail('${char.id}')">
                 <div class="my-char-img-wrap">
                     ${imgHtml}
                     <div class="my-char-overlay"></div>
@@ -157,26 +156,30 @@ function setupSearch() {
     });
 }
 
+function goToCharacterDetail(id) {
+    window.location.href = 'character.html?id=' + id;
+}
+
 function editCharacter(id) {
     event.stopPropagation();
-    // For now, just go to create page
     window.location.href = 'create-character.html?edit=' + id;
 }
 
-function deleteCharacter(id) {
+async function deleteCharacter(id) {
     event.stopPropagation();
     if (!confirm('确定要删除这个角色吗？此操作不可撤销。')) return;
     
-    let myChars = JSON.parse(localStorage.getItem('myCharacters') || '[]');
-    myChars = myChars.filter(c => c.id !== id);
-    localStorage.setItem('myCharacters', JSON.stringify(myChars));
-    
-    // Also remove from allCharacters
-    let allChars = JSON.parse(localStorage.getItem('allCharacters') || '[]');
-    allChars = allChars.filter(c => c.id !== id);
-    localStorage.setItem('allCharacters', JSON.stringify(allChars));
-    
-    loadMyCharacters();
+    try {
+        const res = await GenSphereAPI.characters.delete(id);
+        if (res.code === 0) {
+            loadMyCharacters();
+        } else {
+            alert('删除失败：' + (res.message || '未知错误'));
+        }
+    } catch (error) {
+        console.error('Delete error:', error);
+        alert('删除失败，请稍后重试');
+    }
 }
 
 function formatNumber(num) {

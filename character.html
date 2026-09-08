@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>角色详情 - GenSphere</title>
+    <link rel="icon" type="image/png" href="assets/logo-icon.png">
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/character.css">
+</head>
+<body>
+    <!-- 导航栏 -->
+    <nav class="navbar">
+        <div class="nav-container">
+            <div class="nav-main-row">
+                <div class="nav-left">
+                    <a href="index.html" class="logo">
+                        <img src="assets/logo-icon.png" alt="GenSphere 图标" class="logo-icon">
+                        <img src="assets/logo-text-light.png" alt="GenSphere" class="logo-text-img">
+                    </a>
+                </div>
+
+                <div class="nav-center">
+                    <div class="search-box">
+                        <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="11" cy="11" r="8"></circle>
+                            <path d="m21 21-4.35-4.35"></path>
+                        </svg>
+                        <input type="text" placeholder="搜索角色或创作者..." class="search-input" id="searchInput">
+                    </div>
+                </div>
+
+                <div class="nav-right" id="navRight">
+                    <div class="user-menu" id="userMenu">
+                        <a href="create-character.html" class="btn-create">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M12 5v14M5 12h14"/>
+                            </svg>
+                            创造角色
+                        </a>
+                        <div class="user-avatar" id="userAvatar">
+                            <span id="userAvatarText">U</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- 用户下拉菜单 -->
+    <div class="user-dropdown" id="userDropdown">
+        <div class="user-dropdown-header">
+            <div class="user-dropdown-avatar">
+                <span id="dropdownAvatarText">U</span>
+            </div>
+            <div class="user-dropdown-info">
+                <div class="user-dropdown-name" id="dropdownUsername">用户名</div>
+                <div class="user-dropdown-phone" id="dropdownPhone">138****8888</div>
+            </div>
+        </div>
+        <a href="#" class="user-dropdown-item">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+                <polyline points="9 22 9 12 15 12 15 22"/>
+            </svg>
+            <span>个人资料</span>
+        </a>
+        <a href="my-characters.html" class="user-dropdown-item">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+                <circle cx="9" cy="7" r="4"/>
+            </svg>
+            <span>我的角色</span>
+        </a>
+        <a href="#" class="user-dropdown-item">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+            </svg>
+            <span>我的聊天</span>
+        </a>
+        <a href="#" class="user-dropdown-item">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+                <circle cx="9" cy="7" r="4"/>
+                <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+                <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+            </svg>
+            <span>正在关注</span>
+        </a>
+        <a href="#" class="user-dropdown-item">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="3"/>
+                <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+            </svg>
+            <span>设置</span>
+        </a>
+        <div class="user-dropdown-divider"></div>
+        <button class="user-dropdown-item logout-item" id="logoutBtn">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+                <polyline points="16 17 21 12 16 7"/>
+                <line x1="21" y1="12" x2="9" y2="12"/>
+            </svg>
+            <span>退出登录</span>
+        </button>
+    </div>
+
+    <div class="drawer-overlay" id="drawerOverlay"></div>
+
+    <!-- 角色详情主体 -->
+    <main class="char-detail">
+        <div class="char-detail-container">
+            <!-- 左侧：角色卡片 (Janitor AI 风格) -->
+            <aside class="char-info">
+                <div class="char-card">
+                    <h1 class="char-card-title" id="charTitle">角色名称</h1>
+                    
+                    <div class="char-image-wrapper">
+                        <div class="char-image" id="charImage">
+                            <img src="" alt="" id="charImg">
+                            <div class="char-image-overlay"></div>
+                        </div>
+                        <div class="char-stats-badge">
+                            <div class="char-stat-badge">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                                    <circle cx="12" cy="12" r="3"/>
+                                </svg>
+                                <span id="charViews">0</span>
+                            </div>
+                            <div class="char-stat-badge">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+                                </svg>
+                                <span id="charChats">0</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 创作者信息 -->
+                    <div class="char-creator-row">
+                        <div class="char-creator-avatar" id="creatorAvatar">U</div>
+                        <div>
+                            <span class="char-creator-name">
+                                by @<span id="charCreator">创作者</span>
+                                <span class="char-creator-verified" id="creatorVerified" style="display:none;">✓</span>
+                            </span>
+                        </div>
+                    </div>
+
+                    <!-- 角色描述 -->
+                    <div class="char-description-box" id="charDescription">
+                        角色描述
+                    </div>
+
+                    <!-- 日期信息 -->
+                    <div class="char-date-info" id="charDateInfo">
+                        <span class="char-date-tag">已创建 <span id="createdAt">-</span></span>
+                        <span class="char-date-tag">已更新 <span id="updatedAt">-</span></span>
+                    </div>
+
+                    <!-- 标签 -->
+                    <div class="char-tags-row" id="charTags"></div>
+
+                    <!-- 代理标识 -->
+                    <div class="char-agent-badge" id="agentBadge" style="display:none;">
+                        ✨ 已允许代理
+                    </div>
+
+                    <!-- 聊天按钮 -->
+                    <div class="char-chat-btn-wrapper">
+                        <button class="btn-chat-primary" id="startChatBtn">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+                            </svg>
+                            与 <span id="chatBtnName">角色</span> 聊天
+                        </button>
+                    </div>
+
+                    <!-- 收藏按钮 -->
+                    <div class="char-favorite-btn-wrapper">
+                        <button class="btn-favorite" id="favoriteBtn">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
+                            </svg>
+                            <span>收藏角色</span>
+                        </button>
+                    </div>
+                </div>
+            </aside>
+
+            <!-- 右侧：社区评论/已发布聊天 -->
+            <div class="char-content">
+                <div class="char-content-header">
+                    <h2 class="char-content-title">
+                        已发布聊天
+                        <span class="char-content-title-count" id="commentCount">0</span>
+                    </h2>
+                    <div class="char-sort-tabs">
+                        <button class="char-sort-tab active" data-sort="likes">最高</button>
+                        <button class="char-sort-tab" data-sort="newest">最新</button>
+                    </div>
+                </div>
+
+                <!-- 发表评论 -->
+                <div class="char-comment-input-wrapper">
+                    <textarea class="char-comment-textarea" id="commentInput" placeholder="分享你与这个角色的有趣对话..." maxlength="500"></textarea>
+                    <div class="char-comment-submit-row">
+                        <button class="char-comment-submit-btn" id="submitCommentBtn" disabled>发表评论</button>
+                    </div>
+                </div>
+
+                <!-- 评论列表 -->
+                <div class="char-comments-list" id="commentsList">
+                    <!-- 由 JS 动态生成 -->
+                </div>
+
+                <!-- 加载更多 -->
+                <div class="char-load-more" id="loadMoreSection" style="display:none;">
+                    <button class="char-load-more-btn" id="loadMoreBtn">加载更多</button>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script src="js/api.js"></script>
+    <script src="js/main.js"></script>
+    <script src="js/character.js"></script>
+</body>
+</html>

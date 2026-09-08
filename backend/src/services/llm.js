@@ -49,10 +49,10 @@ function buildSystemPrompt(character) {
     prompt += `请始终以${character.chat_name || character.title}的身份和语气回复，不要出戏，不要提到你是AI或角色扮演。
 回复要自然流畅，符合角色设定。使用第一人称回复。`;
 
-    // Check if RPG category
+    // Check if RPG / adventure category
     const categories = safeJsonParse(character.categories, []);
-    const isRPG = categories.includes('rpg') || categories.includes('xianxia') ||
-                  categories.includes('wuxia') || categories.includes('fantasy');
+    const rpgCategories = ['rpg', 'xianxia', 'wuxia', 'fantasy', 'martial', 'transmigration', 'cyberpunk', 'lovecraft'];
+    const isRPG = categories.some(c => rpgCategories.includes(c));
 
     if (isRPG) {
         prompt += `\n\n【RPG模式】

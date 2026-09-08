@@ -392,9 +392,31 @@
 
 .tag-suggestions {
     display: flex;
+    flex-direction: column;
+    gap: 16px;
+    margin-top: 12px;
+    max-height: 280px;
+    overflow-y: auto;
+    padding-right: 4px;
+}
+
+.tag-group {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.tag-group-title {
+    font-size: 12px;
+    color: rgba(255, 255, 255, 0.35);
+    font-weight: 500;
+    padding-left: 4px;
+}
+
+.tag-group-chips {
+    display: flex;
     flex-wrap: wrap;
     gap: 8px;
-    margin-top: 12px;
 }
 
 .tag-chip {

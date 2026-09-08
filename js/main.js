@@ -544,11 +544,19 @@ logoutBtn.addEventListener('click', async () => {
     window.scrollTo({ top: 0 });
 });
 
-// ===== Card Click: Guest shows login modal =====
+// ===== Card Click =====
 document.addEventListener('click', (e) => {
-    const card = e.target.closest('[data-require-login="true"]');
+    const card = e.target.closest('.character-card');
     if (card) {
-        showLoginModal();
+        const charId = card.dataset.id;
+        const requireLogin = card.dataset.requireLogin === 'true';
+        if (requireLogin && !isLoggedIn()) {
+            showLoginModal();
+            return;
+        }
+        if (charId) {
+            window.location.href = `character.html?id=${charId}`;
+        }
         return;
     }
     
