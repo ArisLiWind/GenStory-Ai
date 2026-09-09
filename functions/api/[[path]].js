@@ -254,7 +254,8 @@ function getCharacterFromBody(body) {
 }
 
 // ===== Main Handler =====
-export async function onRequest(request, env) {
+export async function onRequest(context) {
+    const { request, env } = context;
     const corsResponse = getCORS(request);
     if (corsResponse) return corsResponse;
 
