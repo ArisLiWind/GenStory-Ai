@@ -518,18 +518,23 @@ function renderPagination(totalPages) {
 }
 
 // ===== 上一页/下一页 =====
-document.getElementById('prevPage').addEventListener('click', () => {
-    if (currentPage > 1) {
-        renderCharacters(currentPage - 1);
-    }
-});
-
-document.getElementById('nextPage').addEventListener('click', () => {
-    const totalPages = Math.ceil(filteredCharacters.length / pageSize);
-    if (currentPage < totalPages) {
-        renderCharacters(currentPage + 1);
-    }
-});
+const prevPageBtn = document.getElementById('prevPage');
+const nextPageBtn = document.getElementById('nextPage');
+if (prevPageBtn) {
+    prevPageBtn.addEventListener('click', () => {
+        if (currentPage > 1) {
+            renderCharacters(currentPage - 1);
+        }
+    });
+}
+if (nextPageBtn) {
+    nextPageBtn.addEventListener('click', () => {
+        const totalPages = Math.ceil(filteredCharacters.length / pageSize);
+        if (currentPage < totalPages) {
+            renderCharacters(currentPage + 1);
+        }
+    });
+}
 
 function createCharacterCard(char, isGuest = false) {
     const tagsHtml = char.tags.slice(0, 4).map(tag => `

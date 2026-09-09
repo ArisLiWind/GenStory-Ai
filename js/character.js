@@ -1,7 +1,7 @@
 // ===== Character Detail Page =====
 
 let currentCharacter = null;
-let currentSort = 'likes';
+let currentCommentSort = 'likes';
 let comments = [];
 let allComments = [];
 let isFavorited = false;
@@ -372,7 +372,7 @@ function setupEventListeners() {
         tab.addEventListener('click', () => {
             document.querySelectorAll('.char-sort-tab').forEach(t => t.classList.remove('active'));
             tab.classList.add('active');
-            currentSort = tab.dataset.sort;
+            currentCommentSort = tab.dataset.sort;
             sortComments();
         });
     });
@@ -484,7 +484,7 @@ function loadMockComments() {
 function sortComments() {
     comments = [...allComments];
     
-    if (currentSort === 'likes') {
+    if (currentCommentSort === 'likes') {
         comments.sort((a, b) => b.likes - a.likes);
     } else {
         // newest - keep original order (already sorted by date desc in mock)
