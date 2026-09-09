@@ -321,41 +321,49 @@ const navbar = document.querySelector('.navbar');
 
 // ===== Initialize View Based on Auth State =====
 async function initView() {
+    // 只在主页有角色网格时才初始化角色列表
+    const hasCharacterGrid = !!characterGrid;
+    const hasGuestGrid = !!guestCharacterGrid;
+
     const loggedIn = isLoggedIn();
     const user = getCurrentUser();
 
     if (loggedIn && user) {
         // Logged in view
-        guestView.style.display = 'none';
-        loggedView.style.display = 'block';
-        authButtons.style.display = 'none';
-        userMenu.style.display = 'flex';
+        if (guestView) guestView.style.display = 'none';
+        if (loggedView) loggedView.style.display = 'block';
+        if (authButtons) authButtons.style.display = 'none';
+        if (userMenu) userMenu.style.display = 'flex';
 
         // Update user info
         const firstChar = user.username ? user.username.charAt(0).toUpperCase() : 'U';
-        userAvatarText.textContent = firstChar;
-        dropdownAvatarText.textContent = firstChar;
-        dropdownUsername.textContent = user.username || '用户';
-        dropdownPhone.textContent = user.phone ? maskPhone(user.phone) : '';
+        if (userAvatarText) userAvatarText.textContent = firstChar;
+        if (dropdownAvatarText) dropdownAvatarText.textContent = firstChar;
+        if (dropdownUsername) dropdownUsername.textContent = user.username || '用户';
+        if (dropdownPhone) dropdownPhone.textContent = user.phone ? maskPhone(user.phone) : '';
 
-        // Load characters from backend first
-        if (allCharacters.length === 0) {
-            await loadCharactersFromBackend();
+        // 只有主页才加载角色列表
+        if (hasCharacterGrid) {
+            if (allCharacters.length === 0) {
+                await loadCharactersFromBackend();
+            }
+            renderCharacters(1);
+            setupInfiniteScroll();
         }
-        renderCharacters(1);
-        setupInfiniteScroll();
     } else {
         // Guest view
-        guestView.style.display = 'block';
-        loggedView.style.display = 'none';
-        authButtons.style.display = 'flex';
-        userMenu.style.display = 'none';
+        if (guestView) guestView.style.display = 'block';
+        if (loggedView) loggedView.style.display = 'none';
+        if (authButtons) authButtons.style.display = 'flex';
+        if (userMenu) userMenu.style.display = 'none';
 
-        // Load characters for guest preview
-        if (allCharacters.length === 0) {
-            await loadCharactersFromBackend();
+        // 只有主页才加载角色列表
+        if (hasGuestGrid) {
+            if (allCharacters.length === 0) {
+                await loadCharactersFromBackend();
+            }
+            renderGuestCharacters();
         }
-        renderGuestCharacters();
     }
 }
 
@@ -431,6 +439,7 @@ function maskPhone(phone) {
 
 // ===== Render Guest Preview =====
 function renderGuestCharacters() {
+    if (!guestCharacterGrid) return;
     const previewChars = allCharacters.slice(0, 18);
     const html = previewChars.map(char => createCharacterCard(char, true)).join('');
     guestCharacterGrid.innerHTML = html;
@@ -439,6 +448,7 @@ function renderGuestCharacters() {
 
 // ===== Render Characters (Pagination) =====
 function renderCharacters(page = 1) {
+    if (!characterGrid) return;
     currentPage = page;
     const totalPages = Math.ceil(filteredCharacters.length / pageSize);
     
