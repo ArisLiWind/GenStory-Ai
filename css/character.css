@@ -4,7 +4,7 @@
 
 .char-detail {
     min-height: calc(100vh - 70px);
-    padding: 24px 20px;
+    padding: 94px 20px 24px;
     background: var(--bg-primary);
 }
 
@@ -21,7 +21,7 @@
 /* ===== Left: Character Card ===== */
 .char-info {
     position: sticky;
-    top: 86px;
+    top: 94px;
     min-width: 0;
 }
 
