@@ -2,6 +2,23 @@
 // 兴趣选择页 - 稳健版（只前进不后退）
 // ============================================
 
+// ===== 调试：追踪谁清了 token =====
+(function() {
+    var origRemove = Storage.prototype.removeItem;
+    Storage.prototype.removeItem = function(key) {
+        if (key === 'gensphere_token') {
+            console.error('!!! TOKEN REMOVED !!! Stack:', new Error().stack);
+        }
+        return origRemove.apply(this, arguments);
+    };
+    var origClear = Storage.prototype.clear;
+    Storage.prototype.clear = function() {
+        console.error('!!! STORAGE CLEARED !!! Stack:', new Error().stack);
+        return origClear.apply(this, arguments);
+    };
+    console.log('[DEBUG] Token removal interceptor installed');
+})();
+
 var TOKEN_KEY = 'gensphere_token';
 var USER_KEY = 'gensphere_user';
 var MAX_TOPICS = 5;
