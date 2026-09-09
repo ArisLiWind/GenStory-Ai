@@ -17,9 +17,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     // 从服务端拉取最新用户信息
     const res = await GenSphereAPI.auth.getMe();
     if (res.code !== 0 || !res.data) {
-        // token 无效，显示错误原因
-        const errMsg = res.message || '登录已过期';
-        alert('登录状态异常：' + errMsg + '\n\n请重新登录');
+        // token 无效，回登录页
         localStorage.removeItem(TOKEN_KEY);
         localStorage.removeItem(USER_KEY);
         window.location.href = 'login.html';
@@ -95,39 +93,10 @@ function initUsernamePage() {
             const res = await GenSphereAPI.auth.updateUser({ username });
 
             if (res.code === 0 && res.data) {
-                // 调试：看看返回了什么
-                console.log('updateUser 返回:', res.data);
-                const debug = res.data._debug;
-                if (debug) {
-                    console.log('调试信息:', debug);
-                    console.log('更新前 username:', debug.beforeUsername);
-                    console.log('更新后 username:', debug.afterUsername);
-                    console.log('影响行数:', debug.affectedRows);
-                }
-                
                 // 保存成功，更新本地用户信息
                 localStorage.setItem(USER_KEY, JSON.stringify(res.data));
-                
-                // 立即再查一次，确认数据
-                const checkRes = await GenSphereAPI.auth.getMe();
-                console.log('立即 getMe 返回:', checkRes.data);
-                
-                if (checkRes.code === 0 && checkRes.data && checkRes.data.username) {
-                    // 确认有用户名了，跳兴趣页
-                    window.location.href = 'onboarding-topics.html';
-                } else {
-                    // 数据有问题，显示调试信息
-                    const debugInfo = checkRes.data?._debug || {};
-                    usernameHint.textContent = '保存成功但读取失败，请刷新重试';
-                    usernameHint.style.color = '#f59e0b';
-                    console.error('数据不一致:', {
-                        update返回: res.data.username,
-                        getMe返回: checkRes.data?.username,
-                        userId: debug.userId
-                    });
-                    nextBtn.disabled = false;
-                    nextBtn.textContent = '下一步';
-                }
+                // 跳兴趣选择页
+                window.location.href = 'onboarding-topics.html';
             } else {
                 usernameHint.textContent = res.message || '保存失败，请重试';
                 usernameHint.style.color = '#ef4444';

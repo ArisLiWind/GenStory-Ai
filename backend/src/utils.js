@@ -41,36 +41,19 @@ export function getTokenFromRequest(request) {
     return null;
 }
 
-// ===== Token generation & verification (简单可靠，不依赖 base64) =====
-function strToHex(str) {
-    let hex = '';
-    for (let i = 0; i < str.length; i++) {
-        const code = str.charCodeAt(i);
-        hex += code.toString(16).padStart(4, '0');
-    }
-    return hex;
-}
-
-function hexToStr(hex) {
-    let str = '';
-    for (let i = 0; i < hex.length; i += 4) {
-        const code = parseInt(hex.slice(i, i + 4), 16);
-        str += String.fromCharCode(code);
-    }
-    return str;
-}
-
+// ===== Token generation & verification (极简版：userId.exp.signature) =====
 function simpleHash(str) {
     let h = 0;
     for (let i = 0; i < str.length; i++) {
         h = ((h << 5) - h) + str.charCodeAt(i);
         h |= 0;
     }
-    return Math.abs(h).toString(36);
+    return (h >>> 0).toString(36);
 }
 
 export function generateToken(payload, secret) {
-    const body = strToHex(JSON.stringify(payload));
+    const { userId, exp } = payload;
+    const body = `${userId}.${exp}`;
     const sig = simpleHash(secret + ':' + body);
     return `gs_${body}.${sig}`;
 }
@@ -78,20 +61,20 @@ export function generateToken(payload, secret) {
 export function verifyToken(token, secret) {
     try {
         if (!token || !token.startsWith('gs_')) return null;
-        const rest = token.slice(3);
-        const dotIdx = rest.indexOf('.');
-        if (dotIdx === -1) return null;
+        const rest = token.slice(3); // 去掉 gs_
+        const parts = rest.split('.');
+        if (parts.length !== 3) return null; // userId.exp.sig
 
-        const body = rest.slice(0, dotIdx);
-        const sig = rest.slice(dotIdx + 1);
-        const expectedSig = simpleHash(secret + ':' + body);
+        const userId = parts[0];
+        const exp = parseInt(parts[1], 10);
+        const sig = parts[2];
 
+        const expectedSig = simpleHash(secret + ':' + userId + '.' + exp);
         if (sig !== expectedSig) return null;
 
-        const payload = JSON.parse(hexToStr(body));
-        if (payload.exp < Date.now()) return null;
+        if (exp < Date.now()) return null;
 
-        return payload;
+        return { userId, exp };
     } catch {
         return null;
     }

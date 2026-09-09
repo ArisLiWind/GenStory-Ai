@@ -93,38 +93,10 @@ async function logout(request, env) {
 }
 
 async function getMe(request, env) {
-    const token = getTokenFromRequest(request);
-
-    if (!token) {
-        return errorResponse(401, '未登录：没有收到token');
-    }
-
-    if (!token.startsWith('gs_')) {
-        return errorResponse(401, '未登录：token格式不对 (' + token.slice(0, 15) + '...)');
-    }
-
-    const payload = verifyToken(token, env.JWT_SECRET || 'gensphere-secret');
-    if (!payload) {
-        return errorResponse(401, '未登录：token验证失败 (长度' + token.length + ')');
-    }
-
-    if (payload.exp < Date.now()) {
-        return errorResponse(401, '未登录：token已过期');
-    }
-
-    const user = await env.DB.prepare('SELECT * FROM users WHERE id = ?').bind(payload.userId).first();
+    const user = await getCurrentUser(request, env);
     if (!user) {
-        return errorResponse(401, '未登录：用户不存在 (id=' + payload.userId + ')');
+        return errorResponse(401, '未登录或登录已过期');
     }
-
-    if (user.status !== 'active') {
-        return errorResponse(401, '未登录：账号已禁用');
-    }
-
-    // Parse JSON fields
-    user.topics = safeJsonParse(user.topics, []);
-    user.favorite_characters = safeJsonParse(user.favorite_characters, []);
-
     return jsonResponse(sanitizeUser(user));
 }
 
@@ -151,35 +123,18 @@ async function updateMe(request, env) {
         }
     }
 
-    let beforeUsername = user.username;
-    let affectedRows = 0;
-
     if (setClauses.length > 0) {
         setClauses.push('updated_at = ?');
         values.push(now());
         values.push(user.id);
 
-        const result = await env.DB.prepare(`
+        await env.DB.prepare(`
             UPDATE users SET ${setClauses.join(', ')} WHERE id = ?
         `).bind(...values).run();
-        
-        affectedRows = result.meta?.changes || result.changes || 0;
     }
 
     const updatedUser = await env.DB.prepare('SELECT * FROM users WHERE id = ?').bind(user.id).first();
-    const sanitized = sanitizeUser(updatedUser);
-    
-    // 调试信息
-    sanitized._debug = {
-        beforeUsername,
-        afterUsername: updatedUser.username,
-        updates: Object.keys(updates),
-        setClauses: setClauses.length,
-        affectedRows,
-        userId: user.id
-    };
-
-    return jsonResponse(sanitized);
+    return jsonResponse(sanitizeUser(updatedUser));
 }
 
 async function completeOnboarding(request, env) {
