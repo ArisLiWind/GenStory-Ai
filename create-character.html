@@ -170,6 +170,25 @@
                     我的角色
                 </a>
 
+                <!-- 目录导航 -->
+                <nav class="toc-nav">
+                    <div class="toc-group">
+                        <div class="toc-group-title">常规</div>
+                        <a href="#section-image" class="toc-link active" data-target="section-image">图片</a>
+                        <a href="#section-title" class="toc-link" data-target="section-title">标题</a>
+                        <a href="#section-desc" class="toc-link" data-target="section-desc">简介</a>
+                        <a href="#section-tags" class="toc-link" data-target="section-tags">标签</a>
+                        <a href="#section-rating" class="toc-link" data-target="section-rating">内容分级</a>
+                    </div>
+                    <div class="toc-group">
+                        <div class="toc-group-title">定义</div>
+                        <a href="#section-personality" class="toc-link" data-target="section-personality">性格</a>
+                        <a href="#section-scenario" class="toc-link" data-target="section-scenario">场景</a>
+                        <a href="#section-firstmsg" class="toc-link" data-target="section-firstmsg">初始消息</a>
+                        <a href="#section-example" class="toc-link" data-target="section-example">示例对话</a>
+                    </div>
+                </nav>
+
                 <!-- 预览卡片 -->
                 <div class="preview-section">
                     <div class="preview-label">预览</div>
@@ -206,7 +225,7 @@
                 <!-- 常规 Tab -->
                 <div class="tab-content active" id="tab-basic">
                     <!-- 图片上传 -->
-                    <div class="form-section">
+                    <div class="form-section" id="section-image">
                         <label class="form-label-main">图片 <span class="required">*</span></label>
                         <div class="image-upload-area" id="imageUploadArea">
                             <div class="upload-icon">
@@ -226,7 +245,7 @@
                     </div>
 
                     <!-- 标题 -->
-                    <div class="form-section">
+                    <div class="form-section" id="section-title">
                         <label class="form-label-main">标题 <span class="required">*</span></label>
                         <input type="text" class="form-input-big" id="charTitle" placeholder="为你的角色起一个独特的标题" maxlength="50">
                     </div>
@@ -239,7 +258,7 @@
                     </div>
 
                     <!-- 简介 -->
-                    <div class="form-section">
+                    <div class="form-section" id="section-desc">
                         <label class="form-label-main">简介 <span class="required">*</span></label>
                         <div class="editor-toolbar">
                             <select class="editor-select">
@@ -277,7 +296,7 @@
                     </div>
 
                     <!-- 标签 -->
-                    <div class="form-section">
+                    <div class="form-section" id="section-tags">
                         <label class="form-label-main">标签</label>
                         <div class="tags-input-wrap">
                             <input type="text" class="form-input-big" id="tagInput" placeholder="从建议中选择，或输入自定义标签(最多 10 个)">
@@ -358,7 +377,7 @@
                     </div>
 
                     <!-- 内容分级 -->
-                    <div class="form-section">
+                    <div class="form-section" id="section-rating">
                         <label class="form-label-main">内容分级</label>
                         <div class="rating-options">
                             <label class="rating-option">
@@ -379,21 +398,21 @@
                     </div>
 
                     <!-- 性格 -->
-                    <div class="form-section">
+                    <div class="form-section" id="section-personality">
                         <label class="form-label-main">性格 <span class="required">*</span></label>
                         <p class="form-hint section-hint">在此描述角色的人设。</p>
                         <textarea class="form-textarea" id="charPersonality" placeholder="描述你的角色人设。这将有助于定义角色如何与他人互动。" rows="4"></textarea>
                     </div>
 
                     <!-- 场景 -->
-                    <div class="form-section">
+                    <div class="form-section" id="section-scenario">
                         <label class="form-label-main">场景</label>
                         <p class="form-hint section-hint">对话以及角色当前所处的情境与背景。</p>
                         <textarea class="form-textarea" id="charScene" placeholder="概述你的角色对话的背景与设定。" rows="4"></textarea>
                     </div>
 
                     <!-- 初始消息 -->
-                    <div class="form-section">
+                    <div class="form-section" id="section-firstmsg">
                         <label class="form-label-main">初始消息（首条消息） <span class="required">*</span> <span class="count-badge">1/10</span></label>
                         <div class="initial-msg-tips">
                             <p>• 角色发出的第一条消息。提供一条较长的第一条消息，以鼓励角色给出更长的回复。</p>
@@ -412,7 +431,7 @@
                     </div>
 
                     <!-- 示例对话 -->
-                    <div class="form-section">
+                    <div class="form-section" id="section-example">
                         <label class="form-label-main">示例对话</label>
                         <p class="form-hint section-hint">你与角色之间的示例聊天。这一部分对于教会角色应如何说话非常重要。</p>
                         <textarea class="form-textarea" id="charExample" placeholder="提供示例对话以引导角色的回复。" rows="5"></textarea>

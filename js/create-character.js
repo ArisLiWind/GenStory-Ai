@@ -18,11 +18,71 @@ function initCreatePage() {
     setupPreviewSync();
     setupFormValidation();
     setupCreateButton();
+    setupScrollSpy();
+    setupSmoothScroll();
     
     // If editing, load character data
     if (editingId) {
         loadCharacterForEdit(editingId);
     }
+}
+
+// ===== 滚动高亮（目录跟随） =====
+function setupScrollSpy() {
+    const sections = [
+        'section-image', 'section-title', 'section-desc',
+        'section-tags', 'section-rating', 'section-personality',
+        'section-scenario', 'section-firstmsg', 'section-example'
+    ];
+    const links = document.querySelectorAll('.toc-link');
+
+    let ticking = false;
+    window.addEventListener('scroll', () => {
+        if (ticking) return;
+        ticking = true;
+        requestAnimationFrame(() => {
+            updateActiveToc(sections, links);
+            ticking = false;
+        });
+    });
+}
+
+function updateActiveToc(sections, links) {
+    const scrollY = window.scrollY;
+    const offset = 120; // 顶部偏移（导航栏高度）
+
+    let currentId = sections[0];
+    for (const id of sections) {
+        const el = document.getElementById(id);
+        if (!el) continue;
+        if (el.offsetTop - offset <= scrollY) {
+            currentId = id;
+        }
+    }
+
+    links.forEach(link => {
+        const target = link.getAttribute('data-target');
+        if (target === currentId) {
+            link.classList.add('active');
+        } else {
+            link.classList.remove('active');
+        }
+    });
+}
+
+function setupSmoothScroll() {
+    const links = document.querySelectorAll('.toc-link');
+    links.forEach(link => {
+        link.addEventListener('click', (e) => {
+            e.preventDefault();
+            const targetId = link.getAttribute('data-target');
+            const targetEl = document.getElementById(targetId);
+            if (!targetEl) return;
+
+            const top = targetEl.offsetTop - 16;
+            window.scrollTo({ top, behavior: 'smooth' });
+        });
+    });
 }
 
 // ===== Load Character for Edit =====

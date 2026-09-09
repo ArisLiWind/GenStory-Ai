@@ -47,7 +47,57 @@
     height: 18px;
 }
 
-.side-nav {
+/* 目录导航 */
+.toc-nav {
+    margin-bottom: 24px;
+    padding: 12px 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.toc-group {
+    margin-bottom: 16px;
+}
+
+.toc-group:last-child {
+    margin-bottom: 0;
+}
+
+.toc-group-title {
+    font-size: 11px;
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.3);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 8px;
+    padding: 0 12px;
+}
+
+.toc-link {
+    display: block;
+    padding: 8px 12px;
+    color: rgba(255, 255, 255, 0.5);
+    font-size: 13px;
+    text-decoration: none;
+    border-radius: 8px;
+    transition: all 0.2s ease;
+    border-left: 2px solid transparent;
+    margin-left: -2px;
+    border-radius: 0 8px 8px 0;
+}
+
+.toc-link:hover {
+    color: rgba(255, 255, 255, 0.8);
+    background: rgba(255, 255, 255, 0.04);
+}
+
+.toc-link.active {
+    color: #8b5cf6;
+    background: rgba(139, 92, 246, 0.1);
+    border-left-color: #8b5cf6;
+    font-weight: 500;
+}
+
+.preview-section {
     display: flex;
     flex-direction: column;
     gap: 4px;
