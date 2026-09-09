@@ -273,40 +273,15 @@
                 <div class="char-section">
                     <div class="char-section-title">
                         Lorebook
-                        <span class="char-section-title-count">3 个条目</span>
+                        <span class="char-section-title-count" id="lorebookCount">0 个条目</span>
                     </div>
-                    <div class="lorebook-card">
-                        <div class="lorebook-header">
-                            <span class="lorebook-title">关于黑手党家族</span>
-                            <span class="lorebook-badge">384 Token</span>
-                        </div>
-                        <div class="lorebook-desc">他是意大利黑手党家族的现任头目，接管家族业务已有5年。家族主要从事地下交易和情报收集...</div>
-                        <div class="lorebook-footer">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14">
-                                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
-                                <circle cx="12" cy="12" r="3"/>
-                            </svg>
-                            <span>2.3万 次触发</span>
-                        </div>
-                    </div>
-                    <div class="lorebook-card">
-                        <div class="lorebook-header">
-                            <span class="lorebook-title">他的过去</span>
-                            <span class="lorebook-badge">256 Token</span>
-                        </div>
-                        <div class="lorebook-desc">年轻时曾是街头混混，凭借过人的胆识和智谋一步步爬到今天的位置。他的上位之路充满了血腥与背叛...</div>
-                        <div class="lorebook-footer">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14">
-                                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
-                                <circle cx="12" cy="12" r="3"/>
-                            </svg>
-                            <span>1.8万 次触发</span>
-                        </div>
+                    <div id="lorebookList">
+                        <div style="text-align:center;padding:30px;color:#666;font-size:14px;">加载中...</div>
                     </div>
                 </div>
 
                 <!-- 音乐播放器 -->
-                <div class="char-section">
+                <div class="char-section" id="musicSection" style="display:none;">
                     <div class="char-section-title">背景音乐</div>
                     <div class="music-player">
                         <button class="music-play-btn">
@@ -314,7 +289,7 @@
                                 <polygon points="5 3 19 12 5 21 5 3"/>
                             </svg>
                         </button>
-                        <div class="music-title">Midnight Rendezvous - 悬疑氛围</div>
+                        <div class="music-title" id="musicTitle">—</div>
                     </div>
                 </div>
 
@@ -324,7 +299,7 @@
                         <div class="char-accordion-header">
                             <span class="char-accordion-title">
                                 Persona
-                                <span class="char-accordion-token">786 Token</span>
+                                <span class="char-accordion-token">— Token</span>
                             </span>
                             <span class="char-accordion-arrow">
                                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -333,9 +308,7 @@
                             </span>
                         </div>
                         <div class="char-accordion-content">
-                            <div class="char-accordion-body">
-                                你是一位冷酷无情的黑手党老大，在地下世界拥有极高的威望和权力。你行事果断，从不拖泥带水，对敌人毫不留情。然而在你冰冷的外表下，隐藏着一段不为人知的过去...
-                            </div>
+                            <div class="char-accordion-body">加载中...</div>
                         </div>
                     </div>
 
@@ -343,7 +316,7 @@
                         <div class="char-accordion-header">
                             <span class="char-accordion-title">
                                 Scenario
-                                <span class="char-accordion-token">512 Token</span>
+                                <span class="char-accordion-token">— Token</span>
                             </span>
                             <span class="char-accordion-arrow">
                                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -352,9 +325,7 @@
                             </span>
                         </div>
                         <div class="char-accordion-content">
-                            <div class="char-accordion-body">
-                                你掌握了一些关于他敌对势力的情报，这些情报可能会影响到整个地下世界的格局。他得知了这个消息，派人把你"请"到了他的地盘。现在你正坐在他的办公室里，面对这位传说中的黑手党老大...
-                            </div>
+                            <div class="char-accordion-body">加载中...</div>
                         </div>
                     </div>
 
@@ -362,7 +333,7 @@
                         <div class="char-accordion-header">
                             <span class="char-accordion-title">
                                 Example messages
-                                <span class="char-accordion-token">1.2k Token</span>
+                                <span class="char-accordion-token">— Token</span>
                             </span>
                             <span class="char-accordion-arrow">
                                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -371,11 +342,7 @@
                             </span>
                         </div>
                         <div class="char-accordion-content">
-                            <div class="char-accordion-body">
-                                <p><strong>他：</strong>"你以为你能轻易逃脱我的手掌心吗？"他缓缓走近，冰冷的目光让你不寒而栗。</p>
-                                <p style="margin-top:8px;"><strong>他：</strong>"说吧，你到底知道多少？关于我那些'老朋友'的事。"他坐在办公椅上，手指轻轻敲击着桌面。</p>
-                                <p style="margin-top:8px;"><strong>他：</strong>"别跟我玩花样，你应该知道和我作对的下场。"他的语气平静却带着不容置疑的威胁。</p>
-                            </div>
+                            <div class="char-accordion-body">加载中...</div>
                         </div>
                     </div>
 
@@ -383,7 +350,7 @@
                         <div class="char-accordion-header">
                             <span class="char-accordion-title">
                                 Creator's note
-                                <span class="char-accordion-token">256 Token</span>
+                                <span class="char-accordion-token">— Token</span>
                             </span>
                             <span class="char-accordion-arrow">
                                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -392,9 +359,7 @@
                             </span>
                         </div>
                         <div class="char-accordion-content">
-                            <div class="char-accordion-body">
-                                这个角色适合喜欢暗黑风格和权力博弈的玩家。角色有一定的难度，需要玩家有足够的智慧和勇气才能与之抗衡。建议从情报交易的角度切入，逐步建立关系。
-                            </div>
+                            <div class="char-accordion-body">加载中...</div>
                         </div>
                     </div>
                 </div>
