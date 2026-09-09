@@ -16,8 +16,9 @@ window.onload = function() {
     var nextBtn = document.getElementById('nextBtn');
     var usernameHint = document.getElementById('usernameHint');
     var usernameForm = document.getElementById('usernameForm');
+    var btnText = nextBtn ? nextBtn.querySelector('.btn-text') : null;
 
-    if (!usernameInput || !nextBtn || !usernameHint) {
+    if (!usernameInput || !nextBtn || !usernameHint || !btnText) {
         console.error('用户名页元素缺失');
         return;
     }
@@ -59,7 +60,7 @@ window.onload = function() {
         usernameInput.oninput = function() {
             usernameHint.textContent = '2-20个字符，支持中英文、数字和下划线';
             usernameHint.style.color = '';
-            nextBtn.disabled = usernameInput.value.length === 0;
+            nextBtn.disabled = usernameInput.value.trim().length === 0;
         };
 
         // 下一步
@@ -83,7 +84,7 @@ window.onload = function() {
             }
 
             nextBtn.disabled = true;
-            nextBtn.textContent = '保存中...';
+            btnText.textContent = '保存中...';
             usernameHint.textContent = '';
 
             GenSphereAPI.auth.updateUser({ username: username }).then(function(res) {
@@ -94,13 +95,13 @@ window.onload = function() {
                     usernameHint.textContent = res.message || '保存失败，请重试';
                     usernameHint.style.color = '#ef4444';
                     nextBtn.disabled = false;
-                    nextBtn.textContent = '下一步';
+                    btnText.textContent = '下一步';
                 }
             }).catch(function() {
                 usernameHint.textContent = '网络错误，请稍后重试';
                 usernameHint.style.color = '#ef4444';
                 nextBtn.disabled = false;
-                nextBtn.textContent = '下一步';
+                btnText.textContent = '下一步';
             });
         }
 
@@ -119,3 +120,17 @@ window.onload = function() {
         usernameInput.focus();
     }
 };
+
+// 全局函数：跳过用户名设置
+function skipOnboarding() {
+    GenSphereAPI.auth.completeOnboarding({ topics: [] }).then(function(res) {
+        if (res.code === 0 && res.data) {
+            localStorage.setItem('gensphere_user', JSON.stringify(res.data));
+            window.location.href = 'index.html';
+        } else {
+            alert(res.message || '操作失败，请重试');
+        }
+    }).catch(function() {
+        alert('网络错误，请稍后重试');
+    });
+}

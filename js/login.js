@@ -5,7 +5,6 @@
 const TOKEN_KEY = 'gensphere_token';
 const USER_KEY = 'gensphere_user';
 
-// 页面加载完成后执行
 window.onload = function() {
     var phoneInput = document.getElementById('phoneInput');
     var codeInput = document.getElementById('codeInput');
@@ -13,20 +12,44 @@ window.onload = function() {
     var submitBtn = document.getElementById('submitBtn');
     var formHint = document.getElementById('formHint');
     var loginForm = document.getElementById('loginForm');
+    var btnText = submitBtn ? submitBtn.querySelector('.btn-text') : null;
 
-    if (!phoneInput || !codeInput || !sendCodeBtn || !submitBtn || !formHint) {
+    if (!phoneInput || !codeInput || !sendCodeBtn || !submitBtn || !formHint || !btnText) {
         console.error('登录页元素缺失');
         return;
     }
 
     var countdown = 0;
     var timer = null;
+    var phoneRegistered = null; // null=未知, true=已注册, false=未注册
+
+    // 更新提示文字
+    function updateHint() {
+        if (phoneRegistered === true) {
+            formHint.textContent = '欢迎回来，请输入验证码登录';
+            formHint.style.color = '';
+            btnText.textContent = '登录';
+        } else if (phoneRegistered === false) {
+            formHint.textContent = '新手机号将自动创建账号';
+            formHint.style.color = '';
+            btnText.textContent = '注册并登录';
+        } else {
+            formHint.textContent = '未注册的手机号将自动创建账号';
+            formHint.style.color = '';
+            btnText.textContent = '登录';
+        }
+    }
+
+    // 手机号输入变化时重置状态
+    phoneInput.oninput = function() {
+        phoneRegistered = null;
+        updateHint();
+    };
 
     // 发送验证码
     sendCodeBtn.onclick = function() {
         var phone = phoneInput.value.trim();
-        formHint.textContent = '未注册的手机号将自动创建账号';
-        formHint.style.color = '';
+        phoneRegistered = null;
 
         if (!phone || phone.length < 6) {
             formHint.textContent = '请输入有效的手机号';
@@ -40,6 +63,12 @@ window.onload = function() {
 
         GenSphereAPI.auth.sendCode(phone).then(function(res) {
             if (res.code === 0) {
+                // 更新注册状态
+                if (res.data && res.data.isRegistered !== undefined) {
+                    phoneRegistered = res.data.isRegistered;
+                }
+                updateHint();
+
                 countdown = 60;
                 sendCodeBtn.textContent = countdown + 's 后重发';
                 timer = setInterval(function() {
@@ -71,9 +100,6 @@ window.onload = function() {
         var phone = phoneInput.value.trim();
         var code = codeInput.value.trim();
 
-        formHint.textContent = '未注册的手机号将自动创建账号';
-        formHint.style.color = '';
-
         if (!phone || phone.length < 6) {
             formHint.textContent = '请输入有效的手机号';
             formHint.style.color = '#ef4444';
@@ -86,8 +112,7 @@ window.onload = function() {
         }
 
         submitBtn.disabled = true;
-        var btnText = submitBtn.querySelector('.btn-text');
-        if (btnText) btnText.textContent = '登录中...';
+        btnText.textContent = '登录中...';
 
         GenSphereAPI.auth.login(phone, code).then(function(res) {
             if (res.code === 0 && res.data && res.data.token) {
@@ -105,13 +130,13 @@ window.onload = function() {
                 formHint.textContent = res.message || '登录失败';
                 formHint.style.color = '#ef4444';
                 submitBtn.disabled = false;
-                if (btnText) btnText.textContent = '登录';
+                btnText.textContent = phoneRegistered ? '登录' : '注册并登录';
             }
         }).catch(function() {
             formHint.textContent = '网络错误，请稍后重试';
             formHint.style.color = '#ef4444';
             submitBtn.disabled = false;
-            if (btnText) btnText.textContent = '登录';
+            btnText.textContent = '登录';
         });
     }
 

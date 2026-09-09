@@ -35,12 +35,17 @@ async function sendCode(request, env) {
         return errorResponse(400, '请输入有效的手机号');
     }
 
+    // 检查手机号是否已注册
+    const existing = await env.DB.prepare('SELECT id FROM users WHERE phone = ?').bind(phone).first();
+    const isRegistered = !!existing;
+
     // 开发环境直接返回成功，不真发短信
     // 生产环境这里接短信服务商
-    console.log('[send-code] phone:', phone, 'code:', MASTER_CODE);
+    console.log('[send-code] phone:', phone, 'code:', MASTER_CODE, 'registered:', isRegistered);
 
     return jsonResponse({
-        message: '验证码已发送（开发环境万能码：' + MASTER_CODE + '）',
+        message: '验证码已发送',
+        isRegistered: isRegistered,
         debug: MASTER_CODE
     });
 }
@@ -145,16 +150,23 @@ async function completeOnboarding(request, env) {
 
     const { username, topics } = await parseBody(request);
 
-    if (!username || username.trim().length === 0) {
-        return errorResponse(400, '请填写用户名');
+    const setClauses = ['onboarding_complete = 1', 'updated_at = ?'];
+    const values = [now()];
+
+    if (username && username.trim().length > 0) {
+        setClauses.push('username = ?');
+        values.push(username.trim());
     }
-    if (!topics || !Array.isArray(topics) || topics.length === 0) {
-        return errorResponse(400, '请至少选择一个兴趣标签');
+    if (topics && Array.isArray(topics)) {
+        setClauses.push('topics = ?');
+        values.push(JSON.stringify(topics));
     }
 
+    values.push(user.id);
+
     await env.DB.prepare(`
-        UPDATE users SET username = ?, topics = ?, onboarding_complete = 1, updated_at = ? WHERE id = ?
-    `).bind(username.trim(), JSON.stringify(topics), now(), user.id).run();
+        UPDATE users SET ${setClauses.join(', ')} WHERE id = ?
+    `).bind(...values).run();
 
     const updatedUser = await env.DB.prepare('SELECT * FROM users WHERE id = ?').bind(user.id).first();
     return jsonResponse(sanitizeUser(updatedUser));

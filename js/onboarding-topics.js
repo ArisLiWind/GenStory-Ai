@@ -19,8 +19,9 @@ window.onload = function() {
     var topicGrid = document.getElementById('topicGrid');
     var finishBtn = document.getElementById('finishBtn');
     var selectedCount = document.getElementById('selectedCount');
+    var btnText = finishBtn ? finishBtn.querySelector('.btn-text') : null;
 
-    if (!topicGrid || !finishBtn) {
+    if (!topicGrid || !finishBtn || !btnText) {
         console.error('兴趣选择页元素缺失');
         return;
     }
@@ -83,7 +84,7 @@ window.onload = function() {
 
     function initPage() {
         renderTopics();
-        finishBtn.onclick = finishOnboarding;
+        finishBtn.onclick = doFinish;
     }
 
     function renderTopics() {
@@ -133,30 +134,40 @@ window.onload = function() {
         }
         finishBtn.disabled = selectedTopics.length === 0;
     }
+
+    function doFinish() {
+        if (selectedTopics.length === 0) return;
+
+        finishBtn.disabled = true;
+        btnText.textContent = '保存中...';
+
+        GenSphereAPI.auth.completeOnboarding({ topics: selectedTopics }).then(function(res) {
+            if (res.code === 0 && res.data) {
+                localStorage.setItem(USER_KEY, JSON.stringify(res.data));
+                window.location.href = 'index.html';
+            } else {
+                alert(res.message || '保存失败，请重试');
+                finishBtn.disabled = false;
+                btnText.textContent = '继续';
+            }
+        }).catch(function() {
+            alert('网络错误，请稍后重试');
+            finishBtn.disabled = false;
+            btnText.textContent = '继续';
+        });
+    }
 };
 
-// 全局函数，供 HTML onclick 调用
-function finishOnboarding() {
-    var finishBtn = document.getElementById('finishBtn');
-    if (!finishBtn) return;
-
-    if (selectedTopics.length === 0) return;
-
-    finishBtn.disabled = true;
-    finishBtn.textContent = '保存中...';
-
-    GenSphereAPI.auth.completeOnboarding({ topics: selectedTopics }).then(function(res) {
+// 全局函数：跳过兴趣选择
+function skipOnboarding() {
+    GenSphereAPI.auth.completeOnboarding({ topics: [] }).then(function(res) {
         if (res.code === 0 && res.data) {
-            localStorage.setItem(USER_KEY, JSON.stringify(res.data));
+            localStorage.setItem('gensphere_user', JSON.stringify(res.data));
             window.location.href = 'index.html';
         } else {
-            alert(res.message || '保存失败，请重试');
-            finishBtn.disabled = false;
-            finishBtn.textContent = '完成';
+            alert(res.message || '操作失败，请重试');
         }
     }).catch(function() {
         alert('网络错误，请稍后重试');
-        finishBtn.disabled = false;
-        finishBtn.textContent = '完成';
     });
 }
