@@ -15,24 +15,20 @@ function isLoggedIn() {
 
 // ===== Auto-login check on page load =====
 async function checkAutoLogin() {
-    const autoLogin = localStorage.getItem(AUTO_LOGIN_KEY);
     const token = localStorage.getItem(TOKEN_KEY);
-    
-    if (autoLogin === 'true' && token) {
-        try {
-            const result = await GenSphereAPI.auth.autoLogin(token);
-            if (result.code === 0) {
-                // 更新本地用户信息
-                localStorage.setItem(AUTH_KEY, JSON.stringify(result.data.user));
-                localStorage.setItem(TOKEN_KEY, result.data.token);
-            } else {
-                // 自动登录失败，清除
-                localStorage.removeItem(TOKEN_KEY);
-                localStorage.setItem(AUTO_LOGIN_KEY, 'false');
-            }
-        } catch (e) {
-            console.error('Auto login failed:', e);
+    if (!token) return;
+
+    try {
+        const result = await GenSphereAPI.auth.getMe();
+        if (result.code === 0 && result.data) {
+            localStorage.setItem(AUTH_KEY, JSON.stringify(result.data));
+        } else {
+            // token 失效，清除
+            localStorage.removeItem(TOKEN_KEY);
+            localStorage.removeItem(AUTH_KEY);
         }
+    } catch (e) {
+        console.error('Auto login check failed:', e);
     }
 }
 
