@@ -288,22 +288,37 @@ function parseRpgMessage(content) {
 
     let remaining = content.trim();
 
-    // Parse world state markers: 【时间】xxx · 【地点】xxx · 【天气】xxx
-    const timeMatch = remaining.match(/【时间】\s*([^\n【]*?)\s*(?:【|$|·)/);
-    const locationMatch = remaining.match(/【地点】\s*([^\n【]*?)\s*(?:【|$|·)/);
-    const weatherMatch = remaining.match(/【天气】\s*([^\n【]*?)\s*(?:【|$|·)/);
-
-    if (timeMatch || locationMatch || weatherMatch) {
+    // Parse combined header: 【时间·地点】 or 【时间 · 地点】
+    const headerMatch = remaining.match(/^【([^】·]+)[·\s]+([^】]+)】/);
+    if (headerMatch) {
         result.isRpg = true;
+        const timePart = headerMatch[1].trim();
+        const locationPart = headerMatch[2].trim();
         result.worldState = {
-            time: timeMatch ? timeMatch[1].trim() : null,
-            location: locationMatch ? locationMatch[1].trim() : null,
-            weather: weatherMatch ? weatherMatch[1].trim() : null
+            time: timePart,
+            location: locationPart,
+            weather: null
         };
-        // Remove world state line from remaining
-        remaining = remaining.replace(/^【时间】[^\n]*\n?/, '');
-        remaining = remaining.replace(/【地点】[^\n]*\n?/g, '');
-        remaining = remaining.replace(/【天气】[^\n]*\n?/g, '');
+        // Remove header line
+        remaining = remaining.replace(/^【[^】]+】\s*\n?/, '').trim();
+    }
+
+    // Parse separate world state markers: 【时间】xxx  【地点】xxx  【天气】xxx
+    if (!result.worldState) {
+        const timeMatch = remaining.match(/【时间】\s*([^\n【]*?)\s*(?:【|$|·)/);
+        const locationMatch = remaining.match(/【地点】\s*([^\n【]*?)\s*(?:【|$|·)/);
+        const weatherMatch = remaining.match(/【天气】\s*([^\n【]*?)\s*(?:【|$|·)/);
+        if (timeMatch || locationMatch || weatherMatch) {
+            result.isRpg = true;
+            result.worldState = {
+                time: timeMatch ? timeMatch[1].trim() : null,
+                location: locationMatch ? locationMatch[1].trim() : null,
+                weather: weatherMatch ? weatherMatch[1].trim() : null
+            };
+            remaining = remaining.replace(/^【时间】[^\n]*\n?/, '');
+            remaining = remaining.replace(/【地点】[^\n]*\n?/g, '');
+            remaining = remaining.replace(/【天气】[^\n]*\n?/g, '');
+        }
     }
 
     // Parse scene description: 【场景】xxx
@@ -314,54 +329,108 @@ function parseRpgMessage(content) {
         remaining = remaining.replace(/【场景】[\s\S]*?(?=\n【|$)/, '').trim();
     }
 
-    // Parse status changes: 【状态变化】xxx or 【状态】xxx
-    const statusMatch = remaining.match(/【状态(?:变化)?】\s*([^\n]*)/);
-    if (statusMatch) {
+    // Parse NPC reaction: 【NPC反应】 or 【NPC 反应】
+    const npcMatch = remaining.match(/【NPC\s*反应】\s*([\s\S]*?)(?=\n【|$)/);
+    if (npcMatch) {
         result.isRpg = true;
-        const statusStr = statusMatch[1].trim();
-        // Split by | or , or ，
-        result.statusChanges = statusStr.split(/[||，,]/).map(s => s.trim()).filter(s => s);
-        remaining = remaining.replace(/【状态(?:变化)?】[^\n]*\n?/, '').trim();
+        result.npcReaction = npcMatch[1].trim();
+        remaining = remaining.replace(/【NPC\s*反应】[\s\S]*?(?=\n【|$)/, '').trim();
     }
 
-    // Parse action options: 【选项】 followed by numbered list
-    const optionsMatch = remaining.match(/【选项】\s*\n([\s\S]*)$/);
+    // Parse status changes: 【状态变化】 or 【状态】 with bullet points
+    const statusMatch = remaining.match(/【状态(?:变化)?】\s*([\s\S]*?)(?=\n【|$)/);
+    if (statusMatch) {
+        result.isRpg = true;
+        const statusText = statusMatch[1].trim();
+        // Split by lines starting with - or •
+        const changeLines = statusText.split(/\n/).map(s => s.trim()).filter(s => s && /^[-•]/.test(s));
+        if (changeLines.length > 0) {
+            result.statusChanges = changeLines.map(line => line.replace(/^[-•]\s*/, '').trim());
+        } else {
+            // Fallback: split by | or , or ，
+            result.statusChanges = statusText.split(/[||，,]/).map(s => s.trim()).filter(s => s);
+        }
+        remaining = remaining.replace(/【状态(?:变化)?】[\s\S]*?(?=\n【|$)/, '').trim();
+    }
+
+    // Parse action options: 【行动选项】 or 【选项】 with ①②③ or 1. 2. numbering
+    const optionsMatch = remaining.match(/【(?:行动)?选项】\s*\n([\s\S]*)$/);
     if (optionsMatch) {
         result.isRpg = true;
         const optionsText = optionsMatch[1].trim();
-        // Parse numbered options (1. xxx, 2. xxx, etc.)
-        const optionLines = optionsText.match(/^\d+[\.、]\s*.+$/gm);
-        if (optionLines) {
-            result.actionOptions = optionLines.map(line => {
-                return line.replace(/^\d+[\.、]\s*/, '').trim();
-            }).filter(o => o);
+
+        // Try ①②③④ numbering first
+        const circledNumbers = ['①', '②', '③', '④', '⑤', '⑥', '⑦', '⑧', '⑨', '⑩'];
+        let foundOptions = [];
+        for (let i = 0; i < circledNumbers.length; i++) {
+            const num = circledNumbers[i];
+            const nextNum = circledNumbers[i + 1];
+            const pattern = new RegExp(`${num}\\s*(.+?)(?=${nextNum ? '\\s*' + nextNum : '$'})`, 's');
+            const match = optionsText.match(pattern);
+            if (match) {
+                foundOptions.push(match[1].trim().replace(/\n/g, ' ').trim());
+            }
         }
-        remaining = remaining.replace(/【选项】[\s\S]*$/, '').trim();
+
+        // If no circled numbers, try regular numbered list
+        if (foundOptions.length === 0) {
+            const optionLines = optionsText.match(/^\d+[\.、]\s*.+$/gm);
+            if (optionLines) {
+                foundOptions = optionLines.map(line =>
+                    line.replace(/^\d+[\.、]\s*/, '').trim()
+                ).filter(o => o);
+            }
+        }
+
+        result.actionOptions = foundOptions.filter(o => o && o !== '自由行动');
+        remaining = remaining.replace(/【(?:行动)?选项】[\s\S]*$/, '').trim();
     }
 
-    // Also look for numbered options at the end (without 【选项】 marker)
+    // Also look for numbered options at the end (without marker)
     if (result.actionOptions.length === 0) {
-        const endOptions = remaining.match(/(?:\n|^)((?:\d+[\.、]\s*.+\n?)+)$/);
+        const endOptions = remaining.match(/(?:\n|^)((?:[①②③④⑤⑥⑦⑧⑨⑩]|\d+[\.、])\s*.+\n?)+)$/);
         if (endOptions) {
-            const optionLines = endOptions[1].trim().split(/\n/).filter(l => /^\d+[\.、]/.test(l.trim()));
-            if (optionLines.length >= 2) {
+            const optionsText = endOptions[1].trim();
+            const circledNumbers = ['①', '②', '③', '④', '⑤', '⑥', '⑦', '⑧', '⑨', '⑩'];
+            let foundOptions = [];
+            for (let i = 0; i < circledNumbers.length; i++) {
+                const num = circledNumbers[i];
+                const nextNum = circledNumbers[i + 1];
+                const pattern = new RegExp(`${num}\\s*(.+?)(?=${nextNum ? '\\s*' + nextNum : '$'})`, 's');
+                const match = optionsText.match(pattern);
+                if (match) {
+                    foundOptions.push(match[1].trim().replace(/\n/g, ' ').trim());
+                }
+            }
+            if (foundOptions.length === 0) {
+                const optionLines = optionsText.split(/\n/).filter(l => /^\d+[\.、]/.test(l.trim()));
+                if (optionLines.length >= 2) {
+                    foundOptions = optionLines.map(line =>
+                        line.trim().replace(/^\d+[\.、]\s*/, '').replace(/\*\*/g, '').trim()
+                    ).filter(o => o);
+                }
+            }
+            if (foundOptions.length >= 2) {
                 result.isRpg = true;
-                result.actionOptions = optionLines.map(line => {
-                    return line.trim().replace(/^\d+[\.、]\s*/, '').replace(/\*\*/g, '').trim();
-                }).filter(o => o);
-                remaining = remaining.replace(/((?:\d+[\.、]\s*.+\n?)+)$/, '').trim();
+                result.actionOptions = foundOptions.filter(o => o !== '自由行动');
+                remaining = remaining.replace(/((?:[①②③④⑤⑥⑦⑧⑨⑩]|\d+[\.、])\s*.+\n?)+$/, '').trim();
             }
         }
     }
 
-    // Whatever is left is NPC reaction / dialogue
-    if (remaining.trim()) {
+    // If no scene desc but we have content before NPC reaction, treat it as scene
+    if (!result.sceneDesc && result.npcReaction && remaining.trim()) {
+        result.sceneDesc = remaining.trim();
+        remaining = '';
+    }
+
+    // Whatever is left is NPC reaction / dialogue if not already set
+    if (!result.npcReaction && remaining.trim()) {
         result.npcReaction = remaining.trim();
     }
 
     // If no RPG markers found but we have content, check for RPG-style formatting (asterisk actions + quotes)
     if (!result.isRpg && content) {
-        // Check if message has both action descriptions (*...*) and dialogue ("...")
         const hasActions = /\*[^*]+\*/.test(content);
         const hasDialogue = /"[^"]+"/.test(content);
         if (hasActions && hasDialogue) {
