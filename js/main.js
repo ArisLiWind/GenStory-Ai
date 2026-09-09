@@ -381,24 +381,22 @@ async function loadCharactersFromBackend() {
 
         if (result.code === 0 && result.data && Array.isArray(result.data.items)) {
             const items = result.data.items;
-            if (items.length > 0) {
-                allCharacters = items.map(normalizeCharFromBackend);
-                filteredCharacters = [...allCharacters];
-                totalCharacters = result.data.total || items.length;
-                hasMore = !!result.data.hasMore;
-                useBackendData = true;
-                isLoading = false;
-                return;
-            }
+            allCharacters = items.map(normalizeCharFromBackend);
+            filteredCharacters = [...allCharacters];
+            totalCharacters = result.data.total || items.length;
+            hasMore = !!result.data.hasMore;
+            useBackendData = true;
+            isLoading = false;
+            return;
         }
     } catch (e) {
-        console.warn('Backend API unavailable, using mock data:', e);
+        console.error('Failed to load characters from backend:', e);
     }
 
-    // Fallback to mock data
-    allCharacters = generateCharacters(200);
-    filteredCharacters = [...allCharacters];
-    totalCharacters = allCharacters.length;
+    // 后端加载失败
+    allCharacters = [];
+    filteredCharacters = [];
+    totalCharacters = 0;
     hasMore = false;
     useBackendData = false;
     isLoading = false;
