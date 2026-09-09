@@ -286,150 +286,147 @@ function parseRpgMessage(content) {
         rawContent: content
     };
 
-    let remaining = content.trim();
+    let text = content.trim();
 
-    // Parse combined header: 【时间·地点】 or 【时间 · 地点】
-    const headerMatch = remaining.match(/^【([^】·]+)[·\s]+([^】]+)】/);
+    // ===== 1. Parse header: 【时间·地点】 =====
+    const headerMatch = text.match(/^【([^】·]+)[·\s]+([^】]+)】/);
     if (headerMatch) {
         result.isRpg = true;
-        const timePart = headerMatch[1].trim();
-        const locationPart = headerMatch[2].trim();
         result.worldState = {
-            time: timePart,
-            location: locationPart,
+            time: headerMatch[1].trim(),
+            location: headerMatch[2].trim(),
             weather: null
         };
-        // Remove header line
-        remaining = remaining.replace(/^【[^】]+】\s*\n?/, '').trim();
+        text = text.substring(headerMatch[0].length).trim();
     }
 
-    // Parse separate world state markers: 【时间】xxx  【地点】xxx  【天气】xxx
-    if (!result.worldState) {
-        const timeMatch = remaining.match(/【时间】\s*([^\n【]*?)\s*(?:【|$|·)/);
-        const locationMatch = remaining.match(/【地点】\s*([^\n【]*?)\s*(?:【|$|·)/);
-        const weatherMatch = remaining.match(/【天气】\s*([^\n【]*?)\s*(?:【|$|·)/);
-        if (timeMatch || locationMatch || weatherMatch) {
+    // ===== 2. Parse sections by 【section name】 markers =====
+    const sections = {};
+    const sectionRegex = /【([^】]+)】/g;
+    const sectionPositions = [];
+    let match;
+    while ((match = sectionRegex.exec(text)) !== null) {
+        sectionPositions.push({
+            name: match[1].trim(),
+            start: match.index,
+            end: match.index + match[0].length
+        });
+    }
+
+    for (let i = 0; i < sectionPositions.length; i++) {
+        const sec = sectionPositions[i];
+        const nextStart = i < sectionPositions.length - 1
+            ? sectionPositions[i + 1].start
+            : text.length;
+        const content = text.substring(sec.end, nextStart).trim();
+        sections[sec.name] = content;
+    }
+
+    // Extract scene description
+    if (sections['场景']) {
+        result.isRpg = true;
+        result.sceneDesc = sections['场景'];
+    }
+
+    // Extract NPC reaction
+    const npcKeys = ['NPC反应', 'NPC 反应', 'npc反应'];
+    for (const key of npcKeys) {
+        if (sections[key]) {
             result.isRpg = true;
-            result.worldState = {
-                time: timeMatch ? timeMatch[1].trim() : null,
-                location: locationMatch ? locationMatch[1].trim() : null,
-                weather: weatherMatch ? weatherMatch[1].trim() : null
-            };
-            remaining = remaining.replace(/^【时间】[^\n]*\n?/, '');
-            remaining = remaining.replace(/【地点】[^\n]*\n?/g, '');
-            remaining = remaining.replace(/【天气】[^\n]*\n?/g, '');
+            result.npcReaction = sections[key];
+            break;
         }
     }
 
-    // Parse scene description: 【场景】xxx
-    const sceneMatch = remaining.match(/【场景】\s*([\s\S]*?)(?=\n【|$)/);
-    if (sceneMatch) {
-        result.isRpg = true;
-        result.sceneDesc = sceneMatch[1].trim();
-        remaining = remaining.replace(/【场景】[\s\S]*?(?=\n【|$)/, '').trim();
-    }
-
-    // Parse NPC reaction: 【NPC反应】 or 【NPC 反应】
-    const npcMatch = remaining.match(/【NPC\s*反应】\s*([\s\S]*?)(?=\n【|$)/);
-    if (npcMatch) {
-        result.isRpg = true;
-        result.npcReaction = npcMatch[1].trim();
-        remaining = remaining.replace(/【NPC\s*反应】[\s\S]*?(?=\n【|$)/, '').trim();
-    }
-
-    // Parse status changes: 【状态变化】 or 【状态】 with bullet points
-    const statusMatch = remaining.match(/【状态(?:变化)?】\s*([\s\S]*?)(?=\n【|$)/);
-    if (statusMatch) {
-        result.isRpg = true;
-        const statusText = statusMatch[1].trim();
-        // Split by lines starting with - or •
-        const changeLines = statusText.split(/\n/).map(s => s.trim()).filter(s => s && /^[-•]/.test(s));
-        if (changeLines.length > 0) {
-            result.statusChanges = changeLines.map(line => line.replace(/^[-•]\s*/, '').trim());
-        } else {
-            // Fallback: split by | or , or ，
-            result.statusChanges = statusText.split(/[||，,]/).map(s => s.trim()).filter(s => s);
-        }
-        remaining = remaining.replace(/【状态(?:变化)?】[\s\S]*?(?=\n【|$)/, '').trim();
-    }
-
-    // Parse action options: 【行动选项】 or 【选项】 with ①②③ or 1. 2. numbering
-    const optionsMatch = remaining.match(/【(?:行动)?选项】\s*\n([\s\S]*)$/);
-    if (optionsMatch) {
-        result.isRpg = true;
-        const optionsText = optionsMatch[1].trim();
-
-        // Try ①②③④ numbering first
-        const circledNumbers = ['①', '②', '③', '④', '⑤', '⑥', '⑦', '⑧', '⑨', '⑩'];
-        let foundOptions = [];
-        for (let i = 0; i < circledNumbers.length; i++) {
-            const num = circledNumbers[i];
-            const nextNum = circledNumbers[i + 1];
-            const pattern = new RegExp(`${num}\\s*(.+?)(?=${nextNum ? '\\s*' + nextNum : '$'})`, 's');
-            const match = optionsText.match(pattern);
-            if (match) {
-                foundOptions.push(match[1].trim().replace(/\n/g, ' ').trim());
+    // Extract status changes
+    const statusKeys = ['状态变化', '状态', '角色状态更新'];
+    for (const key of statusKeys) {
+        if (sections[key]) {
+            result.isRpg = true;
+            const statusText = sections[key];
+            const lines = statusText.split('\n').map(s => s.trim()).filter(s => s);
+            const changes = [];
+            for (const line of lines) {
+                // Remove leading bullet markers
+                const cleaned = line.replace(/^[-•▪▸►]\s*/, '').trim();
+                if (cleaned) changes.push(cleaned);
             }
+            result.statusChanges = changes.length > 0 ? changes : lines;
+            break;
         }
-
-        // If no circled numbers, try regular numbered list
-        if (foundOptions.length === 0) {
-            const optionLines = optionsText.match(/^\d+[\.、]\s*.+$/gm);
-            if (optionLines) {
-                foundOptions = optionLines.map(line =>
-                    line.replace(/^\d+[\.、]\s*/, '').trim()
-                ).filter(o => o);
-            }
-        }
-
-        result.actionOptions = foundOptions.filter(o => o && o !== '自由行动');
-        remaining = remaining.replace(/【(?:行动)?选项】[\s\S]*$/, '').trim();
     }
 
-    // Also look for numbered options at the end (without marker)
+    // Extract action options
+    const optionKeys = ['行动选项', '选项', '任务分支'];
+    for (const key of optionKeys) {
+        if (sections[key]) {
+            result.isRpg = true;
+            const optionsText = sections[key];
+            result.actionOptions = parseOptionsText(optionsText);
+            break;
+        }
+    }
+
+    // ===== 3. If no sections found, check end-of-text options =====
     if (result.actionOptions.length === 0) {
-        const endOptions = remaining.match(/(?:\n|^)((?:[①②③④⑤⑥⑦⑧⑨⑩]|\d+[\.、])\s*.+\n?)+)$/);
-        if (endOptions) {
-            const optionsText = endOptions[1].trim();
-            const circledNumbers = ['①', '②', '③', '④', '⑤', '⑥', '⑦', '⑧', '⑨', '⑩'];
-            let foundOptions = [];
-            for (let i = 0; i < circledNumbers.length; i++) {
-                const num = circledNumbers[i];
-                const nextNum = circledNumbers[i + 1];
-                const pattern = new RegExp(`${num}\\s*(.+?)(?=${nextNum ? '\\s*' + nextNum : '$'})`, 's');
-                const match = optionsText.match(pattern);
-                if (match) {
-                    foundOptions.push(match[1].trim().replace(/\n/g, ' ').trim());
-                }
-            }
-            if (foundOptions.length === 0) {
-                const optionLines = optionsText.split(/\n/).filter(l => /^\d+[\.、]/.test(l.trim()));
-                if (optionLines.length >= 2) {
-                    foundOptions = optionLines.map(line =>
-                        line.trim().replace(/^\d+[\.、]\s*/, '').replace(/\*\*/g, '').trim()
-                    ).filter(o => o);
-                }
-            }
-            if (foundOptions.length >= 2) {
-                result.isRpg = true;
-                result.actionOptions = foundOptions.filter(o => o !== '自由行动');
-                remaining = remaining.replace(/((?:[①②③④⑤⑥⑦⑧⑨⑩]|\d+[\.、])\s*.+\n?)+$/, '').trim();
+        const opts = parseOptionsFromEnd(text);
+        if (opts.length >= 2) {
+            result.isRpg = true;
+            result.actionOptions = opts;
+            // Remove options from text
+            const lastOptionIdx = findLastOptionStart(text);
+            if (lastOptionIdx > 0) {
+                text = text.substring(0, lastOptionIdx).trim();
             }
         }
     }
 
-    // If no scene desc but we have content before NPC reaction, treat it as scene
-    if (!result.sceneDesc && result.npcReaction && remaining.trim()) {
-        result.sceneDesc = remaining.trim();
-        remaining = '';
+    // ===== 4. Fill remaining content =====
+    // If we have NPC reaction but no scene desc,
+    // the content before the first section might be scene desc
+    if (!result.sceneDesc && sectionPositions.length > 0) {
+        const beforeFirst = text.substring(0, sectionPositions[0].start).trim();
+        if (beforeFirst) {
+            result.sceneDesc = beforeFirst;
+        }
     }
 
-    // Whatever is left is NPC reaction / dialogue if not already set
-    if (!result.npcReaction && remaining.trim()) {
-        result.npcReaction = remaining.trim();
+    // If no NPC reaction found, all remaining text is NPC reaction
+    if (!result.npcReaction) {
+        // Get text that's not in any recognized section
+        let remaining = text;
+        // Remove all section markers and their content
+        for (const key of Object.keys(sections)) {
+            const lowerKey = key.toLowerCase();
+            if (['场景', 'npc反应', 'npc 反应', '状态变化', '状态', '角色状态更新', '行动选项', '选项', '任务分支']
+                .some(k => lowerKey.includes(k.toLowerCase()))) {
+                // This section was already extracted
+            }
+        }
+        // Simpler: if we have section positions but no NPC reaction,
+        // use the text between sections as NPC reaction
+        if (sectionPositions.length > 0) {
+            // Try to find unrecognized content between sections
+            let npcContent = '';
+            for (let i = 0; i < sectionPositions.length; i++) {
+                const secName = sectionPositions[i].name;
+                const isKnown = ['场景', 'NPC反应', 'NPC 反应', '状态变化', '状态', '角色状态更新', '行动选项', '选项', '任务分支']
+                    .some(k => secName.includes(k) || k.includes(secName));
+                if (!isKnown && sections[secName]) {
+                    npcContent += (npcContent ? '\n' : '') + sections[secName];
+                }
+            }
+            if (npcContent) {
+                result.npcReaction = npcContent.trim();
+            }
+        }
+        // If still nothing, use all text
+        if (!result.npcReaction && text.trim()) {
+            result.npcReaction = text.trim();
+        }
     }
 
-    // If no RPG markers found but we have content, check for RPG-style formatting (asterisk actions + quotes)
+    // ===== 5. Fallback: detect RPG-style from formatting =====
     if (!result.isRpg && content) {
         const hasActions = /\*[^*]+\*/.test(content);
         const hasDialogue = /"[^"]+"/.test(content);
@@ -440,6 +437,141 @@ function parseRpgMessage(content) {
     }
 
     return result;
+}
+
+// Helper: parse options from text with ①②③ or 1. 2. numbering
+function parseOptionsText(optionsText) {
+    const options = [];
+    const circled = ['①', '②', '③', '④', '⑤', '⑥', '⑦', '⑧', '⑨', '⑩'];
+
+    // Try circled numbers first
+    let foundAny = false;
+    for (let i = 0; i < circled.length; i++) {
+        const num = circled[i];
+        if (optionsText.indexOf(num) === -1) continue;
+        foundAny = true;
+        const startIdx = optionsText.indexOf(num) + num.length;
+        let endIdx = optionsText.length;
+        for (let j = i + 1; j < circled.length; j++) {
+            const nextIdx = optionsText.indexOf(circled[j], startIdx);
+            if (nextIdx !== -1) {
+                endIdx = nextIdx;
+                break;
+            }
+        }
+        const optText = optionsText.substring(startIdx, endIdx).trim()
+            .replace(/\n/g, ' ').replace(/\s+/g, ' ').trim();
+        if (optText && optText !== '自由行动') {
+            options.push(optText);
+        }
+    }
+
+    // If no circled numbers, try numbered list
+    if (!foundAny) {
+        const lines = optionsText.split('\n').map(l => l.trim()).filter(l => l);
+        for (const line of lines) {
+            const numMatch = line.match(/^\d+[\.、]\s*(.+)/);
+            if (numMatch) {
+                const opt = numMatch[1].trim();
+                if (opt && opt !== '自由行动') {
+                    options.push(opt);
+                }
+            }
+        }
+    }
+
+    return options;
+}
+
+// Helper: find options at end of text
+function parseOptionsFromEnd(text) {
+    const circled = ['①', '②', '③', '④', '⑤'];
+    const lines = text.split('\n').reverse();
+    const optionLines = [];
+
+    for (const line of lines) {
+        const trimmed = line.trim();
+        if (!trimmed) {
+            if (optionLines.length > 0) break;
+            continue;
+        }
+        // Check if it starts with circled number
+        let isOption = false;
+        for (const num of circled) {
+            if (trimmed.startsWith(num)) {
+                isOption = true;
+                break;
+            }
+        }
+        // Or numbered list
+        if (!isOption && /^\d+[\.、]/.test(trimmed)) {
+            isOption = true;
+        }
+        if (isOption) {
+            optionLines.unshift(trimmed);
+        } else if (optionLines.length > 0) {
+            break;
+        }
+    }
+
+    if (optionLines.length < 2) return [];
+
+    const options = [];
+    for (const line of optionLines) {
+        let cleaned = line;
+        // Remove circled number
+        for (const num of circled) {
+            if (cleaned.startsWith(num)) {
+                cleaned = cleaned.substring(num.length).trim();
+                break;
+            }
+        }
+        // Remove numbered list prefix
+        cleaned = cleaned.replace(/^\d+[\.、]\s*/, '').trim();
+        if (cleaned && cleaned !== '自由行动') {
+            options.push(cleaned);
+        }
+    }
+    return options;
+}
+
+function findLastOptionStart(text) {
+    const circled = ['①', '②', '③', '④', '⑤'];
+    const lines = text.split('\n');
+    let startIdx = -1;
+    let inOptions = false;
+
+    for (let i = lines.length - 1; i >= 0; i--) {
+        const trimmed = lines[i].trim();
+        if (!trimmed) {
+            if (inOptions) {
+                startIdx = i + 1;
+                break;
+            }
+            continue;
+        }
+        let isOption = false;
+        for (const num of circled) {
+            if (trimmed.startsWith(num)) { isOption = true; break; }
+        }
+        if (!isOption && /^\d+[\.、]/.test(trimmed)) isOption = true;
+
+        if (isOption) {
+            inOptions = true;
+            startIdx = i;
+        } else if (inOptions) {
+            startIdx = i + 1;
+            break;
+        }
+    }
+
+    if (startIdx === -1) return -1;
+    // Calculate character index
+    let charIdx = 0;
+    for (let i = 0; i < startIdx; i++) {
+        charIdx += lines[i].length + 1; // +1 for newline
+    }
+    return charIdx;
 }
 
 // ===== RPG Action Options =====
