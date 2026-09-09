@@ -89,7 +89,9 @@ window.onload = function() {
         try {
             GenSphereAPI.categories.getAll().then(function(res) {
                 if (res.code === 0 && res.data && Array.isArray(res.data) && res.data.length > 0) {
-                    allTopics = res.data.map(function(c) { return c.name || c; });
+                    allTopics = res.data
+                        .map(function(c) { return c.name || c; })
+                        .filter(function(name) { return name !== '全部' && name !== 'all'; });
                     addLog('[topics] loaded ' + allTopics.length + ' topics from API');
                     renderTopics();
                 }
