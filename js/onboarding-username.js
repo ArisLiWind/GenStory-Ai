@@ -1,5 +1,5 @@
 // ============================================
-// 用户名设置页 - 极简稳定版
+// 用户名设置页 - 稳健版（只前进不后退）
 // ============================================
 
 var TOKEN_KEY = 'gensphere_token';
@@ -23,36 +23,29 @@ window.onload = function() {
         return;
     }
 
-    // 先从服务端拉取用户信息，确认状态
+    // 先拉取用户信息（但失败了不回跳，让用户至少能填）
     GenSphereAPI.auth.getMe().then(function(res) {
-        if (res.code !== 0 || !res.data) {
-            localStorage.removeItem(TOKEN_KEY);
-            localStorage.removeItem(USER_KEY);
-            window.location.href = 'login.html';
-            return;
+        if (res.code === 0 && res.data) {
+            var user = res.data;
+            localStorage.setItem(USER_KEY, JSON.stringify(user));
+
+            // 已经完成 onboarding → 直接进主页
+            if (user.onboardingComplete) {
+                window.location.href = 'index.html';
+                return;
+            }
+
+            // 已经有用户名 → 直接进兴趣选择页
+            if (user.username && user.username.length > 0) {
+                window.location.href = 'onboarding-topics.html';
+                return;
+            }
         }
-
-        var user = res.data;
-        localStorage.setItem(USER_KEY, JSON.stringify(user));
-
-        // 已经完成 onboarding → 直接进主页
-        if (user.onboardingComplete) {
-            window.location.href = 'index.html';
-            return;
-        }
-
-        // 已经有用户名了 → 直接进兴趣选择页
-        if (user.username && user.username.length > 0) {
-            window.location.href = 'onboarding-topics.html';
-            return;
-        }
-
-        // 正常：初始化页面
+        // getMe 失败或用户没用户名 → 正常显示页面
         initPage();
     }).catch(function() {
-        localStorage.removeItem(TOKEN_KEY);
-        localStorage.removeItem(USER_KEY);
-        window.location.href = 'login.html';
+        // getMe 失败不回跳！可能是网络波动，让用户继续填
+        initPage();
     });
 
     function initPage() {
@@ -63,7 +56,7 @@ window.onload = function() {
             nextBtn.disabled = usernameInput.value.trim().length === 0;
         };
 
-        // 下一步
+        // 下一步（保存失败也要去兴趣页）
         function doNext() {
             var username = usernameInput.value.trim();
 
@@ -85,24 +78,27 @@ window.onload = function() {
 
             nextBtn.disabled = true;
             btnText.textContent = '保存中...';
-            usernameHint.textContent = '';
 
+            // 先乐观地把用户名存到本地
+            var currentUser = JSON.parse(localStorage.getItem(USER_KEY) || '{}');
+            currentUser.username = username;
+            localStorage.setItem(USER_KEY, JSON.stringify(currentUser));
+
+            // 尝试保存到后端
             GenSphereAPI.auth.updateUser({ username: username }).then(function(res) {
                 if (res.code === 0 && res.data) {
                     localStorage.setItem(USER_KEY, JSON.stringify(res.data));
-                    window.location.href = 'onboarding-topics.html';
-                } else {
-                    usernameHint.textContent = res.message || '保存失败，请重试';
-                    usernameHint.style.color = '#ef4444';
-                    nextBtn.disabled = false;
-                    btnText.textContent = '下一步';
                 }
+                // 不管成功失败，都继续去兴趣页
+                goToTopics();
             }).catch(function() {
-                usernameHint.textContent = '网络错误，请稍后重试';
-                usernameHint.style.color = '#ef4444';
-                nextBtn.disabled = false;
-                btnText.textContent = '下一步';
+                // 网络失败也继续去兴趣页（用户名存在本地，后面再同步）
+                goToTopics();
             });
+        }
+
+        function goToTopics() {
+            window.location.href = 'onboarding-topics.html';
         }
 
         nextBtn.onclick = function(e) {
@@ -126,11 +122,10 @@ function skipOnboarding() {
     GenSphereAPI.auth.completeOnboarding({ topics: [] }).then(function(res) {
         if (res.code === 0 && res.data) {
             localStorage.setItem('gensphere_user', JSON.stringify(res.data));
-            window.location.href = 'index.html';
-        } else {
-            alert(res.message || '操作失败，请重试');
         }
+        // 不管成功失败都进主页
+        window.location.href = 'index.html';
     }).catch(function() {
-        alert('网络错误，请稍后重试');
+        window.location.href = 'index.html';
     });
 }
