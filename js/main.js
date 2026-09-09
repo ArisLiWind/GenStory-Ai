@@ -35,10 +35,10 @@ async function checkAutoLogin() {
 // ===== Character Data Generator =====
 function generateCharacters(count, startId = 1) {
     const titles = [
-        "Mafia Boss", "Willson Wáng", "Neglectful family", "Ayato Hiroshi",
+        "深空探险家", "Willson Wáng", "星际指挥官", "Ayato Hiroshi",
         "Second Life Isekai", "Giovanni Moretti", "Your Three Older Brothers",
-        "Your tyrant father", "Best friends trio", "Snow your edgy sister",
-        "Another Magic Academy", "星际指挥官", "古代剑客", "龙骑士传说",
+        "Best friends trio", "Snow your edgy sister",
+        "Another Magic Academy", "古代剑客", "龙骑士传说",
         "末世幸存者", "吸血鬼恋人", "校园恋爱物语", "赛博朋克2077",
         "神秘侦探", "精灵王子", "机械少女", "时空旅行者", "海底王国",
         "天使与恶魔", "狼人传说", "魔法少女", "忍者物语", "海盗冒险",
