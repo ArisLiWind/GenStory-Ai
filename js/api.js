@@ -96,6 +96,13 @@ const GenSphereAPI = {
                 method: 'PUT',
                 body: JSON.stringify(updates)
             });
+        },
+
+        async completeOnboarding(username, topics) {
+            return request('/auth/complete-onboarding', {
+                method: 'POST',
+                body: JSON.stringify({ username, topics })
+            });
         }
     },
 

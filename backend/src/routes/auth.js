@@ -1,10 +1,10 @@
 // ============================================
-// Auth Routes
+// Auth Routes - 重写版
 // ============================================
 
-import { jsonResponse, errorResponse, parseBody, generateToken, verifyToken, getCurrentUser, now, generateId, sanitizeUser, safeJsonParse } from '../utils.js';
+import { jsonResponse, errorResponse, parseBody, generateToken, getCurrentUser, now, generateId, sanitizeUser, safeJsonParse } from '../utils.js';
 
-const MASTER_CODE = '335566'; // Dev universal code
+const MASTER_CODE = '335566';
 
 export async function handleAuth(request, env, path) {
     if (path === '/api/auth/send-code' && request.method === 'POST') {
@@ -22,33 +22,27 @@ export async function handleAuth(request, env, path) {
     if (path === '/api/auth/me' && request.method === 'PUT') {
         return updateMe(request, env);
     }
+    if (path === '/api/auth/complete-onboarding' && request.method === 'POST') {
+        return completeOnboarding(request, env);
+    }
     return errorResponse(404, 'Not found');
 }
 
 async function sendCode(request, env) {
     const { phone } = await parseBody(request);
 
-    if (!/^1[3-9]\d{9}$/.test(phone)) {
-        return errorResponse(400, '手机号格式不正确');
+    if (!phone || phone.length < 6) {
+        return errorResponse(400, '请输入有效的手机号');
     }
 
-    const code = Math.floor(100000 + Math.random() * 900000).toString();
-    const expireAt = now() + 5 * 60 * 1000;
+    // 开发环境直接返回成功，不真发短信
+    // 生产环境这里接短信服务商
+    console.log('[send-code] phone:', phone, 'code:', MASTER_CODE);
 
-    // Upsert verify code
-    await env.DB.prepare(`
-        INSERT INTO verify_codes (phone, code, expire_at, created_at)
-        VALUES (?, ?, ?, ?)
-        ON CONFLICT(phone) DO UPDATE SET
-            code = excluded.code,
-            expire_at = excluded.expire_at,
-            created_at = excluded.created_at
-    `).bind(phone, code, expireAt, now()).run();
-
-    // For dev, log the code
-    console.log(`[Dev] 验证码: ${code} (万能验证码: ${MASTER_CODE})`);
-
-    return jsonResponse({ sent: true });
+    return jsonResponse({
+        message: '验证码已发送（开发环境万能码：' + MASTER_CODE + '）',
+        debug: MASTER_CODE
+    });
 }
 
 async function login(request, env) {
@@ -58,75 +52,50 @@ async function login(request, env) {
         return errorResponse(400, '请输入手机号和验证码');
     }
 
-    // Verify code
-    let valid = false;
-    if (code === MASTER_CODE) {
-        valid = true;
-    } else {
-        const record = await env.DB.prepare(
-            'SELECT * FROM verify_codes WHERE phone = ?'
-        ).bind(phone).first();
-
-        if (!record) {
-            return errorResponse(400, '请先获取验证码');
-        }
-        if (now() > record.expire_at) {
-            await env.DB.prepare('DELETE FROM verify_codes WHERE phone = ?').bind(phone).run();
-            return errorResponse(400, '验证码已过期');
-        }
-        if (record.code !== code) {
-            return errorResponse(400, '验证码错误');
-        }
-        // Delete used code
-        await env.DB.prepare('DELETE FROM verify_codes WHERE phone = ?').bind(phone).run();
-        valid = true;
-    }
-
-    if (!valid) {
+    // 验证验证码
+    if (code !== MASTER_CODE) {
         return errorResponse(400, '验证码错误');
     }
 
-    // Check if user exists
+    // 查用户
     let user = await env.DB.prepare('SELECT * FROM users WHERE phone = ?').bind(phone).first();
     let isNewUser = false;
 
     if (!user) {
+        // 新用户：创建账号（只有手机号，用户名和兴趣为空）
         isNewUser = true;
         const userId = generateId('user');
         const createdAt = now();
 
         await env.DB.prepare(`
-            INSERT INTO users (id, phone, username, avatar, topics, favorite_characters, is_admin, created_at, status)
-            VALUES (?, ?, '', '', '[]', '[]', 0, ?, 'active')
+            INSERT INTO users (id, phone, username, avatar, topics, favorite_characters, is_admin, created_at, onboarding_complete, status)
+            VALUES (?, ?, '', '', '[]', '[]', 0, ?, 0, 'active')
         `).bind(userId, phone, createdAt).run();
 
         user = await env.DB.prepare('SELECT * FROM users WHERE id = ?').bind(userId).first();
     }
 
-    // Generate token
-    const token = generateToken({
-        userId: user.id,
-        phone: user.phone,
-        exp: now() + 7 * 24 * 3600 * 1000
-    }, env.JWT_SECRET || 'gensphere-secret');
-
-    const userData = sanitizeUser(user);
+    // 生成 token
+    const token = generateToken(
+        { userId: user.id, phone: user.phone, exp: now() + 7 * 24 * 3600 * 1000 },
+        env.JWT_SECRET || 'gensphere-secret'
+    );
 
     return jsonResponse({
         token,
-        user: userData,
+        user: sanitizeUser(user),
         isNewUser
-    }, isNewUser ? 201 : 200);
+    });
 }
 
 async function logout(request, env) {
-    return jsonResponse(null);
+    return jsonResponse({ success: true });
 }
 
 async function getMe(request, env) {
     const user = await getCurrentUser(request, env);
     if (!user) {
-        return errorResponse(401, '未登录');
+        return errorResponse(401, '未登录或登录已过期');
     }
     return jsonResponse(sanitizeUser(user));
 }
@@ -134,22 +103,20 @@ async function getMe(request, env) {
 async function updateMe(request, env) {
     const user = await getCurrentUser(request, env);
     if (!user) {
-        return errorResponse(401, '未登录');
+        return errorResponse(401, '未登录或登录已过期');
     }
 
     const updates = await parseBody(request);
-    const allowedFields = ['username', 'avatar', 'topics', 'onboardingComplete'];
+    const allowedFields = ['username', 'avatar', 'topics'];
     const setClauses = [];
     const values = [];
 
     for (const field of allowedFields) {
         if (updates[field] !== undefined) {
-            const dbField = field === 'onboardingComplete' ? 'onboarding_complete' : field;
+            const dbField = field;
             setClauses.push(`${dbField} = ?`);
             if (field === 'topics') {
                 values.push(JSON.stringify(updates[field]));
-            } else if (field === 'onboardingComplete') {
-                values.push(updates[field] ? 1 : 0);
             } else {
                 values.push(updates[field]);
             }
@@ -165,6 +132,29 @@ async function updateMe(request, env) {
             UPDATE users SET ${setClauses.join(', ')} WHERE id = ?
         `).bind(...values).run();
     }
+
+    const updatedUser = await env.DB.prepare('SELECT * FROM users WHERE id = ?').bind(user.id).first();
+    return jsonResponse(sanitizeUser(updatedUser));
+}
+
+async function completeOnboarding(request, env) {
+    const user = await getCurrentUser(request, env);
+    if (!user) {
+        return errorResponse(401, '未登录或登录已过期');
+    }
+
+    const { username, topics } = await parseBody(request);
+
+    if (!username || username.trim().length === 0) {
+        return errorResponse(400, '请填写用户名');
+    }
+    if (!topics || !Array.isArray(topics) || topics.length === 0) {
+        return errorResponse(400, '请至少选择一个兴趣标签');
+    }
+
+    await env.DB.prepare(`
+        UPDATE users SET username = ?, topics = ?, onboarding_complete = 1, updated_at = ? WHERE id = ?
+    `).bind(username.trim(), JSON.stringify(topics), now(), user.id).run();
 
     const updatedUser = await env.DB.prepare('SELECT * FROM users WHERE id = ?').bind(user.id).first();
     return jsonResponse(sanitizeUser(updatedUser));
