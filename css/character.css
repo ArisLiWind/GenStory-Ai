@@ -26,7 +26,7 @@
 }
 
 .char-card {
-    background: linear-gradient(180deg, rgba(88, 28, 135, 0.5) 0%, rgba(30, 27, 75, 0.95) 100%);
+    background: linear-gradient(180deg, rgba(22, 22, 22, 0.95) 0%, rgba(10, 10, 10, 0.98) 100%);
     border: 2px solid rgba(167, 139, 250, 0.5);
     border-radius: var(--radius-lg);
     overflow: hidden;
@@ -594,7 +594,7 @@
 
 /* Accordion panels */
 .char-accordion {
-    background: rgba(88, 28, 135, 0.3);
+    background: rgba(20, 20, 20, 0.9);
     border-radius: var(--radius-md);
     margin-bottom: 8px;
     overflow: hidden;

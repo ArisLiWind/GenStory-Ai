@@ -165,9 +165,59 @@ function generateCharacters(count, startId = 1) {
     
     const localImages = [
         'assets/char-knight.jpg',
-        'assets/char-mystic.jpg'
+        'assets/char-mystic.jpg',
+        'assets/char-mystic2.jpg',
+        'assets/char-eren.jpg',
+        'assets/char-mima.jpg',
+        'assets/char-sakura.jpg',
+        'assets/char-temple.jpg',
+        'assets/char-pagoda.jpg'
     ];
-    
+
+    const personalities = [
+        '冷酷而内心炽热，对信任的人极尽温柔，对敌人毫不留情',
+        '活泼开朗，善于社交，但内心深处藏着不为人知的伤痛',
+        '沉默寡言，行动果断，用沉默代替一切不必要的言语',
+        '傲慢自大，实力强大，但会在关键时刻展现出脆弱的一面',
+        '温柔体贴，善解人意，总是把别人的需求放在自己之前',
+        '腹黑狡猾，城府极深，表面和善实则心狠手辣',
+        '热血冲动，义气深重，为了朋友可以不顾一切',
+        '冷静理性，智商超群，情感淡漠但观察力惊人',
+        '病态执着，占有欲极强，对爱的人有着扭曲的深情',
+        '随性洒脱，不拘小节，看似懒散实则在暗中布局一切'
+    ];
+
+    const scenarios = [
+        '联邦情报局·绝密地下指挥室——多种族融合期的敏感时刻，异常能量波动引发秘密调查行动',
+        '异世界转生——你在一座陌生的魔法学院醒来，发现自己拥有了前世的记忆和新的力量',
+        '末世废土——核灾后的第三年，你在废墟中建立了一个小型避难所，资源日益枯竭',
+        '古代江湖——武林各大门派暗流涌动，一本失传的武学秘籍重现人间，引发血雨腥风',
+        '赛博朋克都市——2077年的夜之城，巨型企业与地下黑客组织的暗战从未停歇',
+        '深渊地牢——你被冤枉入狱，在暗无天日的地牢深处遇到了一位同样被遗忘的存在',
+        '星际战场——联邦与虫族的战争进入白热化阶段，你被紧急调往前线指挥舰队',
+        '吸血鬼城堡——月圆之夜，你误入了一座古老的城堡，这里住着一位沉睡了千年的吸血鬼',
+        '校园日常——看似平静的高中生活下，隐藏着一段跨越前世今生的宿命情缘',
+        '海盗黄金时代——加勒比海上，你是新一代海盗王的有力竞争者'
+    ];
+
+    const firstMessages = [
+        '**【场景：联邦情报局 · 绝密地下指挥室】**\n\n昏暗的灯光下，全息投影在会议桌上投射出几个闪烁的能量波动点。纪陇——联邦最年轻的情报局副局长，正站在投影前，银白色的短发在蓝光中显得格外凌厉。\n\n她的目光扫过你，嘴角微微上扬：\n\n"指挥官，这三个异常能量源的出现时间与『融合纪念日』完全重合。这不是巧合。"\n\n她将一份加密文件推到你面前：\n\n"我的建议是——启动秘密调查。大张旗鼓地调动联邦军队只会打草惊蛇。我们需要那种『即使死在暗处也不会留下痕迹』的特工。"\n\n**你打算如何回应？**\n1. 同意启动秘密调查行动，派遣影子特工潜入异常区域\n2. 调动联邦正规军进行公开巡查，展示联邦力量\n3. 先派出无人机进行远程侦察，暂不派人',
+        '你在一座陌生的房间里醒来，头痛欲裂。窗外传来鸟鸣和远处的钟声。一个身影出现在门口：\n\n"你终于醒了...你在森林里晕倒了，我把你带了回来。"\n\n你低头看着自己的双手——这似乎不是你原来的身体。一股陌生的力量在体内涌动。\n\n"这里是星辉魔法学院。你...是新生吗？"',
+        '废墟中，你紧握着最后半瓶净水。远处传来变异兽的低吼。你的避难所里还有三个人等着你带食物回去。\n\n突然，一个身影出现在废墟尽头，手里拿着一把还在冒烟的枪。',
+        '雨夜。酒馆。一封密信被拍在你面前。\n\n"江湖传言，『天罡秘录』重现人间。各派已暗中派出高手争夺。"\n\n送信人压低斗笠，露出一双锐利的眼睛：\n\n"你...要不要入局？"',
+    ];
+
+    const exampleDialogs = [
+        '{{user}}: 我同意启动秘密调查。\n{{char}}: （她微微挑眉，对你的选择表示赞许）"明智的选择。大张旗鼓地出动联邦军队只会让那些阴影中的家伙提前收敛。"\n\n她转过身，对着阴影处打了个手势："既然决定了，那就立刻启动『幽灵计划』。"\n\n{{user}}: 幽灵计划？\n{{char}}: "联邦最精锐的影子特工——一群融合了魔法隐匿术与高科技伪装装置的精英。他们会悄无声息地潜入那些异常区域。"',
+        '{{user}}: 我这是在哪？\n{{char}}: "这里是星辉魔法学院。你昏迷了三天...你的身体里有一种我说不清的能量。"\n\n她犹豫了一下，递过一面镜子。\n\n{{user}}: 这...这不是我！\n{{char}}: "我也不知道发生了什么，但学院院长说你可能是...『转生者』。"',
+    ];
+
+    const definitions = [
+        '纪陇是联邦情报局副局长，拥有精灵与人类的混血血统。她精通魔法隐匿术和高科技情报分析，性格冷静果断。她对"融合纪念日"的异常能量波动有着敏锐的直觉。',
+        '一个从现代世界转生到魔法学院的灵魂，拥有前世的知识和新的魔法天赋。性格随前世记忆的影响而变化。',
+        '末世幸存者，领导一个小型避难所。在核灾前的身份不明，但展现出超越常人的生存能力。',
+    ];
+
     const chars = [];
     for (let i = 0; i < count; i++) {
         const idx = (startId + i - 1) % titles.length;
@@ -175,7 +225,7 @@ function generateCharacters(count, startId = 1) {
         const charId = startId + i;
         
         // 前两个角色使用用户提供的素材图，其余用 picsum
-        const image = charId <= 2 ? localImages[charId - 1] : `https://picsum.photos/seed/char${charId}/400/520`;
+        const image = charId <= localImages.length ? localImages[charId - 1] : `https://picsum.photos/seed/char${charId}/400/520`;
         
         chars.push({
             id: charId,
@@ -189,7 +239,14 @@ function generateCharacters(count, startId = 1) {
             rating: (Math.random() * 1.5 + 3.5).toFixed(1),
             tags: tags[idx],
             category: categories[idx],
-            image: image
+            image: image,
+            chatName: titles[idx],
+            contentLevel: Math.random() > 0.5 ? 'SFW' : 'NSFW',
+            personality: personalities[idx % personalities.length],
+            scenario: scenarios[idx % scenarios.length],
+            firstMessage: firstMessages[idx % firstMessages.length],
+            exampleDialog: exampleDialogs[idx % exampleDialogs.length],
+            definition: definitions[idx % definitions.length]
         });
     }
     

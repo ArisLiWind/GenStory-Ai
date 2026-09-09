@@ -1,7 +1,7 @@
-// ===== Chat Page - Janitor AI Style =====
+// ===== Chat Page - GenSphere RPG =====
 
 let currentCharacter = null;
-let currentChatId = null;
+let currentSessionId = null;
 let messages = [];
 let isSending = false;
 let charInfoExpanded = false;
@@ -15,24 +15,21 @@ function initChatPage() {
     const characterId = params.get('character');
     
     if (characterId) {
-        loadCharacterAndStartChat(characterId);
+        loadCharacterData(characterId);
     } else {
-        // Fallback to mock character
-        loadMockCharacter('demo_mafia_boss');
-        startNewChat();
+        // No character specified
+        const basePath = window.location.pathname.replace(/[^/]*$/, '');
+        window.location.href = basePath + 'index.html';
+        return;
     }
     
     setupEventListeners();
 }
 
 function setupEventListeners() {
-    // Send button
     const sendBtn = document.getElementById('sendBtn');
-    if (sendBtn) {
-        sendBtn.addEventListener('click', sendMessage);
-    }
+    if (sendBtn) sendBtn.addEventListener('click', sendMessage);
     
-    // Enter to send (Shift+Enter for new line)
     const chatInput = document.getElementById('chatInput');
     if (chatInput) {
         chatInput.addEventListener('keydown', (e) => {
@@ -41,8 +38,6 @@ function setupEventListeners() {
                 sendMessage();
             }
         });
-        
-        // Input event to adjust height
         chatInput.addEventListener('input', autoResizeTextarea);
     }
 }
@@ -59,107 +54,147 @@ window.goBack = function() {
 
 window.toggleCharacterInfo = function() {
     const panel = document.getElementById('charInfoPanel');
+    if (!panel) return;
     charInfoExpanded = !charInfoExpanded;
     
     if (charInfoExpanded) {
         panel.style.display = 'block';
-        setTimeout(() => {
-            panel.style.maxHeight = '200px';
-        }, 10);
+        setTimeout(() => { panel.style.maxHeight = '400px'; }, 10);
     } else {
         panel.style.maxHeight = '0';
-        setTimeout(() => {
-            panel.style.display = 'none';
-        }, 300);
+        setTimeout(() => { panel.style.display = 'none'; }, 300);
     }
 };
 
 // ===== Character Loading =====
-function loadCharacterAndStartChat(characterId) {
-    // Try to load from API, fallback to mock
-    loadMockCharacter(characterId);
-    startNewChat();
-}
-
-function loadMockCharacter(id) {
-    const titles = [
-        "Mafia Boss", "Willson Wáng", "Neglectful family", "Ayato Hiroshi",
-        "Second Life Isekai", "Giovanni Moretti", "Your Three Older Brothers",
-        "Your tyrant father", "Best friends trio", "Snow your edgy sister",
-        "Another Magic Academy", "星际指挥官", "古代剑客", "龙骑士传说",
-        "末世幸存者", "吸血鬼恋人", "校园恋爱物语", "赛博朋克2077",
-        "神秘侦探", "精灵王子", "机械少女", "时空旅行者", "海底王国",
-        "天使与恶魔", "狼人传说", "魔法少女", "忍者物语", "海盗冒险",
-        "超能力学院", "幽灵公寓", "美食厨师", "偶像练习生", "电竞选手",
-        "医生与患者", "师生恋曲", "总裁的秘书", "邻家女孩", "青梅竹马",
-        "双胞胎兄弟", "傲娇大小姐", "忠犬男友", "病娇女友", "高冷学霸"
-    ];
+function loadCharacterData(characterId) {
+    // Generate character data from main.js's generateCharacters function
+    const numericId = parseInt(characterId) || 1;
     
-    if (id === 'demo_mafia_boss') {
+    // Use the same data generation as main.js
+    if (typeof generateCharacters === 'function') {
+        const chars = generateCharacters(Math.max(numericId, 8), 1);
+        currentCharacter = chars.find(c => c.id === numericId) || chars[0];
+    }
+    
+    if (!currentCharacter) {
+        // Fallback: create basic character
         currentCharacter = {
-            id: 'demo_mafia_boss',
-            title: 'Mafia Boss',
-            chatName: 'Mafia Boss',
-            image: 'https://picsum.photos/seed/char1/400/520',
-            description: '一位认为你掌握着他敌人情报的黑手党老大。无论你是否无辜，他都在密切监视着你。',
-            firstMessage: 'A member of the mafia pushed you into an interrogation chair as a man clad in a black suit walked into the room.\n\nHis grayish-green eyes focused on you as he sat down on the other side of the table. He moved with elegance, poise and power. He didn\'t smile or even allow a bit of comforting warmth as he stared. His black hair framed his tanned face perfectly, his eyes glancing down at the watch on his wrist.\n\n"So you must know why you\'re here?" he hummed coldly. "I suggest not lying. It\'s boring for me and it won\'t go well for you. Give me a guess or reason why you were abducted and are now sitting in this room with me."',
-            creatorVerified: true
-        };
-    } else {
-        const numericId = parseInt(id) || 1;
-        const idx = (numericId - 1) % titles.length;
-        const title = titles[idx];
-        currentCharacter = {
-            id: id,
-            title: title,
-            chatName: title,
-            image: `https://picsum.photos/seed/char${numericId}/400/520`,
-            description: '一位神秘的角色，有着不为人知的过去和令人着迷的性格。在这个充满奇幻色彩的世界里，你们将展开一段难忘的冒险。',
-            firstMessage: '你好，很高兴见到你。我是' + title + '，有什么我可以帮你的吗？',
-            creatorVerified: false
+            id: characterId,
+            title: '未知角色',
+            chatName: '未知角色',
+            image: 'https://picsum.photos/seed/char' + numericId + '/400/520',
+            description: '角色信息加载中...',
+            personality: '',
+            scenario: '',
+            firstMessage: '你好...',
+            contentLevel: 'SFW'
         };
     }
     
     // Update header
     const headerName = document.getElementById('headerCharName');
-    if (headerName) {
-        headerName.textContent = currentCharacter.title;
-    }
+    if (headerName) headerName.textContent = currentCharacter.chatName || currentCharacter.title;
     
     // Update character info panel
     const panelName = document.getElementById('panelCharName');
     const panelDesc = document.getElementById('panelCharDesc');
     const panelAvatar = document.getElementById('panelAvatar');
     
-    if (panelName) panelName.textContent = currentCharacter.title;
-    if (panelDesc) panelDesc.textContent = currentCharacter.description;
+    if (panelName) panelName.textContent = currentCharacter.chatName || currentCharacter.title;
+    if (panelDesc) {
+        let desc = currentCharacter.description || '';
+        if (currentCharacter.personality) desc += '\n性格：' + currentCharacter.personality;
+        if (currentCharacter.scenario) desc += '\n场景：' + currentCharacter.scenario;
+        panelDesc.textContent = desc;
+    }
     if (panelAvatar && currentCharacter.image) {
         panelAvatar.src = currentCharacter.image;
+        panelAvatar.style.display = 'block';
     }
+    
+    // Start chat session
+    startChatSession();
 }
 
-// ===== Chat Functions =====
-function startNewChat() {
-    currentChatId = 'new_' + Date.now();
+async function startChatSession() {
+    // Show loading state
+    const messagesContainer = document.getElementById('messagesList');
+    if (messagesContainer) {
+        messagesContainer.innerHTML = '<div style="text-align:center;padding:40px;color:#666;">正在连接AI服务...</div>';
+    }
     
-    // Add first message from character
-    messages = [
-        {
-            id: 'm1',
-            role: 'bot',
-            name: currentCharacter?.title || '角色',
-            content: currentCharacter?.firstMessage || '你好！',
-            timestamp: Date.now(),
-            verified: currentCharacter?.creatorVerified
+    // Try to use real API session
+    try {
+        const result = await GenSphereAPI.chat.getOrCreateSession(currentCharacter.id);
+        
+        if (result && result.code === 0 && result.data) {
+            currentSessionId = result.data.sessionId || result.data.id;
+            
+            // Load existing messages
+            const msgResult = await GenSphereAPI.chat.getMessages(currentSessionId);
+            
+            if (msgResult && msgResult.code === 0 && msgResult.data && msgResult.data.messages) {
+                messages = msgResult.data.messages.map((m, i) => ({
+                    id: 'msg_' + i,
+                    role: m.role === 'assistant' ? 'bot' : 'user',
+                    name: m.role === 'assistant' ? (currentCharacter.chatName || currentCharacter.title) : '我',
+                    content: m.content,
+                    timestamp: m.created_at || Date.now(),
+                    verified: false
+                }));
+            }
+            
+            // If no messages, use character's first message
+            if (messages.length === 0 && currentCharacter.firstMessage) {
+                messages = [{
+                    id: 'm_first',
+                    role: 'bot',
+                    name: currentCharacter.chatName || currentCharacter.title,
+                    content: currentCharacter.firstMessage,
+                    timestamp: Date.now(),
+                    verified: false
+                }];
+            }
+            
+            renderMessages();
+        } else {
+            throw new Error('Failed to create session');
         }
-    ];
-    
-    renderMessages();
+    } catch (error) {
+        console.error('Session creation failed:', error);
+        
+        // Backend not available - show error, NO mock responses
+        if (messagesContainer) {
+            messagesContainer.innerHTML = `
+                <div style="text-align:center;padding:60px 20px;">
+                    <div style="font-size:48px;margin-bottom:16px;">⚠️</div>
+                    <h3 style="color:#fff;margin-bottom:8px;">AI服务未连接</h3>
+                    <p style="color:#888;font-size:14px;line-height:1.6;max-width:400px;margin:0 auto;">
+                        后端API服务尚未部署或未配置API密钥。<br>
+                        管理员请在 <a href="admin.html" style="color:#818cf8;">管理后台</a> 配置DeepSeek API密钥后重试。
+                    </p>
+                </div>
+            `;
+        }
+        
+        // Still show the first message for preview
+        if (currentCharacter.firstMessage) {
+            messages = [{
+                id: 'm_first',
+                role: 'bot',
+                name: currentCharacter.chatName || currentCharacter.title,
+                content: currentCharacter.firstMessage,
+                timestamp: Date.now(),
+                verified: false
+            }];
+            renderMessages();
+        }
+    }
 }
 
 function renderMessages() {
     const messagesContainer = document.getElementById('messagesList');
-    
     if (!messagesContainer) return;
     
     if (messages.length === 0) {
@@ -181,20 +216,15 @@ function renderMessage(msg) {
     const avatarText = isUser ? '我' : (msg.name || '角色').charAt(0).toUpperCase();
     
     return `
-        <div class="message ${isUser ? 'user' : 'bot'}">
+        <div class="message ${isUser ? 'user' : 'bot'}" data-msg-id="${msg.id}">
             <div class="message-avatar">${avatarText}</div>
             <div class="message-content">
                 ${!isUser ? `
                     <div class="message-header">
-                        <span class="message-name">${msg.name}</span>
-                        ${msg.verified ? `
-                            <svg class="message-verified" viewBox="0 0 24 24" fill="currentColor">
-                                <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
-                            </svg>
-                        ` : ''}
+                        <span class="message-name">${escapeHtml(msg.name)}</span>
                     </div>
                 ` : ''}
-                <div class="message-bubble">${escapeHtml(msg.content)}</div>
+                <div class="message-bubble">${formatMessage(msg.content)}</div>
                 <div class="message-actions">
                     ${!isUser ? `
                         <button class="message-action-btn" title="重新生成" onclick="regenerateMessage('${msg.id}')">
@@ -207,11 +237,6 @@ function renderMessage(msg) {
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                 <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
                                 <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
-                            </svg>
-                        </button>
-                        <button class="message-action-btn" title="点赞" onclick="likeMessage('${msg.id}')">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"/>
                             </svg>
                         </button>
                         <button class="message-action-btn" title="删除" onclick="deleteMessage('${msg.id}')">
@@ -240,17 +265,80 @@ function renderMessage(msg) {
     `;
 }
 
+// ===== Markdown Formatting =====
+function formatMessage(text) {
+    if (!text) return '';
+    
+    // Escape HTML first
+    let html = escapeHtml(text);
+    
+    // Format bold **text**
+    html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+    
+    // Format italic *text* (but not ** which is bold)
+    html = html.replace(/(?<!\*)\*(?!\*)(.+?)(?<!\*)\*(?!\*)/g, '<em>$1</em>');
+    
+    // Format line breaks
+    html = html.replace(/\n/g, '<br>');
+    
+    // Parse RPG choices (1. 2. 3. at end of message)
+    const choiceRegex = /(?:^|\n)((?:\d+\.\s+\*\*[^<]+?\*\*(?:<br>|$))+)/g;
+    html = html.replace(choiceRegex, (match, choices) => {
+        const choiceItems = choices.split(/\n?\d+\.\s+/).filter(s => s.trim());
+        if (choiceItems.length === 0) return match;
+        
+        const buttons = choiceItems.map((choice, i) => {
+            const cleanChoice = choice.replace(/<br>/g, '').replace(/<\/?strong>/g, '').trim();
+            const displayChoice = choice.replace(/<br>/g, '').trim();
+            return `<button class="rpg-choice-btn" onclick="selectChoice(this)" data-choice="${escapeAttr(cleanChoice)}">${displayChoice}</button>`;
+        }).join('');
+        
+        return `<div class="rpg-choices">${buttons}</div>`;
+    });
+    
+    return html;
+}
+
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+function escapeAttr(text) {
+    return text.replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+
+// ===== RPG Choice Selection =====
+window.selectChoice = function(btn) {
+    const choice = btn.getAttribute('data-choice');
+    const input = document.getElementById('chatInput');
+    if (input) {
+        input.value = choice;
+        input.focus();
+        autoResizeTextarea();
+    }
+};
+
+// ===== Send Message =====
 async function sendMessage() {
     const input = document.getElementById('chatInput');
     const text = input.value.trim();
     
-    if (!text || isSending || !currentCharacter) return;
+    if (!text || isSending) return;
+    
+    // Check if backend is connected
+    if (!currentSessionId) {
+        // Show error toast
+        showToast('AI服务未连接，请稍后再试');
+        return;
+    }
     
     isSending = true;
     input.value = '';
     autoResizeTextarea();
     
-    // Add user message
+    // Add user message immediately
     const userMsg = {
         id: 'u_' + Date.now(),
         role: 'user',
@@ -264,59 +352,54 @@ async function sendMessage() {
     // Show typing indicator
     showTypingIndicator();
     
-    // Simulate AI response
+    // Call real API
     try {
-        const res = await GenSphereAPI.chat.generate({
-            characterId: currentCharacter.id,
-            message: text,
-            chatId: currentChatId,
-            history: messages.map(m => ({ role: m.role, content: m.content }))
-        });
+        const res = await GenSphereAPI.chat.sendMessage(currentSessionId, text);
         
         removeTypingIndicator();
         
-        if (res.code === 0 && res.data) {
+        if (res && res.code === 0 && res.data) {
             const botMsg = {
                 id: 'b_' + Date.now(),
                 role: 'bot',
-                name: currentCharacter.title,
-                content: res.data.reply,
+                name: currentCharacter.chatName || currentCharacter.title,
+                content: res.data.content || res.data.reply || '',
                 timestamp: Date.now(),
-                verified: currentCharacter.creatorVerified
+                verified: false
             };
             messages.push(botMsg);
         } else {
-            // Fallback mock response
-            const botMsg = {
+            // API returned error
+            const errorMsg = {
                 id: 'b_' + Date.now(),
                 role: 'bot',
-                name: currentCharacter.title,
-                content: generateMockResponse(text),
+                name: currentCharacter.chatName || currentCharacter.title,
+                content: '(AI服务暂时不可用，请稍后再试。错误信息：' + (res.message || '未知错误') + ')',
                 timestamp: Date.now(),
-                verified: currentCharacter.creatorVerified
+                verified: false
             };
-            messages.push(botMsg);
+            messages.push(errorMsg);
         }
     } catch (error) {
         console.error('Chat error:', error);
         removeTypingIndicator();
         
-        // Fallback mock response
-        const botMsg = {
+        const errorMsg = {
             id: 'b_' + Date.now(),
             role: 'bot',
-            name: currentCharacter.title,
-            content: generateMockResponse(text),
+            name: currentCharacter.chatName || currentCharacter.title,
+            content: '(网络请求失败，请检查网络连接后重试。)',
             timestamp: Date.now(),
-            verified: currentCharacter.creatorVerified
+            verified: false
         };
-        messages.push(botMsg);
+        messages.push(errorMsg);
     }
     
     renderMessages();
     isSending = false;
 }
 
+// ===== Typing Indicator =====
 function showTypingIndicator() {
     const messagesContainer = document.getElementById('messagesList');
     if (!messagesContainer) return;
@@ -325,7 +408,8 @@ function showTypingIndicator() {
     typingEl.id = 'typingIndicator';
     typingEl.className = 'typing-indicator';
     
-    const avatarText = currentCharacter?.title?.charAt(0).toUpperCase() || '角';
+    const avatarText = currentCharacter?.chatName?.charAt(0).toUpperCase() || 
+                       currentCharacter?.title?.charAt(0).toUpperCase() || '角';
     
     typingEl.innerHTML = `
         <div class="message-avatar">${avatarText}</div>
@@ -339,40 +423,44 @@ function showTypingIndicator() {
     messagesContainer.appendChild(typingEl);
     
     const msgArea = document.querySelector('.messages-area');
-    if (msgArea) {
-        msgArea.scrollTop = msgArea.scrollHeight;
-    }
+    if (msgArea) msgArea.scrollTop = msgArea.scrollHeight;
 }
 
 function removeTypingIndicator() {
     const typingEl = document.getElementById('typingIndicator');
-    if (typingEl) {
-        typingEl.remove();
+    if (typingEl) typingEl.remove();
+}
+
+// ===== Toast Notification =====
+function showToast(message) {
+    let toast = document.getElementById('chatToast');
+    if (!toast) {
+        toast = document.createElement('div');
+        toast.id = 'chatToast';
+        toast.style.cssText = 'position:fixed;top:80px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,0.85);color:#fff;padding:12px 24px;border-radius:10px;font-size:14px;z-index:9999;backdrop-filter:blur(10px);border:1px solid rgba(255,255,255,0.1);';
+        document.body.appendChild(toast);
     }
+    toast.textContent = message;
+    toast.style.display = 'block';
+    toast.style.opacity = '1';
+    setTimeout(() => {
+        toast.style.opacity = '0';
+        setTimeout(() => { toast.style.display = 'none'; }, 300);
+    }, 3000);
 }
 
-function generateMockResponse(userMessage) {
-    const responses = [
-        '他眯起眼睛，仔细打量着你。\n\n"有意思...你比我想象的要大胆。" 他缓缓站起身，雪茄的烟雾在他指间缭绕，"不过在这个城市里，大胆的人往往活不长。"\n\n他的语气里带着一丝玩味，但你能感受到其中潜藏的危险。',
-        '"情报？" 他冷笑一声，"我见过太多像你这样的人了，以为手里有点东西就能跟我谈条件。"\n\n他走到窗前，背对着你，身影在月光下显得格外高大。\n\n"说吧，你想要什么？"',
-        '他的手指轻轻敲击着桌面，发出有节奏的声响。\n\n"你最好想清楚再回答我。" 他的声音平静得可怕，"我不喜欢浪费时间，也不喜欢被人耍。"\n\n房间里的空气仿佛凝固了，你能听到自己的心跳声。'
-    ];
-    
-    return responses[Math.floor(Math.random() * responses.length)];
-}
-
+// ===== Textarea Auto Resize =====
 function autoResizeTextarea() {
     const input = document.getElementById('chatInput');
     if (!input) return;
-    
     input.style.height = 'auto';
     input.style.height = Math.min(input.scrollHeight, 200) + 'px';
 }
 
 // ===== Message Actions =====
-function regenerateMessage(msgId) {
+window.regenerateMessage = async function(msgId) {
     const msg = messages.find(m => m.id === msgId);
-    if (!msg || msg.role !== 'bot') return;
+    if (!msg || msg.role !== 'bot' || !currentSessionId) return;
     
     const index = messages.findIndex(m => m.id === msgId);
     if (index > -1) {
@@ -382,35 +470,46 @@ function regenerateMessage(msgId) {
     renderMessages();
     showTypingIndicator();
     
-    setTimeout(() => {
+    // Find the previous user message
+    const prevUserMsg = messages.filter(m => m.role === 'user').pop();
+    if (!prevUserMsg) {
         removeTypingIndicator();
-        const newMsg = {
-            id: 'b_' + Date.now(),
-            role: 'bot',
-            name: currentCharacter.title,
-            content: generateMockResponse('regenerate'),
-            timestamp: Date.now(),
-            verified: currentCharacter.creatorVerified
-        };
-        messages.splice(index, 0, newMsg);
-        renderMessages();
-    }, 1500);
-}
+        return;
+    }
+    
+    try {
+        const res = await GenSphereAPI.chat.sendMessage(currentSessionId, prevUserMsg.content);
+        removeTypingIndicator();
+        
+        if (res && res.code === 0 && res.data) {
+            const newMsg = {
+                id: 'b_' + Date.now(),
+                role: 'bot',
+                name: currentCharacter.chatName || currentCharacter.title,
+                content: res.data.content || res.data.reply || '',
+                timestamp: Date.now(),
+                verified: false
+            };
+            messages.splice(index, 0, newMsg);
+        }
+    } catch (error) {
+        removeTypingIndicator();
+        console.error('Regenerate error:', error);
+    }
+    
+    renderMessages();
+};
 
-function copyMessage(msgId) {
+window.copyMessage = function(msgId) {
     const msg = messages.find(m => m.id === msgId);
     if (msg) {
         navigator.clipboard.writeText(msg.content).then(() => {
-            console.log('Message copied');
+            showToast('已复制到剪贴板');
         }).catch(() => {});
     }
-}
+};
 
-function likeMessage(msgId) {
-    console.log('Liked message:', msgId);
-}
-
-function editMessage(msgId) {
+window.editMessage = function(msgId) {
     const msg = messages.find(m => m.id === msgId);
     if (!msg || msg.role !== 'user') return;
     
@@ -419,21 +518,13 @@ function editMessage(msgId) {
         msg.content = newContent.trim();
         renderMessages();
     }
-}
+};
 
-function deleteMessage(msgId) {
+window.deleteMessage = function(msgId) {
     if (!confirm('确定要删除这条消息吗？')) return;
-    
     const index = messages.findIndex(m => m.id === msgId);
     if (index > -1) {
         messages.splice(index, 1);
         renderMessages();
     }
-}
-
-// ===== Helper functions =====
-function escapeHtml(text) {
-    const div = document.createElement('div');
-    div.textContent = text;
-    return div.innerHTML;
-}
+};
