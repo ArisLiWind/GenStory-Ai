@@ -4,23 +4,6 @@
 // 连接真实的 Cloudflare Workers 后端 API
 // ============================================
 
-// ===== 调试：追踪 token 被清除 =====
-(function() {
-    var origRemove = Storage.prototype.removeItem;
-    Storage.prototype.removeItem = function(key) {
-        if (key === 'gensphere_token') {
-            console.error('!!! TOKEN REMOVED !!!', new Error().stack);
-        }
-        return origRemove.apply(this, arguments);
-    };
-    var origClear = Storage.prototype.clear;
-    Storage.prototype.clear = function() {
-        console.error('!!! STORAGE CLEARED !!!', new Error().stack);
-        return origClear.apply(this, arguments);
-    };
-    console.log('[DEBUG] Token interceptor installed');
-})();
-
 const API_BASE = '/api';
 
 // ===== Token 管理 =====

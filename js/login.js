@@ -120,11 +120,11 @@ window.onload = function() {
                 localStorage.setItem(USER_KEY, JSON.stringify(user));
 
                 if (user.onboardingComplete) {
-                    window.location.href = 'index.html';
+                    window.location.assign('/');
                 } else if (user.username && user.username.length > 0) {
-                    window.location.href = 'onboarding-topics.html';
+                    window.location.assign('/onboarding-topics');
                 } else {
-                    window.location.href = 'onboarding-username.html';
+                    window.location.assign('/onboarding-username');
                 }
             } else {
                 formHint.textContent = res.message || '登录失败';
@@ -160,9 +160,9 @@ window.onload = function() {
                 var user = res.data;
                 localStorage.setItem(USER_KEY, JSON.stringify(user));
                 if (user.onboardingComplete) {
-                    window.location.href = 'index.html';
+                    window.location.assign('/');
                 } else if (user.username && user.username.length > 0) {
-                    window.location.href = 'onboarding-topics.html';
+                    window.location.assign('/onboarding-topics');
                 } else {
                     // 停在当前页，用户可能想换号
                 }

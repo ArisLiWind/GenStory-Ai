@@ -2,30 +2,13 @@
 // 用户名设置页 - 稳健版（只前进不后退）
 // ============================================
 
-// ===== 调试：追踪谁清了 token =====
-(function() {
-    var origRemove = Storage.prototype.removeItem;
-    Storage.prototype.removeItem = function(key) {
-        if (key === 'gensphere_token') {
-            console.error('!!! TOKEN REMOVED !!! Stack:', new Error().stack);
-        }
-        return origRemove.apply(this, arguments);
-    };
-    var origClear = Storage.prototype.clear;
-    Storage.prototype.clear = function() {
-        console.error('!!! STORAGE CLEARED !!! Stack:', new Error().stack);
-        return origClear.apply(this, arguments);
-    };
-    console.log('[DEBUG] Token removal interceptor installed');
-})();
-
 var TOKEN_KEY = 'gensphere_token';
 var USER_KEY = 'gensphere_user';
 
 window.onload = function() {
     var token = localStorage.getItem(TOKEN_KEY);
     if (!token) {
-        window.location.href = 'login.html';
+        window.location.assign('/login');
         return;
     }
 
@@ -48,13 +31,13 @@ window.onload = function() {
 
             // 已经完成 onboarding → 直接进主页
             if (user.onboardingComplete) {
-                window.location.href = 'index.html';
+                window.location.assign('/');
                 return;
             }
 
             // 已经有用户名 → 直接进兴趣选择页
             if (user.username && user.username.length > 0) {
-                window.location.href = 'onboarding-topics.html';
+                window.location.assign('/onboarding-topics');
                 return;
             }
         }
@@ -115,7 +98,7 @@ window.onload = function() {
         }
 
         function goToTopics() {
-            window.location.href = 'onboarding-topics.html';
+            window.location.assign('/onboarding-topics');
         }
 
         nextBtn.onclick = function(e) {
@@ -141,8 +124,8 @@ function skipOnboarding() {
             localStorage.setItem('gensphere_user', JSON.stringify(res.data));
         }
         // 不管成功失败都进主页
-        window.location.href = 'index.html';
+        window.location.assign('/');
     }).catch(function() {
-        window.location.href = 'index.html';
+        window.location.assign('/');
     });
 }
