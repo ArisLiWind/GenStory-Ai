@@ -105,13 +105,16 @@ export function now() {
 
 export function sanitizeUser(user) {
     if (!user) return null;
+    const topics = Array.isArray(user.topics) ? user.topics : safeJsonParse(user.topics, []);
+    const onboardingComplete = !!user.onboarding_complete || (!!user.username && topics.length > 0);
+
     return {
         id: user.id,
         phone: user.phone,
         username: user.username,
         avatar: user.avatar,
-        topics: user.topics || [],
-        onboardingComplete: !!user.onboarding_complete,
+        topics,
+        onboardingComplete,
         isAdmin: !!user.is_admin,
         createdAt: user.created_at
     };

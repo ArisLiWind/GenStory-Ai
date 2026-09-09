@@ -10,12 +10,12 @@ document.addEventListener('DOMContentLoaded', () => {
     initChatPage();
 });
 
-function initChatPage() {
+async function initChatPage() {
     const params = new URLSearchParams(window.location.search);
     const characterId = params.get('character');
     
     if (characterId) {
-        loadCharacterData(characterId);
+        await loadCharacterData(characterId);
     } else {
         // No character specified
         const basePath = window.location.pathname.replace(/[^/]*$/, '');
@@ -67,30 +67,23 @@ window.toggleCharacterInfo = function() {
 };
 
 // ===== Character Loading =====
-function loadCharacterData(characterId) {
-    // Generate character data from main.js's generateCharacters function
-    const numericId = parseInt(characterId) || 1;
-    
-    // Use the same data generation as main.js
-    if (typeof generateCharacters === 'function') {
-        const chars = generateCharacters(Math.max(numericId, 8), 1);
-        currentCharacter = chars.find(c => c.id === numericId) || chars[0];
+async function loadCharacterData(characterId) {
+    const result = await GenSphereAPI.characters.getDetail(characterId);
+
+    if (result.code !== 0 || !result.data) {
+        const messagesContainer = document.getElementById('messagesList');
+        if (messagesContainer) {
+            messagesContainer.innerHTML = `
+                <div style="text-align:center;padding:60px 20px;color:#888;">
+                    <h3 style="color:#fff;margin-bottom:8px;">角色加载失败</h3>
+                    <p>${escapeHtml(result.message || '角色不存在或未发布')}</p>
+                </div>
+            `;
+        }
+        return;
     }
-    
-    if (!currentCharacter) {
-        // Fallback: create basic character
-        currentCharacter = {
-            id: characterId,
-            title: '未知角色',
-            chatName: '未知角色',
-            image: 'assets/char-knight.jpg',
-            description: '角色信息加载中...',
-            personality: '',
-            scenario: '',
-            firstMessage: '你好...',
-            contentLevel: 'SFW'
-        };
-    }
+
+    currentCharacter = normalizeCharacter(result.data);
     
     // Update header
     const headerName = document.getElementById('headerCharName');
@@ -115,6 +108,15 @@ function loadCharacterData(characterId) {
     
     // Start chat session
     startChatSession();
+}
+
+function normalizeCharacter(char) {
+    return {
+        ...char,
+        chatName: char.chatName || char.chat_name || char.title,
+        firstMessage: char.firstMessage || char.first_message || '你好...',
+        exampleDialogue: char.exampleDialogue || char.example_dialogue || ''
+    };
 }
 
 async function startChatSession() {

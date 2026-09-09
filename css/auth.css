@@ -514,20 +514,25 @@
 }
 
 .topic-grid {
-    display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 12px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
     margin-top: 24px;
     margin-bottom: 32px;
 }
 
 .topic-item {
     position: relative;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
     background: rgba(255, 255, 255, 0.04);
-    border: 2px solid transparent;
-    border-radius: 12px;
-    padding: 20px 12px;
-    text-align: center;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 9999px;
+    padding: 8px 14px;
+    color: inherit;
+    font: inherit;
+    text-align: left;
     cursor: pointer;
     transition: all 0.2s ease;
 }
@@ -542,11 +547,8 @@
 }
 
 .topic-check {
-    position: absolute;
-    top: 8px;
-    right: 8px;
-    width: 20px;
-    height: 20px;
+    width: 16px;
+    height: 16px;
     border-radius: 50%;
     background: #6366f1;
     color: white;
@@ -559,8 +561,8 @@
 }
 
 .topic-check svg {
-    width: 12px;
-    height: 12px;
+    width: 10px;
+    height: 10px;
 }
 
 .topic-item.active .topic-check {
@@ -569,14 +571,15 @@
 }
 
 .topic-icon {
-    font-size: 32px;
-    margin-bottom: 8px;
+    font-size: 16px;
+    line-height: 1;
 }
 
 .topic-name {
     font-size: 13px;
     font-weight: 500;
     color: rgba(255, 255, 255, 0.8);
+    white-space: nowrap;
 }
 
 .topic-item.active .topic-name {

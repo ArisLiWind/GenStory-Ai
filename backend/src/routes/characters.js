@@ -19,7 +19,7 @@ export async function handleCharacters(request, env, path) {
     const detailMatch = path.match(/^\/api\/characters\/(\d+)$/);
     if (detailMatch) {
         const id = parseInt(detailMatch[1]);
-        if (request.method === 'GET') return getCharacterDetail(env, id);
+        if (request.method === 'GET') return getCharacterDetail(request, env, id);
         if (request.method === 'PUT') return updateCharacter(request, env, id);
         if (request.method === 'DELETE') return deleteCharacter(request, env, id);
     }
@@ -108,7 +108,7 @@ async function listCharacters(request, env) {
     });
 }
 
-async function getCharacterDetail(env, id) {
+async function getCharacterDetail(request, env, id) {
     const row = await env.DB.prepare(`
         SELECT * FROM characters WHERE id = ? AND status = 'published'
     `).bind(id).first();
@@ -119,6 +119,15 @@ async function getCharacterDetail(env, id) {
 
     // Increment view count
     await env.DB.prepare('UPDATE characters SET view_count = view_count + 1 WHERE id = ?').bind(id).run();
+
+    const user = await getCurrentUser(request, env);
+    let isFavorited = false;
+    if (user) {
+        const favorite = await env.DB.prepare(
+            'SELECT id FROM favorites WHERE user_id = ? AND character_id = ?'
+        ).bind(user.id, id).first();
+        isFavorited = !!favorite;
+    }
 
     const character = {
         ...row,
@@ -135,7 +144,11 @@ async function getCharacterDetail(env, id) {
         chatName: row.chat_name,
         firstMessage: row.first_message,
         exampleDialogue: row.example_dialogue,
-        isPublic: !!row.is_public
+        creator: row.creator_name,
+        views: row.view_count + 1,
+        chats: row.chat_count,
+        isPublic: !!row.is_public,
+        isFavorited
     };
 
     return jsonResponse(character);

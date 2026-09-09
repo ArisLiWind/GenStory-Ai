@@ -154,14 +154,15 @@ function initCharacterPage() {
 }
 
 async function loadCharacterDetail(id) {
-    const numericId = parseInt(id) || 1;
-    if (typeof generateCharacters === 'function') {
-        const chars = generateCharacters(Math.max(numericId, 8), 1);
-        currentCharacter = chars.find(c => c.id === numericId) || chars[0];
+    const result = await GenSphereAPI.characters.getDetail(id);
+
+    if (result.code !== 0 || !result.data) {
+        renderCharacterError(result.message || '角色信息加载失败');
+        return;
     }
-    if (!currentCharacter) {
-        currentCharacter = { id: id, title: '未知角色', image: 'assets/char-knight.jpg', description: '角色信息加载中...', tags: [] };
-    }
+
+    currentCharacter = normalizeCharacter(result.data);
+    isFavorited = !!currentCharacter.isFavorited;
     renderCharacter(currentCharacter);
     loadMockComments();
 }
@@ -211,6 +212,8 @@ function renderCharacter(char) {
     if (char.allowAgent) {
         document.getElementById('agentBadge').style.display = 'block';
     }
+
+    renderFavoriteButton();
 
     // ===== Accordion panels: use real character data =====
     // Persona accordion
@@ -273,11 +276,13 @@ function setupEventListeners() {
     // Start chat button
     document.getElementById('startChatBtn').addEventListener('click', (e) => {
         e.preventDefault();
-        if (currentCharacter && currentCharacter.id) {
-            const basePath = window.location.pathname.replace(/[^/]*$/, '');
-            window.location.href = basePath + 'chat.html?character=' + encodeURIComponent(currentCharacter.id);
-        }
+        openChat();
     });
+
+    const continueChatBtn = document.querySelector('.btn-continue-chat');
+    if (continueChatBtn) {
+        continueChatBtn.addEventListener('click', openChat);
+    }
     
     // Favorite button
     document.getElementById('favoriteBtn').addEventListener('click', toggleFavorite);
@@ -314,11 +319,38 @@ function setupEventListeners() {
     });
 }
 
-function toggleFavorite() {
-    isFavorited = !isFavorited;
+function openChat() {
+    if (currentCharacter && currentCharacter.id) {
+        const basePath = window.location.pathname.replace(/[^/]*$/, '');
+        window.location.href = basePath + 'chat.html?character=' + encodeURIComponent(currentCharacter.id);
+    }
+}
+
+async function toggleFavorite() {
+    if (!currentCharacter?.id) return;
+
+    const btn = document.getElementById('favoriteBtn');
+    btn.disabled = true;
+
+    const result = await GenSphereAPI.characters.toggleFavorite(currentCharacter.id);
+    if (result.code === 401) {
+        window.location.href = 'login.html';
+        return;
+    }
+    if (result.code === 0) {
+        isFavorited = !!result.data.favorited;
+        renderFavoriteButton();
+    } else {
+        alert(result.message || '收藏失败，请稍后重试');
+    }
+
+    btn.disabled = false;
+}
+
+function renderFavoriteButton() {
     const btn = document.getElementById('favoriteBtn');
     const span = btn.querySelector('span');
-    
+
     if (isFavorited) {
         btn.classList.add('active');
         span.textContent = '已收藏';
@@ -326,6 +358,36 @@ function toggleFavorite() {
         btn.classList.remove('active');
         span.textContent = '收藏角色';
     }
+}
+
+function normalizeCharacter(char) {
+    return {
+        ...char,
+        chatName: char.chatName || char.chat_name || char.title,
+        creator: char.creator || char.creatorName || char.creator_name || '未知创作者',
+        views: char.views ?? char.viewCount ?? char.view_count ?? 0,
+        chats: char.chats ?? char.chatCount ?? char.chat_count ?? 0,
+        createdAt: formatDate(char.createdAt || char.created_at),
+        updatedAt: formatDate(char.updatedAt || char.updated_at || char.createdAt || char.created_at),
+        exampleDialogue: char.exampleDialogue || char.example_dialogue || ''
+    };
+}
+
+function renderCharacterError(message) {
+    document.querySelector('.char-detail-container').innerHTML = `
+        <div style="width:100%;text-align:center;padding:80px 20px;color:rgba(255,255,255,0.72);">
+            <h1 style="font-size:24px;margin-bottom:12px;color:#fff;">角色不存在或未发布</h1>
+            <p style="margin-bottom:24px;">${escapeHtml(message)}</p>
+            <a href="index.html" class="btn-chat-primary" style="display:inline-flex;width:auto;padding:0 24px;">返回首页</a>
+        </div>
+    `;
+}
+
+function formatDate(value) {
+    if (!value) return '-';
+    const timestamp = Number(value);
+    if (!Number.isFinite(timestamp)) return value;
+    return new Date(timestamp).toLocaleDateString('zh-CN');
 }
 
 // ===== Comments =====

@@ -23,11 +23,11 @@ window.addEventListener('DOMContentLoaded', async () => {
     const token = localStorage.getItem(TOKEN_KEY);
     
     if (autoLogin === 'true' && token) {
-        const result = await GenSphereAPI.auth.autoLogin(token);
+        const result = await GenSphereAPI.auth.autoLogin();
         if (result.code === 0) {
             // 自动登录成功
-            saveUserSession(result.data.user, token);
-            redirectAfterLogin(result.data.user);
+            saveUserSession(result.data, token);
+            redirectAfterLogin(result.data);
             return;
         } else {
             // token 无效，清除
@@ -177,13 +177,17 @@ function saveUserSession(user, token) {
 
 // ===== Redirect Logic =====
 function redirectAfterLogin(user) {
-    if (user.onboardingComplete) {
+    if (hasCompletedOnboarding(user)) {
         // 老用户 → 首页
         window.location.href = 'index.html';
     } else {
         // 新用户 → 新手引导
         window.location.href = 'onboarding-username.html';
     }
+}
+
+function hasCompletedOnboarding(user) {
+    return !!user?.onboardingComplete || (!!user?.username && Array.isArray(user?.topics) && user.topics.length > 0);
 }
 
 // ===== Keyboard Navigation =====

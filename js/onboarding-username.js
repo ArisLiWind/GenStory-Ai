@@ -23,8 +23,27 @@ window.addEventListener('DOMContentLoaded', async () => {
         window.location.href = 'index.html';
         return;
     }
+
+    const me = await GenSphereAPI.auth.getMe();
+    if (me.code === 0 && me.data) {
+        localStorage.setItem(AUTH_KEY, JSON.stringify(me.data));
+        if (hasCompletedOnboarding(me.data)) {
+            window.location.href = 'index.html';
+            return;
+        }
+        currentUser = me.data;
+        if (me.data.username) {
+            usernameInput.value = me.data.username;
+            validateUsername();
+        }
+        return;
+    }
     
     currentUser = user;
+    if (user.username) {
+        usernameInput.value = user.username;
+        validateUsername();
+    }
 });
 
 // ===== Real-time Validation =====
@@ -122,4 +141,8 @@ async function skipOnboarding() {
     localStorage.setItem(AUTH_KEY, JSON.stringify(user));
     
     window.location.href = 'index.html';
+}
+
+function hasCompletedOnboarding(user) {
+    return !!user?.onboardingComplete || (!!user?.username && Array.isArray(user?.topics) && user.topics.length > 0);
 }
