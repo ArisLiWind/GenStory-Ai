@@ -348,17 +348,18 @@
             <h3 class="modal-title" id="keyModalTitle">添加API密钥</h3>
             <div class="form-group">
                 <label class="form-label">名称</label>
-                <input type="text" class="form-input" id="keyName" placeholder="如：OpenAI主账号">
+                <input type="text" class="form-input" id="keyName" placeholder="如：DeepSeek主账号">
             </div>
             <div class="form-row">
                 <div class="form-group">
                     <label class="form-label">服务商</label>
-                    <select class="form-select" id="keyProvider">
+                    <select class="form-select" id="keyProvider" onchange="autoFillProvider()">
+                        <option value="">请选择</option>
+                        <option value="deepseek">DeepSeek</option>
                         <option value="openai">OpenAI</option>
                         <option value="anthropic">Anthropic</option>
-                        <option value="deepseek">DeepSeek</option>
                         <option value="zhipu">智谱AI</option>
-                        <option value="moonshot">月之暗面</option>
+                        <option value="moonshot">月之暗面(Moonshot)</option>
                         <option value="other">其他</option>
                     </select>
                 </div>
@@ -372,12 +373,12 @@
                 <input type="password" class="form-input" id="keyApiKey" placeholder="sk-...">
             </div>
             <div class="form-group">
-                <label class="form-label">Base URL</label>
-                <input type="text" class="form-input" id="keyBaseUrl" placeholder="https://api.openai.com/v1">
+                <label class="form-label">Base URL <span style="color: rgba(255,255,255,0.3); font-size: 12px;">(选择服务商后自动填充)</span></label>
+                <input type="text" class="form-input" id="keyBaseUrl" placeholder="选择服务商后自动填充">
             </div>
             <div class="form-group">
-                <label class="form-label">模型</label>
-                <input type="text" class="form-input" id="keyModel" placeholder="gpt-3.5-turbo">
+                <label class="form-label">模型 <span style="color: rgba(255,255,255,0.3); font-size: 12px;">(选择服务商后自动填充默认模型)</span></label>
+                <input type="text" class="form-input" id="keyModel" placeholder="选择服务商后自动填充">
             </div>
             <div class="form-group">
                 <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
@@ -510,13 +511,45 @@
             editingKeyId = null;
             document.getElementById('keyModalTitle').textContent = '添加API密钥';
             document.getElementById('keyName').value = '';
-            document.getElementById('keyProvider').value = 'openai';
+            document.getElementById('keyProvider').value = '';
             document.getElementById('keyApiKey').value = '';
             document.getElementById('keyBaseUrl').value = '';
             document.getElementById('keyModel').value = '';
             document.getElementById('keyPriority').value = '0';
             document.getElementById('keyActive').checked = true;
             document.getElementById('keyModal').classList.add('active');
+        }
+
+        const PROVIDER_PRESETS = {
+            deepseek: { baseUrl: 'https://api.deepseek.com/v1', model: 'deepseek-chat', nameHint: 'DeepSeek' },
+            openai: { baseUrl: 'https://api.openai.com/v1', model: 'gpt-4o-mini', nameHint: 'OpenAI' },
+            anthropic: { baseUrl: 'https://api.anthropic.com/v1', model: 'claude-3-5-sonnet-20241022', nameHint: 'Anthropic' },
+            zhipu: { baseUrl: 'https://open.bigmodel.cn/api/paas/v4', model: 'glm-4-flash', nameHint: '智谱AI' },
+            moonshot: { baseUrl: 'https://api.moonshot.cn/v1', model: 'moonshot-v1-8k', nameHint: '月之暗面' },
+            other: { baseUrl: '', model: '', nameHint: '' }
+        };
+
+        function autoFillProvider() {
+            const provider = document.getElementById('keyProvider').value;
+            const preset = PROVIDER_PRESETS[provider];
+            if (!preset) return;
+
+            const baseUrlInput = document.getElementById('keyBaseUrl');
+            const modelInput = document.getElementById('keyModel');
+            const nameInput = document.getElementById('keyName');
+
+            // Only auto-fill if field is empty or was previously auto-filled
+            if (!baseUrlInput.value || baseUrlInput.dataset.autoFilled === 'true') {
+                baseUrlInput.value = preset.baseUrl;
+                baseUrlInput.dataset.autoFilled = 'true';
+            }
+            if (!modelInput.value || modelInput.dataset.autoFilled === 'true') {
+                modelInput.value = preset.model;
+                modelInput.dataset.autoFilled = 'true';
+            }
+            if (!nameInput.value && preset.nameHint) {
+                nameInput.value = preset.nameHint + '主账号';
+            }
         }
 
         function editKey(id) {

@@ -554,7 +554,7 @@ const drawerOverlay = document.getElementById('drawerOverlay');
 
 function openUserDropdown() {
     userDropdown.classList.add('visible');
-    if (drawerOverlay && window.innerWidth <= 768) {
+    if (drawerOverlay) {
         drawerOverlay.classList.add('visible');
     }
 }
