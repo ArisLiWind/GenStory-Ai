@@ -163,13 +163,22 @@ function generateCharacters(count, startId = 1) {
         "紧张刺激的剧情发展，每一个选择都将改变结局。"
     ];
     
+    const localImages = [
+        'assets/char-knight.jpg',
+        'assets/char-mystic.jpg'
+    ];
+    
     const chars = [];
     for (let i = 0; i < count; i++) {
         const idx = (startId + i - 1) % titles.length;
         const rand = Math.floor(Math.random() * 10);
+        const charId = startId + i;
+        
+        // 前两个角色使用用户提供的素材图，其余用 picsum
+        const image = charId <= 2 ? localImages[charId - 1] : `https://picsum.photos/seed/char${charId}/400/520`;
         
         chars.push({
-            id: startId + i,
+            id: charId,
             title: titles[idx] + (startId > 1 ? ` ${Math.ceil((startId + i) / titles.length)}` : ''),
             creator: creators[Math.floor(Math.random() * creators.length)],
             verified: Math.random() > 0.6,
@@ -180,7 +189,7 @@ function generateCharacters(count, startId = 1) {
             rating: (Math.random() * 1.5 + 3.5).toFixed(1),
             tags: tags[idx],
             category: categories[idx],
-            image: `https://picsum.photos/seed/char${startId + i}/400/520`
+            image: image
         });
     }
     
