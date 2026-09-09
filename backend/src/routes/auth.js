@@ -123,18 +123,35 @@ async function updateMe(request, env) {
         }
     }
 
+    let beforeUsername = user.username;
+    let affectedRows = 0;
+
     if (setClauses.length > 0) {
         setClauses.push('updated_at = ?');
         values.push(now());
         values.push(user.id);
 
-        await env.DB.prepare(`
+        const result = await env.DB.prepare(`
             UPDATE users SET ${setClauses.join(', ')} WHERE id = ?
         `).bind(...values).run();
+        
+        affectedRows = result.meta?.changes || result.changes || 0;
     }
 
     const updatedUser = await env.DB.prepare('SELECT * FROM users WHERE id = ?').bind(user.id).first();
-    return jsonResponse(sanitizeUser(updatedUser));
+    const sanitized = sanitizeUser(updatedUser);
+    
+    // 调试信息
+    sanitized._debug = {
+        beforeUsername,
+        afterUsername: updatedUser.username,
+        updates: Object.keys(updates),
+        setClauses: setClauses.length,
+        affectedRows,
+        userId: user.id
+    };
+
+    return jsonResponse(sanitized);
 }
 
 async function completeOnboarding(request, env) {
