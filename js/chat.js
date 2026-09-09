@@ -83,7 +83,7 @@ function loadCharacterData(characterId) {
             id: characterId,
             title: '未知角色',
             chatName: '未知角色',
-            image: 'https://picsum.photos/seed/char' + numericId + '/400/520',
+            image: 'assets/char-knight.jpg',
             description: '角色信息加载中...',
             personality: '',
             scenario: '',
