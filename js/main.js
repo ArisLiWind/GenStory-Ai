@@ -171,7 +171,17 @@ function generateCharacters(count, startId = 1) {
         'assets/char-mima.jpg',
         'assets/char-sakura.jpg',
         'assets/char-temple.jpg',
-        'assets/char-pagoda.jpg'
+        'assets/char-pagoda.jpg',
+        'assets/char-new-01.jpg',
+        'assets/char-new-02.jpg',
+        'assets/char-new-03.jpg',
+        'assets/char-new-04.jpg',
+        'assets/char-new-05.jpg',
+        'assets/char-new-06.jpg',
+        'assets/char-new-07.jpg',
+        'assets/char-new-08.jpg',
+        'assets/char-new-09.jpg',
+        'assets/char-new-10.jpg'
     ];
 
     const personalities = [
@@ -224,8 +234,8 @@ function generateCharacters(count, startId = 1) {
         const rand = Math.floor(Math.random() * 10);
         const charId = startId + i;
         
-        // 前两个角色使用用户提供的素材图，其余用 picsum
-        const image = charId <= localImages.length ? localImages[charId - 1] : `https://picsum.photos/seed/char${charId}/400/520`;
+        // 使用本地素材图，超过数量则循环复用
+        const image = localImages[(charId - 1) % localImages.length];
         
         chars.push({
             id: charId,

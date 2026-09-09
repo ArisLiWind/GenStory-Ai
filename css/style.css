@@ -632,7 +632,7 @@ img {
 
 .character-card {
     position: relative;
-    background: linear-gradient(180deg, rgba(22, 22, 22, 0.95) 0%, rgba(10, 10, 10, 0.98) 100%);
+    background: linear-gradient(180deg, rgba(88, 28, 135, 0.6) 0%, rgba(30, 27, 75, 0.9) 100%);
     border: 1.5px solid rgba(167, 139, 250, 0.5);
     border-radius: var(--radius-lg);
     overflow: hidden;

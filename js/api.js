@@ -170,10 +170,10 @@ const GenSphereAPI = {
             return request('/chat/sessions');
         },
 
-        async createSession(characterId) {
+        async createSession(characterId, characterData) {
             return request('/chat/sessions', {
                 method: 'POST',
-                body: JSON.stringify({ characterId })
+                body: JSON.stringify({ characterId, character: characterData })
             });
         },
 
