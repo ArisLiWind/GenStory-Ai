@@ -110,11 +110,7 @@ async function login(request, env) {
         exp: now() + 7 * 24 * 3600 * 1000
     }, env.JWT_SECRET || 'gensphere-secret');
 
-    const userData = {
-        ...sanitizeUser(user),
-        topics: safeJsonParse(user.topics, []),
-        onboardingComplete: !!user.onboarding_complete
-    };
+    const userData = sanitizeUser(user);
 
     return jsonResponse({
         token,

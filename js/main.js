@@ -275,12 +275,14 @@ function formatViews(num) {
 }
 
 // ===== State =====
-let allCharacters = generateCharacters(200);
-let filteredCharacters = [...allCharacters];
+let allCharacters = [];
+let filteredCharacters = [];
 let currentPage = 1;
 const pageSize = 12;
 let isLoading = false;
 let hasMore = true;
+let totalCharacters = 0;
+let useBackendData = false;
 
 let currentCategory = 'all';
 let currentFilter = 'characters';
@@ -318,41 +320,109 @@ const themeToggleLogged = document.getElementById('themeToggleLogged');
 const navbar = document.querySelector('.navbar');
 
 // ===== Initialize View Based on Auth State =====
-function initView() {
+async function initView() {
     const loggedIn = isLoggedIn();
     const user = getCurrentUser();
-    
+
     if (loggedIn && user) {
         // Logged in view
         guestView.style.display = 'none';
         loggedView.style.display = 'block';
         authButtons.style.display = 'none';
         userMenu.style.display = 'flex';
-        
+
         // Update user info
         const firstChar = user.username ? user.username.charAt(0).toUpperCase() : 'U';
         userAvatarText.textContent = firstChar;
         dropdownAvatarText.textContent = firstChar;
         dropdownUsername.textContent = user.username || '用户';
         dropdownPhone.textContent = user.phone ? maskPhone(user.phone) : '';
-        
-        // Render character grid
-        if (characterGrid.children.length === 0) {
-            renderCharacters(true);
-            setupInfiniteScroll();
+
+        // Load characters from backend first
+        if (allCharacters.length === 0) {
+            await loadCharactersFromBackend();
         }
+        renderCharacters(1);
+        setupInfiniteScroll();
     } else {
         // Guest view
         guestView.style.display = 'block';
         loggedView.style.display = 'none';
         authButtons.style.display = 'flex';
         userMenu.style.display = 'none';
-        
-        // Render guest preview (8 cards)
-        if (guestCharacterGrid.children.length === 0) {
-            renderGuestCharacters();
+
+        // Load characters for guest preview
+        if (allCharacters.length === 0) {
+            await loadCharactersFromBackend();
         }
+        renderGuestCharacters();
     }
+}
+
+// ===== Load characters from backend API =====
+async function loadCharactersFromBackend() {
+    isLoading = true;
+
+    try {
+        const result = await GenSphereAPI.characters.getList({
+            page: 1,
+            pageSize: 50,
+            category: currentCategory,
+            sortBy: currentSortBy
+        });
+
+        if (result.code === 0 && result.data && Array.isArray(result.data.items)) {
+            const items = result.data.items;
+            if (items.length > 0) {
+                allCharacters = items.map(normalizeCharFromBackend);
+                filteredCharacters = [...allCharacters];
+                totalCharacters = result.data.total || items.length;
+                hasMore = !!result.data.hasMore;
+                useBackendData = true;
+                isLoading = false;
+                return;
+            }
+        }
+    } catch (e) {
+        console.warn('Backend API unavailable, using mock data:', e);
+    }
+
+    // Fallback to mock data
+    allCharacters = generateCharacters(200);
+    filteredCharacters = [...allCharacters];
+    totalCharacters = allCharacters.length;
+    hasMore = false;
+    useBackendData = false;
+    isLoading = false;
+}
+
+// ===== Normalize backend character data to match UI format =====
+function normalizeCharFromBackend(char) {
+    const viewCount = char.viewCount ?? char.view_count ?? 0;
+    const chatCount = char.chatCount ?? char.chat_count ?? 0;
+
+    return {
+        id: char.id,
+        title: char.title,
+        image: char.image || 'assets/char-knight.jpg',
+        description: char.description || '',
+        creator: char.creatorName || char.creator_name || '匿名用户',
+        creatorId: char.creatorId || char.creator_id,
+        verified: !!char.verified,
+        tags: Array.isArray(char.tags) ? char.tags : [],
+        categories: Array.isArray(char.categories) ? char.categories : [],
+        views: formatNumber(viewCount),
+        chats: formatNumber(chatCount),
+        tokens: formatNumber(viewCount),
+        rating: char.rating || 0,
+        createdAt: char.createdAt || char.created_at,
+        category: Array.isArray(char.categories) ? char.categories : (char.category || [])
+    };
+}
+
+function formatNumber(num) {
+    if (num >= 10000) return (num / 10000).toFixed(1) + '万';
+    return num.toString();
 }
 
 function maskPhone(phone) {
@@ -503,26 +573,40 @@ function createCharacterCard(char, isGuest = false) {
 // ===== Filter & Sort =====
 function applyFilters() {
     filteredCharacters = [...allCharacters];
-    
+
     if (currentCategory !== 'all') {
-        filteredCharacters = filteredCharacters.filter(char => 
-            char.category.includes(currentCategory)
-        );
+        filteredCharacters = filteredCharacters.filter(char => {
+            const cats = char.categories || char.category || [];
+            return cats.includes(currentCategory);
+        });
     }
-    
+
     if (currentSortBy === 'views') {
-        filteredCharacters.sort((a, b) => parseViews(b.views) - parseViews(a.views));
+        filteredCharacters.sort((a, b) => parseCount(b.views) - parseCount(a.views));
     } else if (currentSortBy === 'rating') {
         filteredCharacters.sort((a, b) => parseFloat(b.rating) - parseFloat(a.rating));
     } else if (currentSortBy === 'newest') {
-        filteredCharacters.sort((a, b) => b.id - a.id);
+        filteredCharacters.sort((a, b) => {
+            const aTime = typeof a.createdAt === 'number' ? a.createdAt : (b.id - a.id);
+            const bTime = typeof b.createdAt === 'number' ? b.createdAt : 0;
+            return bTime - aTime;
+        });
     }
-    
+
     // 筛选后重置到第一页
     renderCharacters(1);
 }
 
+function parseCount(val) {
+    if (typeof val === 'number') return val;
+    if (typeof val !== 'string') return 0;
+    if (val.includes('亿')) return parseFloat(val) * 100000000;
+    if (val.includes('万')) return parseFloat(val) * 10000;
+    return parseFloat(val) || 0;
+}
+
 function parseViews(viewsStr) {
+    if (typeof viewsStr === 'number') return viewsStr;
     if (viewsStr.includes('亿')) {
         return parseFloat(viewsStr) * 100000000;
     } else if (viewsStr.includes('万')) {

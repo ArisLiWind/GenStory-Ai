@@ -24,181 +24,20 @@
                     <img src="assets/logo-text-light.png" alt="GenSphere" class="auth-logo-text-img">
                 </div>
                 <div class="onboarding-step">步骤 <strong>2</strong> / 2</div>
-                <h1 class="auth-title">你对什么感兴趣？</h1>
-                <p class="onboarding-sub">选择你喜欢的话题，我们将为你推荐更符合口味的角色</p>
-                <p class="selected-count">已选择 <strong id="selectedCount">0</strong> 个话题（至少选1个）</p>
+                <h1 class="auth-title">你想看到哪些内容？</h1>
+                <p class="onboarding-sub">选择 1 到 5 个标签来筛选你的内容。</p>
+                <p class="selected-count">已选 <strong id="selectedCount">0</strong>/5 个</p>
             </div>
 
             <!-- 话题选择 -->
-            <div class="topic-grid" id="topicGrid">
-                <div class="topic-item" data-topic="xianxia">
-                    <div class="topic-check">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
-                            <polyline points="20 6 9 17 4 12"></polyline>
-                        </svg>
-                    </div>
-                    <div class="topic-icon">⚔️</div>
-                    <div class="topic-name">修仙玄幻</div>
-                </div>
-
-                <div class="topic-item" data-topic="wuxia">
-                    <div class="topic-check">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
-                            <polyline points="20 6 9 17 4 12"></polyline>
-                        </svg>
-                    </div>
-                    <div class="topic-icon">🗡️</div>
-                    <div class="topic-name">江湖武侠</div>
-                </div>
-
-                <div class="topic-item" data-topic="ancient">
-                    <div class="topic-check">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
-                            <polyline points="20 6 9 17 4 12"></polyline>
-                        </svg>
-                    </div>
-                    <div class="topic-icon">🏮</div>
-                    <div class="topic-name">古风言情</div>
-                </div>
-
-                <div class="topic-item" data-topic="history">
-                    <div class="topic-check">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
-                            <polyline points="20 6 9 17 4 12"></polyline>
-                        </svg>
-                    </div>
-                    <div class="topic-icon">📜</div>
-                    <div class="topic-name">历史真实</div>
-                </div>
-
-                <div class="topic-item" data-topic="anime">
-                    <div class="topic-check">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
-                            <polyline points="20 6 9 17 4 12"></polyline>
-                        </svg>
-                    </div>
-                    <div class="topic-icon">🎮</div>
-                    <div class="topic-name">动漫游戏</div>
-                </div>
-
-                <div class="topic-item" data-topic="modern">
-                    <div class="topic-check">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
-                            <polyline points="20 6 9 17 4 12"></polyline>
-                        </svg>
-                    </div>
-                    <div class="topic-icon">🏙️</div>
-                    <div class="topic-name">现代都市</div>
-                </div>
-
-                <div class="topic-item" data-topic="scifi">
-                    <div class="topic-check">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
-                            <polyline points="20 6 9 17 4 12"></polyline>
-                        </svg>
-                    </div>
-                    <div class="topic-icon">🚀</div>
-                    <div class="topic-name">科幻未来</div>
-                </div>
-
-                <div class="topic-item" data-topic="fantasy">
-                    <div class="topic-check">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
-                            <polyline points="20 6 9 17 4 12"></polyline>
-                        </svg>
-                    </div>
-                    <div class="topic-icon">🐉</div>
-                    <div class="topic-name">异世界</div>
-                </div>
-
-                <div class="topic-item" data-topic="rpg">
-                    <div class="topic-check">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
-                            <polyline points="20 6 9 17 4 12"></polyline>
-                        </svg>
-                    </div>
-                    <div class="topic-icon">🗺️</div>
-                    <div class="topic-name">RPG冒险</div>
-                </div>
-
-                <div class="topic-item" data-topic="horror">
-                    <div class="topic-check">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
-                            <polyline points="20 6 9 17 4 12"></polyline>
-                        </svg>
-                    </div>
-                    <div class="topic-icon">👻</div>
-                    <div class="topic-name">悬疑恐怖</div>
-                </div>
-
-                <div class="topic-item" data-topic="comedy">
-                    <div class="topic-check">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
-                            <polyline points="20 6 9 17 4 12"></polyline>
-                        </svg>
-                    </div>
-                    <div class="topic-icon">😄</div>
-                    <div class="topic-name">搞笑日常</div>
-                </div>
-
-                <div class="topic-item" data-topic="sweet">
-                    <div class="topic-check">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
-                            <polyline points="20 6 9 17 4 12"></polyline>
-                        </svg>
-                    </div>
-                    <div class="topic-icon">💕</div>
-                    <div class="topic-name">甜蜜恋爱</div>
-                </div>
-
-                <div class="topic-item" data-topic="oc">
-                    <div class="topic-check">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
-                            <polyline points="20 6 9 17 4 12"></polyline>
-                        </svg>
-                    </div>
-                    <div class="topic-icon">🎭</div>
-                    <div class="topic-name">原创OC</div>
-                </div>
-
-                <div class="topic-item" data-topic="male">
-                    <div class="topic-check">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
-                            <polyline points="20 6 9 17 4 12"></polyline>
-                        </svg>
-                    </div>
-                    <div class="topic-icon">♂️</div>
-                    <div class="topic-name">男性角色</div>
-                </div>
-
-                <div class="topic-item" data-topic="female">
-                    <div class="topic-check">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
-                            <polyline points="20 6 9 17 4 12"></polyline>
-                        </svg>
-                    </div>
-                    <div class="topic-icon">♀️</div>
-                    <div class="topic-name">女性角色</div>
-                </div>
-
-                <div class="topic-item" data-topic="multi">
-                    <div class="topic-check">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
-                            <polyline points="20 6 9 17 4 12"></polyline>
-                        </svg>
-                    </div>
-                    <div class="topic-icon">👥</div>
-                    <div class="topic-name">多人角色</div>
-                </div>
+            <div class="topic-tags-grid" id="topicGrid">
+                <!-- 由 JS 动态生成 -->
             </div>
 
             <!-- 底部按钮 -->
             <div class="onboarding-bottom">
                 <button type="button" class="btn-submit" id="finishBtn" onclick="finishOnboarding()" disabled>
-                    <span class="btn-text">开始探索</span>
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-                        <path d="M5 12h14M12 5l7 7-7 7"/>
-                    </svg>
+                    <span class="btn-text">继续</span>
                 </button>
 
                 <div class="onboarding-skip-wrap">

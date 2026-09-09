@@ -513,77 +513,78 @@
     font-weight: 600;
 }
 
-.topic-grid {
+/* ===== Topic Tags (Onboarding) ===== */
+.topic-tags-grid {
     display: flex;
     flex-wrap: wrap;
     gap: 10px;
-    margin-top: 24px;
+    margin-top: 28px;
     margin-bottom: 32px;
+    justify-content: center;
 }
 
-.topic-item {
-    position: relative;
+.topic-tag {
     display: inline-flex;
     align-items: center;
     gap: 6px;
+    padding: 8px 16px;
     background: rgba(255, 255, 255, 0.04);
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(167, 139, 250, 0.25);
     border-radius: 9999px;
-    padding: 8px 14px;
-    color: inherit;
-    font: inherit;
-    text-align: left;
+    color: rgba(255, 255, 255, 0.7);
+    font-size: 14px;
+    font-weight: 500;
     cursor: pointer;
     transition: all 0.2s ease;
+    white-space: nowrap;
+    font-family: inherit;
 }
 
-.topic-item:hover {
-    background: rgba(255, 255, 255, 0.07);
+.topic-tag:hover {
+    border-color: rgba(167, 139, 250, 0.5);
+    color: #ffffff;
+    background: rgba(255, 255, 255, 0.08);
 }
 
-.topic-item.active {
-    background: rgba(99, 102, 241, 0.12);
-    border-color: #6366f1;
+.topic-tag.active {
+    background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+    border-color: transparent;
+    color: #ffffff;
+    box-shadow: 0 2px 12px rgba(99, 102, 241, 0.4);
 }
 
-.topic-check {
-    width: 16px;
-    height: 16px;
-    border-radius: 50%;
-    background: #6366f1;
-    color: white;
-    display: flex;
+.topic-tag-check {
+    display: inline-flex;
     align-items: center;
     justify-content: center;
+    width: 0;
+    height: 16px;
     opacity: 0;
-    transform: scale(0.5);
+    overflow: hidden;
     transition: all 0.2s ease;
 }
 
-.topic-check svg {
-    width: 10px;
-    height: 10px;
+.topic-tag-check svg {
+    width: 14px;
+    height: 14px;
 }
 
-.topic-item.active .topic-check {
+.topic-tag.active .topic-tag-check {
+    width: 16px;
     opacity: 1;
-    transform: scale(1);
+    margin-right: 2px;
 }
 
-.topic-icon {
-    font-size: 16px;
+.topic-tag-icon {
+    font-size: 15px;
     line-height: 1;
+    flex-shrink: 0;
 }
 
-.topic-name {
-    font-size: 13px;
+.topic-tag-name {
+    font-size: 14px;
     font-weight: 500;
-    color: rgba(255, 255, 255, 0.8);
     white-space: nowrap;
-}
-
-.topic-item.active .topic-name {
-    color: #ffffff;
 }
 
 .onboarding-bottom {
