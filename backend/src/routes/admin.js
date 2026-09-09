@@ -2,7 +2,7 @@
 // Admin Routes
 // ============================================
 
-import { jsonResponse, errorResponse, parseBody, getCurrentUser, now, getTokenFromRequest } from '../utils.js';
+import { jsonResponse, errorResponse, parseBody, getCurrentUser, now, getTokenFromRequest, safeJsonParse } from '../utils.js';
 
 function checkAdmin(request, env) {
     // Check via admin token header
@@ -64,8 +64,10 @@ export async function handleAdmin(request, env, path) {
         return listAllCharacters(request, env);
     }
     const charAdminMatch = path.match(/^\/api\/admin\/characters\/(\d+)$/);
-    if (charAdminMatch && request.method === 'PUT') {
-        return adminUpdateCharacter(request, env, parseInt(charAdminMatch[1]));
+    if (charAdminMatch) {
+        const id = parseInt(charAdminMatch[1]);
+        if (request.method === 'GET') return adminGetCharacter(env, id);
+        if (request.method === 'PUT') return adminUpdateCharacter(request, env, id);
     }
 
     // Stats
@@ -246,10 +248,43 @@ async function listAllCharacters(request, env) {
     });
 }
 
+async function adminGetCharacter(env, id) {
+    const character = await env.DB.prepare(
+        'SELECT * FROM characters WHERE id = ?'
+    ).bind(id).first();
+
+    if (!character) return errorResponse(404, '角色不存在');
+
+    // Parse JSON fields
+    character.tags = safeJsonParse(character.tags, []);
+    character.categories = safeJsonParse(character.categories, []);
+
+    return jsonResponse(character);
+}
+
 async function adminUpdateCharacter(request, env, id) {
     const body = await parseBody(request);
-    const allowedFields = ['status', 'isPublic', 'verified'];
-    const fieldMap = { isPublic: 'is_public' };
+
+    const allowedFields = [
+        'title', 'chatName', 'chat_name',
+        'description', 'personality', 'scenario',
+        'firstMessage', 'first_message',
+        'exampleDialogue', 'example_dialogue',
+        'image', 'tags', 'categories',
+        'contentRating', 'content_rating',
+        'status', 'isPublic', 'is_public', 'verified'
+    ];
+
+    const fieldMap = {
+        chatName: 'chat_name',
+        firstMessage: 'first_message',
+        exampleDialogue: 'example_dialogue',
+        contentRating: 'content_rating',
+        isPublic: 'is_public'
+    };
+
+    const booleanFields = ['isPublic', 'is_public', 'verified'];
+    const jsonFields = ['tags', 'categories'];
 
     const setClauses = [];
     const values = [];
@@ -257,12 +292,32 @@ async function adminUpdateCharacter(request, env, id) {
     for (const field of allowedFields) {
         if (body[field] !== undefined) {
             const dbField = fieldMap[field] || field;
+            let value = body[field];
+
+            // Boolean fields: convert to 1/0
+            if (booleanFields.includes(field)) {
+                value = value ? 1 : 0;
+            }
+
+            // JSON fields: stringify arrays/objects
+            if (jsonFields.includes(field)) {
+                try {
+                    value = typeof value === 'string' ? value : JSON.stringify(value);
+                } catch {
+                    value = '[]';
+                }
+            }
+
             setClauses.push(`${dbField} = ?`);
-            values.push(field === 'isPublic' || field === 'verified' ? (body[field] ? 1 : 0) : body[field]);
+            values.push(value);
         }
     }
 
     if (setClauses.length === 0) return jsonResponse({ updated: false });
+
+    // Add updated_at
+    setClauses.push('updated_at = ?');
+    values.push(Date.now());
 
     values.push(id);
     await env.DB.prepare(`

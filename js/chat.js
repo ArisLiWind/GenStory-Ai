@@ -6,6 +6,14 @@ let messages = [];
 let isSending = false;
 let charInfoExpanded = false;
 
+// RPG World State
+let worldState = {
+    time: '',
+    location: '',
+    weather: ''
+};
+let currentActionOptions = [];
+
 // Mock character data (fallback when backend is empty)
 const MOCK_CHARACTERS = [
     {
@@ -185,6 +193,9 @@ function renderCharacterInfo() {
 async function startMockChatSession() {
     if (!currentCharacter?.firstMessage) return;
 
+    // Initialize RPG world state
+    initWorldState();
+
     messages = [{
         id: 'm_first',
         role: 'bot',
@@ -195,6 +206,17 @@ async function startMockChatSession() {
     }];
 
     renderMessages();
+
+    // Parse first message for RPG data
+    const firstMsg = messages[0];
+    const rpgData = parseRpgMessage(firstMsg.content);
+    if (rpgData?.isRpg) {
+        if (rpgData.worldState) updateWorldState(rpgData.worldState);
+        if (rpgData.actionOptions?.length > 0) {
+            updateActionOptions(rpgData.actionOptions);
+        }
+    }
+
     scrollToBottom();
 }
 
@@ -207,7 +229,191 @@ function normalizeCharacter(char) {
     };
 }
 
+// ===== RPG World State =====
+function initWorldState() {
+    // Try to extract world state from scenario
+    if (currentCharacter?.scenario) {
+        const scenario = currentCharacter.scenario;
+        // Try to find location hints
+        const locMatch = scenario.match(/在([^，。,.\s]+的?[^，。,.\s]*[地馆房间殿洞村城山林海]+)/);
+        if (locMatch) {
+            worldState.location = locMatch[1].replace(/^在/, '');
+        }
+    }
+
+    // Default values if not set
+    if (!worldState.time) worldState.time = '白天';
+    if (!worldState.location) worldState.location = '未知之地';
+    if (!worldState.weather) worldState.weather = '晴朗';
+
+    updateWorldStateBar();
+}
+
+function updateWorldState(newState) {
+    if (!newState) return;
+    if (newState.time) worldState.time = newState.time;
+    if (newState.location) worldState.location = newState.location;
+    if (newState.weather) worldState.weather = newState.weather;
+    updateWorldStateBar();
+}
+
+function updateWorldStateBar() {
+    const bar = document.getElementById('worldStateBar');
+    if (!bar) return;
+
+    if (worldState.time || worldState.location || worldState.weather) {
+        bar.style.display = 'block';
+        const timeEl = document.getElementById('worldStateTime');
+        const locEl = document.getElementById('worldStateLocation');
+        const weatherEl = document.getElementById('worldStateWeather');
+        if (timeEl) timeEl.textContent = worldState.time || '未知';
+        if (locEl) locEl.textContent = worldState.location || '未知';
+        if (weatherEl) weatherEl.textContent = worldState.weather || '未知';
+    }
+}
+
+// ===== RPG Message Parsing =====
+function parseRpgMessage(content) {
+    if (!content) return null;
+
+    const result = {
+        isRpg: false,
+        worldState: null,
+        sceneDesc: '',
+        npcReaction: '',
+        statusChanges: [],
+        actionOptions: [],
+        rawContent: content
+    };
+
+    let remaining = content.trim();
+
+    // Parse world state markers: 【时间】xxx · 【地点】xxx · 【天气】xxx
+    const timeMatch = remaining.match(/【时间】\s*([^\n【]*?)\s*(?:【|$|·)/);
+    const locationMatch = remaining.match(/【地点】\s*([^\n【]*?)\s*(?:【|$|·)/);
+    const weatherMatch = remaining.match(/【天气】\s*([^\n【]*?)\s*(?:【|$|·)/);
+
+    if (timeMatch || locationMatch || weatherMatch) {
+        result.isRpg = true;
+        result.worldState = {
+            time: timeMatch ? timeMatch[1].trim() : null,
+            location: locationMatch ? locationMatch[1].trim() : null,
+            weather: weatherMatch ? weatherMatch[1].trim() : null
+        };
+        // Remove world state line from remaining
+        remaining = remaining.replace(/^【时间】[^\n]*\n?/, '');
+        remaining = remaining.replace(/【地点】[^\n]*\n?/g, '');
+        remaining = remaining.replace(/【天气】[^\n]*\n?/g, '');
+    }
+
+    // Parse scene description: 【场景】xxx
+    const sceneMatch = remaining.match(/【场景】\s*([\s\S]*?)(?=\n【|$)/);
+    if (sceneMatch) {
+        result.isRpg = true;
+        result.sceneDesc = sceneMatch[1].trim();
+        remaining = remaining.replace(/【场景】[\s\S]*?(?=\n【|$)/, '').trim();
+    }
+
+    // Parse status changes: 【状态变化】xxx or 【状态】xxx
+    const statusMatch = remaining.match(/【状态(?:变化)?】\s*([^\n]*)/);
+    if (statusMatch) {
+        result.isRpg = true;
+        const statusStr = statusMatch[1].trim();
+        // Split by | or , or ，
+        result.statusChanges = statusStr.split(/[||，,]/).map(s => s.trim()).filter(s => s);
+        remaining = remaining.replace(/【状态(?:变化)?】[^\n]*\n?/, '').trim();
+    }
+
+    // Parse action options: 【选项】 followed by numbered list
+    const optionsMatch = remaining.match(/【选项】\s*\n([\s\S]*)$/);
+    if (optionsMatch) {
+        result.isRpg = true;
+        const optionsText = optionsMatch[1].trim();
+        // Parse numbered options (1. xxx, 2. xxx, etc.)
+        const optionLines = optionsText.match(/^\d+[\.、]\s*.+$/gm);
+        if (optionLines) {
+            result.actionOptions = optionLines.map(line => {
+                return line.replace(/^\d+[\.、]\s*/, '').trim();
+            }).filter(o => o);
+        }
+        remaining = remaining.replace(/【选项】[\s\S]*$/, '').trim();
+    }
+
+    // Also look for numbered options at the end (without 【选项】 marker)
+    if (result.actionOptions.length === 0) {
+        const endOptions = remaining.match(/(?:\n|^)((?:\d+[\.、]\s*.+\n?)+)$/);
+        if (endOptions) {
+            const optionLines = endOptions[1].trim().split(/\n/).filter(l => /^\d+[\.、]/.test(l.trim()));
+            if (optionLines.length >= 2) {
+                result.isRpg = true;
+                result.actionOptions = optionLines.map(line => {
+                    return line.trim().replace(/^\d+[\.、]\s*/, '').replace(/\*\*/g, '').trim();
+                }).filter(o => o);
+                remaining = remaining.replace(/((?:\d+[\.、]\s*.+\n?)+)$/, '').trim();
+            }
+        }
+    }
+
+    // Whatever is left is NPC reaction / dialogue
+    if (remaining.trim()) {
+        result.npcReaction = remaining.trim();
+    }
+
+    // If no RPG markers found but we have content, check for RPG-style formatting (asterisk actions + quotes)
+    if (!result.isRpg && content) {
+        // Check if message has both action descriptions (*...*) and dialogue ("...")
+        const hasActions = /\*[^*]+\*/.test(content);
+        const hasDialogue = /"[^"]+"/.test(content);
+        if (hasActions && hasDialogue) {
+            result.isRpg = true;
+            result.npcReaction = content;
+        }
+    }
+
+    return result;
+}
+
+// ===== RPG Action Options =====
+function updateActionOptions(options) {
+    currentActionOptions = options || [];
+    const container = document.getElementById('actionOptions');
+    const buttonsEl = document.getElementById('actionButtons');
+    if (!container || !buttonsEl) return;
+
+    if (currentActionOptions.length > 0) {
+        container.style.display = 'block';
+        buttonsEl.innerHTML = currentActionOptions.map((opt, i) => {
+            const num = i + 1;
+            return `
+                <button class="rpg-action-pill" onclick="selectActionOption(${i})" data-index="${i}">
+                    <span class="rpg-action-num">${num}</span>
+                    <span class="rpg-action-text">${escapeHtml(opt)}</span>
+                </button>
+            `;
+        }).join('');
+    } else {
+        container.style.display = 'none';
+    }
+}
+
+window.selectActionOption = function(index) {
+    const option = currentActionOptions[index];
+    if (!option || isSending) return;
+
+    const input = document.getElementById('chatInput');
+    if (input) {
+        input.value = option;
+        input.focus();
+        autoResizeTextarea();
+    }
+    // Auto-send the selected option
+    sendMessage();
+};
+
 async function startChatSession() {
+    // Initialize RPG world state (from character scenario as baseline)
+    initWorldState();
+
     // Show loading state
     const messagesContainer = document.getElementById('messagesList');
     if (messagesContainer) {
@@ -220,6 +426,12 @@ async function startChatSession() {
         
         if (result && result.code === 0 && result.data) {
             currentSessionId = result.data.sessionId || result.data.id;
+
+            // If session has world_state, use it
+            if (result.data.worldState || result.data.world_state) {
+                const ws = result.data.worldState || result.data.world_state;
+                updateWorldState(ws);
+            }
             
             // If session returned messages, use them
             if (result.data.messages && result.data.messages.length > 0) {
@@ -246,6 +458,18 @@ async function startChatSession() {
             }
             
             renderMessages();
+
+            // Parse last bot message for RPG data (action options, etc.)
+            const lastBotMsg = [...messages].reverse().find(m => m.role === 'bot');
+            if (lastBotMsg) {
+                const rpgData = parseRpgMessage(lastBotMsg.content);
+                if (rpgData?.isRpg) {
+                    if (rpgData.worldState) updateWorldState(rpgData.worldState);
+                    if (rpgData.actionOptions?.length > 0) {
+                        updateActionOptions(rpgData.actionOptions);
+                    }
+                }
+            }
         } else {
             throw new Error(result?.message || 'Failed to create session');
         }
@@ -302,38 +526,20 @@ function renderMessages() {
 function renderMessage(msg) {
     const isUser = msg.role === 'user';
     const avatarText = isUser ? '我' : (msg.name || '角色').charAt(0).toUpperCase();
-    
-    return `
-        <div class="message ${isUser ? 'user' : 'bot'}" data-msg-id="${msg.id}">
-            <div class="message-avatar">${avatarText}</div>
-            <div class="message-content">
-                ${!isUser ? `
-                    <div class="message-header">
-                        <span class="message-name">${escapeHtml(msg.name)}</span>
+    const rpgData = parseRpgMessage(msg.content);
+    const isRpg = rpgData?.isRpg && !isUser;
+
+    // User message - always simple style
+    if (isUser) {
+        return `
+            <div class="message user rpg-user-turn" data-msg-id="${msg.id}">
+                <div class="message-avatar">${avatarText}</div>
+                <div class="message-content">
+                    <div class="rpg-user-action">
+                        <span class="rpg-user-label">你的行动</span>
+                        <div class="rpg-user-text">${formatMessage(msg.content)}</div>
                     </div>
-                ` : ''}
-                <div class="message-bubble">${formatMessage(msg.content)}</div>
-                <div class="message-actions">
-                    ${!isUser ? `
-                        <button class="message-action-btn" title="重新生成" onclick="regenerateMessage('${msg.id}')">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <polyline points="23 4 23 10 17 10"/>
-                                <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
-                            </svg>
-                        </button>
-                        <button class="message-action-btn" title="复制" onclick="copyMessage('${msg.id}')">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
-                                <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
-                            </svg>
-                        </button>
-                        <button class="message-action-btn" title="删除" onclick="deleteMessage('${msg.id}')">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <polyline points="3 6 5 6 21 6"/>
-                                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
-                            </svg>
-                        </button>
-                    ` : `
+                    <div class="message-actions">
                         <button class="message-action-btn" title="编辑" onclick="editMessage('${msg.id}')">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                 <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
@@ -346,11 +552,142 @@ function renderMessage(msg) {
                                 <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
                             </svg>
                         </button>
-                    `}
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+
+    // Bot message - RPG style if detected
+    if (isRpg) {
+        return renderRpgBotMessage(msg, rpgData, avatarText);
+    }
+
+    // Bot message - classic bubble style (fallback)
+    return `
+        <div class="message bot" data-msg-id="${msg.id}">
+            <div class="message-avatar">${avatarText}</div>
+            <div class="message-content">
+                <div class="message-header">
+                    <span class="message-name">${escapeHtml(msg.name)}</span>
+                </div>
+                <div class="message-bubble">${formatMessage(msg.content)}</div>
+                <div class="message-actions">
+                    <button class="message-action-btn" title="重新生成" onclick="regenerateMessage('${msg.id}')">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <polyline points="23 4 23 10 17 10"/>
+                            <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
+                        </svg>
+                    </button>
+                    <button class="message-action-btn" title="复制" onclick="copyMessage('${msg.id}')">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
+                            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+                        </svg>
+                    </button>
+                    <button class="message-action-btn" title="删除" onclick="deleteMessage('${msg.id}')">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <polyline points="3 6 5 6 21 6"/>
+                            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+                        </svg>
+                    </button>
                 </div>
             </div>
         </div>
     `;
+}
+
+function renderRpgBotMessage(msg, rpgData, avatarText) {
+    const sceneDesc = rpgData.sceneDesc || '';
+    const npcReaction = rpgData.npcReaction || '';
+    const statusChanges = rpgData.statusChanges || [];
+
+    let bodyHtml = '';
+
+    // Scene description
+    if (sceneDesc) {
+        bodyHtml += `
+            <div class="rpg-scene-desc">
+                ${formatRpgText(sceneDesc)}
+            </div>
+        `;
+    }
+
+    // NPC reaction (action + dialogue)
+    if (npcReaction) {
+        bodyHtml += `
+            <div class="rpg-npc-reaction">
+                <div class="rpg-npc-name">${escapeHtml(msg.name)}</div>
+                <div class="rpg-npc-text">${formatRpgText(npcReaction)}</div>
+            </div>
+        `;
+    }
+
+    // Status changes as badges
+    if (statusChanges.length > 0) {
+        bodyHtml += `
+            <div class="rpg-status-changes">
+                ${statusChanges.map(change => `
+                    <span class="rpg-status-badge">${escapeHtml(change)}</span>
+                `).join('')}
+            </div>
+        `;
+    }
+
+    // Turn divider
+    bodyHtml += `<div class="rpg-turn-divider"><span>— 回合结束 —</span></div>`;
+
+    return `
+        <div class="message bot rpg-turn" data-msg-id="${msg.id}">
+            <div class="message-avatar">${avatarText}</div>
+            <div class="message-content">
+                <div class="rpg-turn-body">
+                    ${bodyHtml}
+                </div>
+                <div class="message-actions">
+                    <button class="message-action-btn" title="重新生成" onclick="regenerateMessage('${msg.id}')">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <polyline points="23 4 23 10 17 10"/>
+                            <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
+                        </svg>
+                    </button>
+                    <button class="message-action-btn" title="复制" onclick="copyMessage('${msg.id}')">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
+                            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+                        </svg>
+                    </button>
+                    <button class="message-action-btn" title="删除" onclick="deleteMessage('${msg.id}')">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <polyline points="3 6 5 6 21 6"/>
+                            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+// Format RPG text (actions + dialogue)
+function formatRpgText(text) {
+    if (!text) return '';
+    
+    let html = escapeHtml(text);
+    
+    // Format bold **text**
+    html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+    
+    // Format action descriptions: *action* -> italic action style
+    html = html.replace(/(?<!\*)\*(?!\*)(.+?)(?<!\*)\*(?!\*)/g, '<em class="rpg-action-text">$1</em>');
+    
+    // Format dialogue: "text" -> quoted style
+    html = html.replace(/"([^"]+)"/g, '<span class="rpg-dialogue">"$1"</span>');
+    
+    // Line breaks
+    html = html.replace(/\n/g, '<br>');
+    
+    return html;
 }
 
 // ===== Markdown Formatting =====
@@ -448,6 +785,16 @@ async function sendMessage() {
             };
             messages.push(botMsg);
             renderMessages();
+
+            // Parse RPG data from reply
+            const rpgData = parseRpgMessage(mockReply);
+            if (rpgData?.isRpg) {
+                if (rpgData.worldState) updateWorldState(rpgData.worldState);
+                updateActionOptions(rpgData.actionOptions);
+            } else {
+                updateActionOptions([]);
+            }
+
             isSending = false;
         }, 1200 + Math.random() * 800);
         return;
@@ -460,15 +807,30 @@ async function sendMessage() {
         removeTypingIndicator();
 
         if (res && res.code === 0 && res.data) {
+            const replyContent = res.data.content || res.data.reply || '';
             const botMsg = {
                 id: 'b_' + Date.now(),
                 role: 'bot',
                 name: currentCharacter.chatName || currentCharacter.title,
-                content: res.data.content || res.data.reply || '',
+                content: replyContent,
                 timestamp: Date.now(),
                 verified: false
             };
             messages.push(botMsg);
+
+            // Parse RPG data from reply
+            const rpgData = parseRpgMessage(replyContent);
+            if (rpgData?.isRpg) {
+                if (rpgData.worldState) updateWorldState(rpgData.worldState);
+                updateActionOptions(rpgData.actionOptions);
+            } else {
+                updateActionOptions([]);
+            }
+
+            // Also check for worldState in response data
+            if (res.data.worldState || res.data.world_state) {
+                updateWorldState(res.data.worldState || res.data.world_state);
+            }
         } else {
             const errorMsg = {
                 id: 'b_' + Date.now(),
@@ -479,6 +841,7 @@ async function sendMessage() {
                 verified: false
             };
             messages.push(errorMsg);
+            updateActionOptions([]);
         }
     } catch (error) {
         console.error('Chat error:', error);
@@ -493,6 +856,7 @@ async function sendMessage() {
             verified: false
         };
         messages.push(errorMsg);
+        updateActionOptions([]);
     }
 
     renderMessages();
@@ -566,6 +930,14 @@ function showToast(message) {
     }, 3000);
 }
 
+// ===== Scroll =====
+function scrollToBottom() {
+    const msgArea = document.querySelector('.messages-area');
+    if (msgArea) {
+        msgArea.scrollTop = msgArea.scrollHeight;
+    }
+}
+
 // ===== Textarea Auto Resize =====
 function autoResizeTextarea() {
     const input = document.getElementById('chatInput');
@@ -599,15 +971,29 @@ window.regenerateMessage = async function(msgId) {
         removeTypingIndicator();
         
         if (res && res.code === 0 && res.data) {
+            const replyContent = res.data.content || res.data.reply || '';
             const newMsg = {
                 id: 'b_' + Date.now(),
                 role: 'bot',
                 name: currentCharacter.chatName || currentCharacter.title,
-                content: res.data.content || res.data.reply || '',
+                content: replyContent,
                 timestamp: Date.now(),
                 verified: false
             };
             messages.splice(index, 0, newMsg);
+
+            // Update RPG state from the new message (if it's the last bot message)
+            const isLastBotMsg = index === messages.length - 1 || 
+                !messages.slice(index + 1).some(m => m.role === 'bot');
+            if (isLastBotMsg) {
+                const rpgData = parseRpgMessage(replyContent);
+                if (rpgData?.isRpg) {
+                    if (rpgData.worldState) updateWorldState(rpgData.worldState);
+                    updateActionOptions(rpgData.actionOptions);
+                } else {
+                    updateActionOptions([]);
+                }
+            }
         }
     } catch (error) {
         removeTypingIndicator();

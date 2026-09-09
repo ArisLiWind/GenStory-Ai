@@ -48,6 +48,37 @@
             </div>
         </div>
 
+        <!-- RPG World State Bar -->
+        <div class="rpg-world-state-bar" id="worldStateBar" style="display: none;">
+            <div class="rpg-world-state-content">
+                <span class="rpg-state-item">
+                    <svg class="rpg-state-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="10"/>
+                        <polyline points="12 6 12 12 16 14"/>
+                    </svg>
+                    <span id="worldStateTime">未知时间</span>
+                </span>
+                <span class="rpg-state-divider">·</span>
+                <span class="rpg-state-item">
+                    <svg class="rpg-state-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/>
+                        <circle cx="12" cy="10" r="3"/>
+                    </svg>
+                    <span id="worldStateLocation">未知地点</span>
+                </span>
+                <span class="rpg-state-divider">·</span>
+                <span class="rpg-state-item">
+                    <svg class="rpg-state-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M17.5 19a4.5 4.5 0 1 0-1.1-8.86 6 6 0 0 0-11.5 1.36A4 4 0 0 0 6 19h11.5z"/>
+                        <line x1="10" y1="14" x2="10" y2="18"/>
+                        <line x1="14" y1="14" x2="14" y2="18"/>
+                        <line x1="12" y1="12" x2="12" y2="16"/>
+                    </svg>
+                    <span id="worldStateWeather">未知天气</span>
+                </span>
+            </div>
+        </div>
+
         <!-- Messages Area -->
         <main class="messages-area">
             <div class="messages-container">
@@ -59,6 +90,14 @@
         <!-- Input Area -->
         <footer class="chat-input-area">
             <div class="chat-input-container">
+                <!-- Action Options -->
+                <div class="rpg-action-options" id="actionOptions" style="display: none;">
+                    <div class="rpg-action-label">选择你的行动：</div>
+                    <div class="rpg-action-buttons" id="actionButtons">
+                        <!-- Action buttons will be rendered here -->
+                    </div>
+                </div>
+
                 <div class="chat-input-wrapper">
                     <div class="input-controls-left">
                         <button class="sparkle-btn" title="灵感模式">
@@ -77,7 +116,7 @@
                     <textarea 
                         class="chat-textarea" 
                         id="chatInput" 
-                        placeholder="按 Enter 发送，Shift+Enter 换行。"
+                        placeholder="自由行动：输入你想做的事..."
                         rows="1"
                     ></textarea>
                     <button class="send-btn" id="sendBtn" onclick="sendMessage()">

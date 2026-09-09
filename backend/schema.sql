@@ -116,6 +116,58 @@ CREATE TABLE IF NOT EXISTS verify_codes (
 );
 
 -- ============================================
+-- RPG 世界引擎
+-- ============================================
+
+-- 世界状态表（每个聊天会话对应一个世界状态）
+CREATE TABLE IF NOT EXISTS world_states (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    session_id TEXT NOT NULL UNIQUE,
+    current_time TEXT DEFAULT '',
+    current_location TEXT DEFAULT '',
+    weather TEXT DEFAULT '',
+    state_json TEXT DEFAULT '{}',
+    history_json TEXT DEFAULT '[]',
+    created_at INTEGER NOT NULL,
+    updated_at INTEGER,
+    FOREIGN KEY (session_id) REFERENCES chat_sessions(id)
+);
+
+-- NPC 状态表
+CREATE TABLE IF NOT EXISTS npc_states (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    session_id TEXT NOT NULL,
+    npc_key TEXT NOT NULL,
+    name TEXT DEFAULT '',
+    location TEXT DEFAULT '',
+    mood TEXT DEFAULT 'neutral',
+    health INTEGER DEFAULT 100,
+    relationship INTEGER DEFAULT 0,
+    knowledge_json TEXT DEFAULT '{}',
+    goals_json TEXT DEFAULT '[]',
+    last_action TEXT DEFAULT '',
+    created_at INTEGER NOT NULL,
+    updated_at INTEGER,
+    UNIQUE(session_id, npc_key),
+    FOREIGN KEY (session_id) REFERENCES chat_sessions(id)
+);
+
+-- 玩家状态表
+CREATE TABLE IF NOT EXISTS player_states (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    session_id TEXT NOT NULL UNIQUE,
+    location TEXT DEFAULT '',
+    inventory_json TEXT DEFAULT '[]',
+    stats_json TEXT DEFAULT '{}',
+    knowledge_json TEXT DEFAULT '{}',
+    relationships_json TEXT DEFAULT '{}',
+    quests_json TEXT DEFAULT '[]',
+    created_at INTEGER NOT NULL,
+    updated_at INTEGER,
+    FOREIGN KEY (session_id) REFERENCES chat_sessions(id)
+);
+
+-- ============================================
 -- 初始化数据
 -- ============================================
 

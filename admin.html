@@ -432,6 +432,92 @@
         </div>
     </div>
 
+    <!-- Character Edit Modal -->
+    <div id="characterModal" class="modal-overlay">
+        <div class="modal" style="width: 680px;">
+            <h3 class="modal-title" id="characterModalTitle">编辑角色</h3>
+            <div class="form-row">
+                <div class="form-group">
+                    <label class="form-label">角色名 (title)</label>
+                    <input type="text" class="form-input" id="charTitle" placeholder="角色名称">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">聊天名 (chatName)</label>
+                    <input type="text" class="form-input" id="charChatName" placeholder="聊天时显示的名字">
+                </div>
+            </div>
+            <div class="form-group">
+                <label class="form-label">头像图片URL (image)</label>
+                <input type="text" class="form-input" id="charImage" placeholder="头像图片链接">
+            </div>
+            <div class="form-group">
+                <label class="form-label">简介 (description)</label>
+                <textarea class="form-textarea" id="charDescription" rows="2" placeholder="角色简短介绍"></textarea>
+            </div>
+            <div class="form-group">
+                <label class="form-label">性格 (personality)</label>
+                <textarea class="form-textarea" id="charPersonality" rows="3" placeholder="角色性格设定"></textarea>
+            </div>
+            <div class="form-group">
+                <label class="form-label">场景设定 (scenario)</label>
+                <textarea class="form-textarea" id="charScenario" rows="3" placeholder="故事背景和场景设定"></textarea>
+            </div>
+            <div class="form-group">
+                <label class="form-label">初始消息 (firstMessage)</label>
+                <textarea class="form-textarea" id="charFirstMessage" rows="3" placeholder="开场白/初始消息"></textarea>
+            </div>
+            <div class="form-group">
+                <label class="form-label">示例对话 (exampleDialogue)</label>
+                <textarea class="form-textarea" id="charExampleDialogue" rows="3" placeholder="示例对话，帮助AI理解角色语气"></textarea>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label class="form-label">标签 (tags) <span style="color: rgba(255,255,255,0.3); font-size: 12px;">逗号分隔</span></label>
+                    <input type="text" class="form-input" id="charTags" placeholder="如：修仙,剑修,高冷">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">分类 (categories) <span style="color: rgba(255,255,255,0.3); font-size: 12px;">逗号分隔</span></label>
+                    <input type="text" class="form-input" id="charCategories" placeholder="如：xianxia,male,fantasy">
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label class="form-label">内容分级 (contentRating)</label>
+                    <select class="form-select" id="charContentRating">
+                        <option value="general">通用 (General)</option>
+                        <option value="mature">成熟 (Mature)</option>
+                        <option value="explicit">成人 (Explicit)</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">状态 (status)</label>
+                    <select class="form-select" id="charStatus">
+                        <option value="draft">草稿</option>
+                        <option value="published">已发布</option>
+                    </select>
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                        <input type="checkbox" id="charIsPublic" style="width: 16px; height: 16px; accent-color: #6366f1;">
+                        <span style="font-size: 14px;">是否公开 (isPublic)</span>
+                    </label>
+                </div>
+                <div class="form-group">
+                    <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                        <input type="checkbox" id="charVerified" style="width: 16px; height: 16px; accent-color: #6366f1;">
+                        <span style="font-size: 14px;">是否认证 (verified)</span>
+                    </label>
+                </div>
+            </div>
+            <div class="modal-actions">
+                <button class="btn btn-secondary" onclick="closeCharacterModal()">取消</button>
+                <button class="btn btn-primary" onclick="saveCharacter()">保存</button>
+            </div>
+        </div>
+    </div>
+
     <script>
         const API_BASE = '/api';
         let adminToken = localStorage.getItem('admin_token') || '';
@@ -698,6 +784,7 @@
                     <td>${c.view_count}</td>
                     <td>${c.chat_count}</td>
                     <td class="action-btns">
+                        <button class="action-btn" onclick="editCharacter(${c.id})">编辑</button>
                         <button class="action-btn" onclick="toggleCharStatus(${c.id}, '${c.status}')">${c.status === 'published' ? '下架' : '发布'}</button>
                     </td>
                 </tr>
@@ -715,6 +802,134 @@
                 body: JSON.stringify({ status: newStatus })
             });
             loadCharacters();
+        }
+
+        let editingCharId = null;
+
+        async function editCharacter(id) {
+            editingCharId = id;
+            document.getElementById('characterModalTitle').textContent = '编辑角色';
+
+            // Show loading state
+            document.getElementById('characterModal').classList.add('active');
+            const modal = document.querySelector('#characterModal .modal');
+            modal.style.opacity = '0.6';
+            modal.style.pointerEvents = 'none';
+
+            try {
+                const res = await fetch(`${API_BASE}/admin/characters/${id}`, {
+                    headers: { 'X-Admin-Token': adminToken }
+                });
+                const data = await res.json();
+
+                if (data.code === 0 && data.data) {
+                    const char = data.data;
+                    fillCharacterForm(char);
+                } else {
+                    alert('加载角色详情失败：' + (data.message || '未知错误'));
+                    closeCharacterModal();
+                }
+            } catch (e) {
+                alert('加载角色详情失败，请检查网络连接');
+                closeCharacterModal();
+            } finally {
+                modal.style.opacity = '1';
+                modal.style.pointerEvents = 'auto';
+            }
+        }
+
+        function fillCharacterForm(char) {
+            document.getElementById('charTitle').value = char.title || '';
+            document.getElementById('charChatName').value = char.chatName || char.chat_name || '';
+            document.getElementById('charImage').value = char.image || '';
+            document.getElementById('charDescription').value = char.description || '';
+            document.getElementById('charPersonality').value = char.personality || '';
+            document.getElementById('charScenario').value = char.scenario || '';
+            document.getElementById('charFirstMessage').value = char.firstMessage || char.first_message || '';
+            document.getElementById('charExampleDialogue').value = char.exampleDialogue || char.example_dialogue || '';
+
+            // Tags - array to comma-separated string
+            const tags = char.tags || [];
+            document.getElementById('charTags').value = Array.isArray(tags) ? tags.join(', ') : (tags || '');
+
+            // Categories - array to comma-separated string
+            const categories = char.categories || [];
+            document.getElementById('charCategories').value = Array.isArray(categories) ? categories.join(', ') : (categories || '');
+
+            // Content rating
+            document.getElementById('charContentRating').value = char.contentRating || char.content_rating || 'general';
+
+            // Status
+            document.getElementById('charStatus').value = char.status || 'draft';
+
+            // Checkboxes
+            document.getElementById('charIsPublic').checked = char.isPublic || char.is_public || false;
+            document.getElementById('charVerified').checked = char.verified || false;
+        }
+
+        function collectCharacterForm() {
+            const tagsStr = document.getElementById('charTags').value;
+            const categoriesStr = document.getElementById('charCategories').value;
+
+            const tags = tagsStr ? tagsStr.split(',').map(s => s.trim()).filter(s => s) : [];
+            const categories = categoriesStr ? categoriesStr.split(',').map(s => s.trim()).filter(s => s) : [];
+
+            return {
+                title: document.getElementById('charTitle').value,
+                chatName: document.getElementById('charChatName').value,
+                image: document.getElementById('charImage').value,
+                description: document.getElementById('charDescription').value,
+                personality: document.getElementById('charPersonality').value,
+                scenario: document.getElementById('charScenario').value,
+                firstMessage: document.getElementById('charFirstMessage').value,
+                exampleDialogue: document.getElementById('charExampleDialogue').value,
+                tags: tags,
+                categories: categories,
+                contentRating: document.getElementById('charContentRating').value,
+                status: document.getElementById('charStatus').value,
+                isPublic: document.getElementById('charIsPublic').checked,
+                verified: document.getElementById('charVerified').checked
+            };
+        }
+
+        async function saveCharacter() {
+            if (!editingCharId) return;
+
+            const body = collectCharacterForm();
+            const saveBtn = document.querySelector('#characterModal .btn-primary');
+            const originalText = saveBtn.textContent;
+            saveBtn.textContent = '保存中...';
+            saveBtn.disabled = true;
+
+            try {
+                const res = await fetch(`${API_BASE}/admin/characters/${editingCharId}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Admin-Token': adminToken
+                    },
+                    body: JSON.stringify(body)
+                });
+
+                const data = await res.json();
+
+                if (res.ok && (data.code === 0 || data.success)) {
+                    closeCharacterModal();
+                    loadCharacters();
+                } else {
+                    alert('保存失败：' + (data.message || '未知错误'));
+                }
+            } catch (e) {
+                alert('保存失败，请检查网络连接');
+            } finally {
+                saveBtn.textContent = originalText;
+                saveBtn.disabled = false;
+            }
+        }
+
+        function closeCharacterModal() {
+            editingCharId = null;
+            document.getElementById('characterModal').classList.remove('active');
         }
 
         async function loadUsers() {

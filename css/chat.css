@@ -629,3 +629,278 @@
     color: #a5b4fc;
     font-style: italic;
 }
+
+/* ============================================
+   RPG Turn-based UI Styles
+   ============================================ */
+
+/* ===== World State Bar ===== */
+.rpg-world-state-bar {
+    background: rgba(99, 102, 241, 0.06);
+    border-bottom: 1px solid rgba(99, 102, 241, 0.12);
+    padding: 8px 24px;
+    flex-shrink: 0;
+}
+
+.rpg-world-state-content {
+    max-width: 672px;
+    margin: 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    font-size: 12px;
+    color: rgba(255, 255, 255, 0.55);
+}
+
+.rpg-state-item {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.rpg-state-icon {
+    width: 14px;
+    height: 14px;
+    opacity: 0.6;
+}
+
+.rpg-state-divider {
+    color: rgba(255, 255, 255, 0.2);
+    font-size: 11px;
+}
+
+/* ===== RPG Turn Messages ===== */
+.rpg-turn .message-content {
+    gap: 8px;
+}
+
+.rpg-turn-body {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+/* Scene description */
+.rpg-scene-desc {
+    font-size: 14px;
+    line-height: 1.7;
+    color: rgba(255, 255, 255, 0.5);
+    font-style: italic;
+    padding: 12px 16px;
+    background: rgba(255, 255, 255, 0.02);
+    border-left: 2px solid rgba(99, 102, 241, 0.3);
+    border-radius: 0 8px 8px 0;
+}
+
+/* NPC Reaction */
+.rpg-npc-reaction {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.rpg-npc-name {
+    font-size: 13px;
+    font-weight: 600;
+    color: #818cf8;
+}
+
+.rpg-npc-text {
+    font-size: 15px;
+    line-height: 1.75;
+    color: #dbdee1;
+}
+
+.rpg-action-text {
+    color: #a5b4fc;
+    font-style: italic;
+}
+
+.rpg-dialogue {
+    color: #f3e8ff;
+    font-style: normal;
+    font-weight: 500;
+}
+
+/* Status change badges */
+.rpg-status-changes {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.rpg-status-badge {
+    display: inline-block;
+    padding: 3px 10px;
+    background: rgba(34, 197, 94, 0.1);
+    border: 1px solid rgba(34, 197, 94, 0.25);
+    color: #4ade80;
+    font-size: 11px;
+    font-weight: 500;
+    border-radius: 12px;
+    letter-spacing: 0.3px;
+}
+
+.rpg-status-badge:has(.-) {
+    background: rgba(239, 68, 68, 0.1);
+    border-color: rgba(239, 68, 68, 0.25);
+    color: #f87171;
+}
+
+/* Turn divider */
+.rpg-turn-divider {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-top: 4px;
+    padding-top: 12px;
+    border-top: 1px dashed rgba(255, 255, 255, 0.08);
+}
+
+.rpg-turn-divider span {
+    font-size: 11px;
+    color: rgba(255, 255, 255, 0.25);
+    letter-spacing: 2px;
+}
+
+/* ===== User Action (RPG style) ===== */
+.rpg-user-turn .message-content {
+    gap: 6px;
+}
+
+.rpg-user-action {
+    background: linear-gradient(135deg, rgba(99, 102, 241, 0.15), rgba(139, 92, 246, 0.1));
+    border: 1px solid rgba(99, 102, 241, 0.25);
+    border-radius: 12px;
+    padding: 10px 14px;
+    max-width: 100%;
+}
+
+.rpg-user-label {
+    font-size: 11px;
+    color: #a5b4fc;
+    font-weight: 600;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    display: block;
+    margin-bottom: 4px;
+}
+
+.rpg-user-text {
+    font-size: 14px;
+    line-height: 1.6;
+    color: #fff;
+    word-break: break-word;
+}
+
+/* ===== Action Options (Bottom) ===== */
+.rpg-action-options {
+    margin-bottom: 12px;
+}
+
+.rpg-action-label {
+    font-size: 12px;
+    color: rgba(255, 255, 255, 0.4);
+    margin-bottom: 8px;
+    font-weight: 500;
+}
+
+.rpg-action-buttons {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.rpg-action-pill {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 16px;
+    background: rgba(99, 102, 241, 0.08);
+    border: 1px solid rgba(99, 102, 241, 0.25);
+    border-radius: 20px;
+    color: #c4b5fd;
+    font-size: 13px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-family: inherit;
+    line-height: 1.4;
+}
+
+.rpg-action-pill:hover {
+    background: rgba(99, 102, 241, 0.18);
+    border-color: rgba(99, 102, 241, 0.5);
+    color: #fff;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(99, 102, 241, 0.2);
+}
+
+.rpg-action-pill:active {
+    transform: translateY(0);
+}
+
+.rpg-action-num {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 18px;
+    height: 18px;
+    background: rgba(99, 102, 241, 0.3);
+    border-radius: 50%;
+    font-size: 11px;
+    font-weight: 700;
+    color: #e0e7ff;
+    flex-shrink: 0;
+}
+
+.rpg-action-text {
+    font-size: 13px;
+    line-height: 1.4;
+}
+
+/* ===== Responsive - RPG ===== */
+@media (max-width: 768px) {
+    .rpg-world-state-bar {
+        padding: 6px 16px;
+    }
+
+    .rpg-world-state-content {
+        gap: 8px;
+        font-size: 11px;
+    }
+
+    .rpg-state-icon {
+        width: 12px;
+        height: 12px;
+    }
+
+    .rpg-scene-desc {
+        font-size: 13px;
+        padding: 10px 12px;
+    }
+
+    .rpg-npc-text {
+        font-size: 14px;
+        line-height: 1.65;
+    }
+
+    .rpg-action-pill {
+        padding: 7px 14px;
+        font-size: 12px;
+    }
+
+    .rpg-action-num {
+        width: 16px;
+        height: 16px;
+        font-size: 10px;
+    }
+
+    .rpg-user-text {
+        font-size: 13px;
+    }
+
+    .rpg-user-action {
+        padding: 8px 12px;
+    }
+}

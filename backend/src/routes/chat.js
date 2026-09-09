@@ -3,7 +3,7 @@
 // ============================================
 
 import { jsonResponse, errorResponse, parseBody, getCurrentUser, now, generateId, safeJsonParse } from '../utils.js';
-import { callLLM } from '../services/llm.js';
+import { callLLM, parseAction, generateNarrative } from '../services/llm.js';
 
 export async function handleChat(request, env, path) {
     // List sessions
@@ -169,13 +169,43 @@ async function sendMessage(request, env, sessionId) {
 
     const messages = historyResult.results || [];
 
-    // Call LLM
+    // ===== RPG Turn-based Flow =====
     let reply = '';
     try {
-        reply = await callLLM(env, character, messages);
+        // Step 1: Get or initialize world/NPC/player states
+        const worldState = await getOrCreateWorldState(env, sessionId, character);
+        const npcStates = await getOrCreateNpcStates(env, sessionId, character, worldState);
+        const playerState = await getOrCreatePlayerState(env, sessionId, worldState);
+
+        // Step 2: Parse user action
+        const parsedAction = await parseAction(env, content.trim(), character, worldState);
+
+        // Step 3: Update world state (simplified version)
+        await updateWorldStateAfterAction(env, sessionId, worldState, npcStates, playerState, parsedAction, character);
+
+        // Step 4: Generate RPG narrative
+        const updatedWorldState = await getOrCreateWorldState(env, sessionId, character);
+        const updatedNpcStates = await getOrCreateNpcStates(env, sessionId, character, updatedWorldState);
+        const updatedPlayerState = await getOrCreatePlayerState(env, sessionId, updatedWorldState);
+
+        reply = await generateNarrative(env, character, updatedWorldState, updatedNpcStates, updatedPlayerState, parsedAction, messages);
+
+        // Step 5: Parse status changes from narrative and update DB (best-effort)
+        try {
+            await applyStatusChangesFromNarrative(env, sessionId, reply, character);
+        } catch (parseErr) {
+            console.warn('Status change parse failed (non-critical):', parseErr.message);
+        }
+
     } catch (err) {
-        console.error('LLM Error:', err);
-        reply = '（抱歉，我现在有点忙，请稍后再试...）';
+        console.error('RPG Chat Error:', err);
+        // Fallback to regular LLM call
+        try {
+            reply = await callLLM(env, character, messages);
+        } catch (llmErr) {
+            console.error('LLM Fallback Error:', llmErr);
+            reply = '（抱歉，我现在有点忙，请稍后再试...）';
+        }
     }
 
     // Save assistant reply
@@ -202,6 +232,268 @@ async function sendMessage(request, env, sessionId) {
         content: reply,
         createdAt: assistantMsgTime
     });
+}
+
+// ===== RPG World State Helpers =====
+
+async function getOrCreateWorldState(env, sessionId, character) {
+    const existing = await env.DB.prepare(
+        'SELECT * FROM world_states WHERE session_id = ?'
+    ).bind(sessionId).first();
+
+    if (existing) {
+        existing.state_json = safeJsonParse(existing.state_json, {});
+        existing.history_json = safeJsonParse(existing.history_json, []);
+        return existing;
+    }
+
+    // Initialize with character's scenario
+    const chatName = character.chat_name || character.title || 'NPC';
+    const initialState = {
+        current_location: '初始场景',
+        weather: '晴朗',
+        current_time: '白天'
+    };
+
+    // Try to extract location from scenario
+    const scenario = character.scenario || '';
+    const locMatch = scenario.match(/在(.{2,20}?)[，。,.]/);
+    if (locMatch) {
+        initialState.current_location = locMatch[1].trim();
+    }
+
+    const ts = now();
+    await env.DB.prepare(`
+        INSERT INTO world_states (session_id, current_time, current_location, weather, state_json, history_json, created_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+    `).bind(
+        sessionId,
+        initialState.current_time,
+        initialState.current_location,
+        initialState.weather,
+        JSON.stringify({ mainNpc: chatName }),
+        JSON.stringify([]),
+        ts
+    ).run();
+
+    return {
+        id: 0,
+        session_id: sessionId,
+        current_time: initialState.current_time,
+        current_location: initialState.current_location,
+        weather: initialState.weather,
+        state_json: { mainNpc: chatName },
+        history_json: [],
+        created_at: ts,
+        updated_at: null
+    };
+}
+
+async function getOrCreateNpcStates(env, sessionId, character, worldState) {
+    const result = await env.DB.prepare(
+        'SELECT * FROM npc_states WHERE session_id = ?'
+    ).bind(sessionId).all();
+
+    const npcStates = result.results || [];
+
+    // If no NPCs exist, create the main character as default NPC
+    if (npcStates.length === 0) {
+        const chatName = character.chat_name || character.title || 'NPC';
+        const location = worldState?.current_location || '';
+        const ts = now();
+
+        await env.DB.prepare(`
+            INSERT INTO npc_states (session_id, npc_key, name, location, mood, health, relationship, knowledge_json, goals_json, last_action, created_at)
+            VALUES (?, ?, ?, ?, 'neutral', 100, 0, '{}', '[]', '', ?)
+        `).bind(sessionId, 'main', chatName, location, ts).run();
+
+        return [{
+            id: 0,
+            session_id: sessionId,
+            npc_key: 'main',
+            name: chatName,
+            location: location,
+            mood: 'neutral',
+            health: 100,
+            relationship: 0,
+            knowledge_json: {},
+            goals_json: [],
+            last_action: '',
+            created_at: ts,
+            updated_at: null
+        }];
+    }
+
+    // Parse JSON fields
+    return npcStates.map(npc => ({
+        ...npc,
+        knowledge_json: safeJsonParse(npc.knowledge_json, {}),
+        goals_json: safeJsonParse(npc.goals_json, [])
+    }));
+}
+
+async function getOrCreatePlayerState(env, sessionId, worldState) {
+    const existing = await env.DB.prepare(
+        'SELECT * FROM player_states WHERE session_id = ?'
+    ).bind(sessionId).first();
+
+    if (existing) {
+        existing.inventory_json = safeJsonParse(existing.inventory_json, []);
+        existing.stats_json = safeJsonParse(existing.stats_json, {});
+        existing.knowledge_json = safeJsonParse(existing.knowledge_json, {});
+        existing.relationships_json = safeJsonParse(existing.relationships_json, {});
+        existing.quests_json = safeJsonParse(existing.quests_json, []);
+        return existing;
+    }
+
+    const location = worldState?.current_location || '';
+    const ts = now();
+
+    await env.DB.prepare(`
+        INSERT INTO player_states (session_id, location, inventory_json, stats_json, knowledge_json, relationships_json, quests_json, created_at)
+        VALUES (?, ?, '[]', '{}', '{}', '{}', '[]', ?)
+    `).bind(sessionId, location, ts).run();
+
+    return {
+        id: 0,
+        session_id: sessionId,
+        location: location,
+        inventory_json: [],
+        stats_json: {},
+        knowledge_json: {},
+        relationships_json: {},
+        quests_json: [],
+        created_at: ts,
+        updated_at: null
+    };
+}
+
+async function updateWorldStateAfterAction(env, sessionId, worldState, npcStates, playerState, parsedAction, character) {
+    const ts = now();
+
+    // Add action to history
+    const history = safeJsonParse(worldState.history_json, []);
+    history.push({
+        timestamp: ts,
+        role: 'player',
+        action_type: parsedAction.action_type,
+        target: parsedAction.target,
+        content: parsedAction.content
+    });
+    // Keep last 50 history entries
+    while (history.length > 50) history.shift();
+
+    // Update world state history
+    await env.DB.prepare(`
+        UPDATE world_states
+        SET history_json = ?, updated_at = ?
+        WHERE session_id = ?
+    `).bind(JSON.stringify(history), ts, sessionId).run();
+
+    // Simple relationship adjustment based on action type
+    // talk: +1, observe: 0, move: 0, attack: -5, investigate: +1
+    let relationshipDelta = 0;
+    let moodChange = '';
+    switch (parsedAction.action_type) {
+        case 'talk':
+            relationshipDelta = 1;
+            moodChange = 'interested';
+            break;
+        case 'attack':
+            relationshipDelta = -5;
+            moodChange = 'angry';
+            break;
+        case 'investigate':
+            relationshipDelta = 1;
+            moodChange = 'curious';
+            break;
+        case 'observe':
+            moodChange = 'neutral';
+            break;
+        default:
+            relationshipDelta = 0;
+    }
+
+    // Update main NPC state
+    if (npcStates && npcStates.length > 0) {
+        const mainNpc = npcStates.find(n => n.npc_key === 'main') || npcStates[0];
+        const newRelationship = Math.max(-100, Math.min(100, (mainNpc.relationship || 0) + relationshipDelta));
+        const newMood = moodChange || mainNpc.mood || 'neutral';
+
+        await env.DB.prepare(`
+            UPDATE npc_states
+            SET relationship = ?, mood = ?, last_action = ?, updated_at = ?
+            WHERE session_id = ? AND npc_key = ?
+        `).bind(
+            newRelationship,
+            newMood,
+            parsedAction.content?.substring(0, 200) || '',
+            ts,
+            sessionId,
+            mainNpc.npc_key
+        ).run();
+    }
+
+    // Update player location if action is move
+    if (parsedAction.action_type === 'move' && parsedAction.target) {
+        await env.DB.prepare(`
+            UPDATE player_states
+            SET location = ?, updated_at = ?
+            WHERE session_id = ?
+        `).bind(parsedAction.target, ts, sessionId).run();
+
+        // Also update world state location
+        await env.DB.prepare(`
+            UPDATE world_states
+            SET current_location = ?, updated_at = ?
+            WHERE session_id = ?
+        `).bind(parsedAction.target, ts, sessionId).run();
+    }
+}
+
+async function applyStatusChangesFromNarrative(env, sessionId, narrative, character) {
+    const chatName = character.chat_name || character.title || 'NPC';
+    const ts = now();
+
+    // Extract 【状态变化】 section
+    const statusMatch = narrative.match(/【状态变化】([\s\S]*?)(?=\n【|$)/);
+    if (!statusMatch) return;
+
+    const statusSection = statusMatch[1];
+    const lines = statusSection.split('\n').filter(l => l.trim().startsWith('-'));
+
+    for (const line of lines) {
+        // Try to match NPC relationship changes: "NPC名：关系 +5" or "NPC名：关系 -3 / 情绪变为好奇"
+        const relMatch = line.match(/关系\s*([+-]?\d+)/);
+        const moodMatch = line.match(/情绪变为?([\u4e00-\u9fa5a-zA-Z]+)/);
+
+        if (relMatch || moodMatch) {
+            // Get current NPC state
+            const npc = await env.DB.prepare(
+                'SELECT * FROM npc_states WHERE session_id = ? AND npc_key = ?'
+            ).bind(sessionId, 'main').first();
+
+            if (npc) {
+                let newRelationship = npc.relationship || 0;
+                let newMood = npc.mood || 'neutral';
+
+                if (relMatch) {
+                    const delta = parseInt(relMatch[1], 10);
+                    newRelationship = Math.max(-100, Math.min(100, newRelationship + delta));
+                }
+
+                if (moodMatch) {
+                    newMood = moodMatch[1];
+                }
+
+                await env.DB.prepare(`
+                    UPDATE npc_states
+                    SET relationship = ?, mood = ?, updated_at = ?
+                    WHERE session_id = ? AND npc_key = ?
+                `).bind(newRelationship, newMood, ts, sessionId, 'main').run();
+            }
+        }
+    }
 }
 
 async function getOrCreateSession(request, env, characterId) {
