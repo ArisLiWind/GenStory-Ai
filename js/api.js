@@ -30,6 +30,9 @@ async function request(path, options = {}) {
     const token = getToken();
     if (token) {
         headers['Authorization'] = `Bearer ${token}`;
+        console.log('[API] 请求:', path, 'token:', token.slice(0, 30) + '...');
+    } else {
+        console.log('[API] 请求:', path, '(无token)');
     }
 
     try {
@@ -39,6 +42,9 @@ async function request(path, options = {}) {
         });
 
         const data = await response.json();
+        if (data.code !== 0) {
+            console.log('[API] 返回错误:', path, data.code, data.message);
+        }
         return data;
     } catch (err) {
         console.error('API Request Error:', err);

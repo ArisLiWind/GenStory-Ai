@@ -93,10 +93,38 @@ async function logout(request, env) {
 }
 
 async function getMe(request, env) {
-    const user = await getCurrentUser(request, env);
-    if (!user) {
-        return errorResponse(401, '未登录或登录已过期');
+    const token = getTokenFromRequest(request);
+
+    if (!token) {
+        return errorResponse(401, '未登录：没有收到token');
     }
+
+    if (!token.startsWith('gs_')) {
+        return errorResponse(401, '未登录：token格式不对 (' + token.slice(0, 15) + '...)');
+    }
+
+    const payload = verifyToken(token, env.JWT_SECRET || 'gensphere-secret');
+    if (!payload) {
+        return errorResponse(401, '未登录：token验证失败 (长度' + token.length + ')');
+    }
+
+    if (payload.exp < Date.now()) {
+        return errorResponse(401, '未登录：token已过期');
+    }
+
+    const user = await env.DB.prepare('SELECT * FROM users WHERE id = ?').bind(payload.userId).first();
+    if (!user) {
+        return errorResponse(401, '未登录：用户不存在 (id=' + payload.userId + ')');
+    }
+
+    if (user.status !== 'active') {
+        return errorResponse(401, '未登录：账号已禁用');
+    }
+
+    // Parse JSON fields
+    user.topics = safeJsonParse(user.topics, []);
+    user.favorite_characters = safeJsonParse(user.favorite_characters, []);
+
     return jsonResponse(sanitizeUser(user));
 }
 

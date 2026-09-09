@@ -17,7 +17,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     // 从服务端拉取最新用户信息
     const res = await GenSphereAPI.auth.getMe();
     if (res.code !== 0 || !res.data) {
-        // token 无效，回登录页
+        // token 无效，显示错误原因
+        const errMsg = res.message || '登录已过期';
+        alert('登录状态异常：' + errMsg + '\n\n请重新登录');
         localStorage.removeItem(TOKEN_KEY);
         localStorage.removeItem(USER_KEY);
         window.location.href = 'login.html';
