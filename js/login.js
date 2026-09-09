@@ -1,55 +1,43 @@
 // ============================================
-// 登录页 - 极简稳定版
+// 登录页 - 极简版
 // ============================================
 
-const TOKEN_KEY = 'gensphere_token';
-const USER_KEY = 'gensphere_user';
+var TOKEN_KEY = 'gensphere_token';
+var USER_KEY = 'gensphere_user';
+var LOG_KEY = 'gensphere_debug_log';
+
+function addLog(msg) {
+    try {
+        var logs = JSON.parse(localStorage.getItem(LOG_KEY) || '[]');
+        logs.push(new Date().toLocaleTimeString() + ' ' + msg);
+        if (logs.length > 50) logs = logs.slice(-50);
+        localStorage.setItem(LOG_KEY, JSON.stringify(logs));
+    } catch(e) {}
+}
 
 window.onload = function() {
+    addLog('[login] page loaded');
+
     var phoneInput = document.getElementById('phoneInput');
     var codeInput = document.getElementById('codeInput');
     var sendCodeBtn = document.getElementById('sendCodeBtn');
     var submitBtn = document.getElementById('submitBtn');
     var formHint = document.getElementById('formHint');
     var loginForm = document.getElementById('loginForm');
-    var btnText = submitBtn ? submitBtn.querySelector('.btn-text') : null;
 
-    if (!phoneInput || !codeInput || !sendCodeBtn || !submitBtn || !formHint || !btnText) {
-        console.error('登录页元素缺失');
+    if (!phoneInput || !codeInput || !sendCodeBtn || !submitBtn || !formHint) {
+        addLog('[login] ERROR: elements missing');
         return;
     }
 
     var countdown = 0;
     var timer = null;
-    var phoneRegistered = null; // null=未知, true=已注册, false=未注册
-
-    // 更新提示文字
-    function updateHint() {
-        if (phoneRegistered === true) {
-            formHint.textContent = '欢迎回来，请输入验证码登录';
-            formHint.style.color = '';
-            btnText.textContent = '登录';
-        } else if (phoneRegistered === false) {
-            formHint.textContent = '新手机号将自动创建账号';
-            formHint.style.color = '';
-            btnText.textContent = '注册并登录';
-        } else {
-            formHint.textContent = '未注册的手机号将自动创建账号';
-            formHint.style.color = '';
-            btnText.textContent = '登录';
-        }
-    }
-
-    // 手机号输入变化时重置状态
-    phoneInput.oninput = function() {
-        phoneRegistered = null;
-        updateHint();
-    };
 
     // 发送验证码
     sendCodeBtn.onclick = function() {
         var phone = phoneInput.value.trim();
-        phoneRegistered = null;
+        formHint.textContent = '';
+        formHint.style.color = '';
 
         if (!phone || phone.length < 6) {
             formHint.textContent = '请输入有效的手机号';
@@ -63,12 +51,14 @@ window.onload = function() {
 
         GenSphereAPI.auth.sendCode(phone).then(function(res) {
             if (res.code === 0) {
-                // 更新注册状态
-                if (res.data && res.data.isRegistered !== undefined) {
-                    phoneRegistered = res.data.isRegistered;
+                // 根据是否已注册显示提示
+                if (res.data && res.data.isRegistered) {
+                    formHint.textContent = '欢迎回来，即将登录';
+                    formHint.style.color = '#22c55e';
+                } else {
+                    formHint.textContent = '新手机号将自动创建账号';
+                    formHint.style.color = '';
                 }
-                updateHint();
-
                 countdown = 60;
                 sendCodeBtn.textContent = countdown + 's 后重发';
                 timer = setInterval(function() {
@@ -99,6 +89,8 @@ window.onload = function() {
     function doLogin() {
         var phone = phoneInput.value.trim();
         var code = codeInput.value.trim();
+        formHint.textContent = '';
+        formHint.style.color = '';
 
         if (!phone || phone.length < 6) {
             formHint.textContent = '请输入有效的手机号';
@@ -112,31 +104,39 @@ window.onload = function() {
         }
 
         submitBtn.disabled = true;
-        btnText.textContent = '登录中...';
+        submitBtn.querySelector('.btn-text').textContent = '登录中...';
+        addLog('[login] doLogin: phone=' + phone);
 
         GenSphereAPI.auth.login(phone, code).then(function(res) {
+            addLog('[login] login response: code=' + res.code);
+
             if (res.code === 0 && res.data && res.data.token) {
                 var user = res.data.user;
                 localStorage.setItem(USER_KEY, JSON.stringify(user));
+                addLog('[login] token saved, user=' + JSON.stringify(user).substring(0, 100));
 
                 if (user.onboardingComplete) {
-                    window.location.assign('/');
+                    addLog('[login] redirect to /');
+                    window.location.href = '/';
                 } else if (user.username && user.username.length > 0) {
-                    window.location.assign('/onboarding-topics');
+                    addLog('[login] redirect to /onboarding-topics');
+                    window.location.href = '/onboarding-topics';
                 } else {
-                    window.location.assign('/onboarding-username');
+                    addLog('[login] redirect to /onboarding-username');
+                    window.location.href = '/onboarding-username';
                 }
             } else {
                 formHint.textContent = res.message || '登录失败';
                 formHint.style.color = '#ef4444';
                 submitBtn.disabled = false;
-                btnText.textContent = phoneRegistered ? '登录' : '注册并登录';
+                submitBtn.querySelector('.btn-text').textContent = '登录';
             }
-        }).catch(function() {
+        }).catch(function(err) {
+            addLog('[login] login catch: ' + err.message);
             formHint.textContent = '网络错误，请稍后重试';
             formHint.style.color = '#ef4444';
             submitBtn.disabled = false;
-            btnText.textContent = '登录';
+            submitBtn.querySelector('.btn-text').textContent = '登录';
         });
     }
 
@@ -152,23 +152,23 @@ window.onload = function() {
         };
     }
 
-    // 检查是否已登录
+    // 如果已登录，直接跳转
     var token = localStorage.getItem(TOKEN_KEY);
     if (token) {
+        addLog('[login] has token, checking...');
         GenSphereAPI.auth.getMe().then(function(res) {
             if (res.code === 0 && res.data) {
                 var user = res.data;
                 localStorage.setItem(USER_KEY, JSON.stringify(user));
+                addLog('[login] auto-login ok, onboarding=' + user.onboardingComplete + ' username=' + !!user.username);
                 if (user.onboardingComplete) {
-                    window.location.assign('/');
+                    window.location.href = '/';
                 } else if (user.username && user.username.length > 0) {
-                    window.location.assign('/onboarding-topics');
-                } else {
-                    // 停在当前页，用户可能想换号
+                    window.location.href = '/onboarding-topics';
                 }
             }
         }).catch(function() {
-            // token 无效就清掉
+            addLog('[login] auto-login catch, clear token');
             localStorage.removeItem(TOKEN_KEY);
             localStorage.removeItem(USER_KEY);
         });

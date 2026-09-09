@@ -1,14 +1,27 @@
 // ============================================
-// 用户名设置页 - 稳健版（只前进不后退）
+// 用户名设置页 - 极简版
 // ============================================
 
 var TOKEN_KEY = 'gensphere_token';
 var USER_KEY = 'gensphere_user';
+var LOG_KEY = 'gensphere_debug_log';
+
+function addLog(msg) {
+    try {
+        var logs = JSON.parse(localStorage.getItem(LOG_KEY) || '[]');
+        logs.push(new Date().toLocaleTimeString() + ' ' + msg);
+        if (logs.length > 50) logs = logs.slice(-50);
+        localStorage.setItem(LOG_KEY, JSON.stringify(logs));
+    } catch(e) {}
+}
 
 window.onload = function() {
+    addLog('[username] page loaded, token=' + !!localStorage.getItem(TOKEN_KEY));
+
     var token = localStorage.getItem(TOKEN_KEY);
     if (!token) {
-        window.location.assign('/login');
+        addLog('[username] no token, go to /login');
+        window.location.href = '/login';
         return;
     }
 
@@ -16,47 +29,53 @@ window.onload = function() {
     var nextBtn = document.getElementById('nextBtn');
     var usernameHint = document.getElementById('usernameHint');
     var usernameForm = document.getElementById('usernameForm');
-    var btnText = nextBtn ? nextBtn.querySelector('.btn-text') : null;
 
-    if (!usernameInput || !nextBtn || !usernameHint || !btnText) {
-        console.error('用户名页元素缺失');
+    if (!usernameInput || !nextBtn || !usernameHint) {
+        addLog('[username] ERROR: elements missing');
         return;
     }
 
-    // 先拉取用户信息（但失败了不回跳，让用户至少能填）
+    // 先检查用户状态
     GenSphereAPI.auth.getMe().then(function(res) {
+        addLog('[username] getMe: code=' + res.code);
+
         if (res.code === 0 && res.data) {
             var user = res.data;
             localStorage.setItem(USER_KEY, JSON.stringify(user));
 
-            // 已经完成 onboarding → 直接进主页
             if (user.onboardingComplete) {
-                window.location.assign('/');
+                addLog('[username] already complete, go to /');
+                window.location.href = '/';
                 return;
             }
 
-            // 已经有用户名 → 直接进兴趣选择页
             if (user.username && user.username.length > 0) {
-                window.location.assign('/onboarding-topics');
+                addLog('[username] has username, go to /onboarding-topics');
+                window.location.href = '/onboarding-topics';
                 return;
             }
         }
-        // getMe 失败或用户没用户名 → 正常显示页面
+
+        // 没完成也没用户名 → 正常显示页面
         initPage();
-    }).catch(function() {
-        // getMe 失败不回跳！可能是网络波动，让用户继续填
+    }).catch(function(err) {
+        addLog('[username] getMe catch: ' + err.message + ', but continue anyway');
+        // 网络失败也继续显示页面，不让用户卡死
         initPage();
     });
 
     function initPage() {
+        addLog('[username] initPage');
+        usernameInput.focus();
+
         // 输入时启用按钮
         usernameInput.oninput = function() {
             usernameHint.textContent = '2-20个字符，支持中英文、数字和下划线';
             usernameHint.style.color = '';
-            nextBtn.disabled = usernameInput.value.trim().length === 0;
+            nextBtn.disabled = usernameInput.value.length === 0;
         };
 
-        // 下一步（保存失败也要去兴趣页）
+        // 下一步
         function doNext() {
             var username = usernameInput.value.trim();
 
@@ -77,28 +96,29 @@ window.onload = function() {
             }
 
             nextBtn.disabled = true;
-            btnText.textContent = '保存中...';
+            nextBtn.querySelector('.btn-text').textContent = '保存中...';
+            addLog('[username] doNext: username=' + username);
 
-            // 先乐观地把用户名存到本地
-            var currentUser = JSON.parse(localStorage.getItem(USER_KEY) || '{}');
-            currentUser.username = username;
-            localStorage.setItem(USER_KEY, JSON.stringify(currentUser));
-
-            // 尝试保存到后端
             GenSphereAPI.auth.updateUser({ username: username }).then(function(res) {
+                addLog('[username] updateUser: code=' + res.code);
+
                 if (res.code === 0 && res.data) {
                     localStorage.setItem(USER_KEY, JSON.stringify(res.data));
+                    addLog('[username] saved, go to /onboarding-topics');
+                    window.location.href = '/onboarding-topics';
+                } else {
+                    usernameHint.textContent = res.message || '保存失败，请重试';
+                    usernameHint.style.color = '#ef4444';
+                    nextBtn.disabled = false;
+                    nextBtn.querySelector('.btn-text').textContent = '下一步';
                 }
-                // 不管成功失败，都继续去兴趣页
-                goToTopics();
-            }).catch(function() {
-                // 网络失败也继续去兴趣页（用户名存在本地，后面再同步）
-                goToTopics();
+            }).catch(function(err) {
+                addLog('[username] updateUser catch: ' + err.message);
+                usernameHint.textContent = '网络错误，请稍后重试';
+                usernameHint.style.color = '#ef4444';
+                nextBtn.disabled = false;
+                nextBtn.querySelector('.btn-text').textContent = '下一步';
             });
-        }
-
-        function goToTopics() {
-            window.location.assign('/onboarding-topics');
         }
 
         nextBtn.onclick = function(e) {
@@ -112,20 +132,18 @@ window.onload = function() {
                 doNext();
             };
         }
-
-        usernameInput.focus();
     }
 };
 
-// 全局函数：跳过用户名设置
+// 跳过
 function skipOnboarding() {
+    addLog('[username] skipOnboarding');
     GenSphereAPI.auth.completeOnboarding({ topics: [] }).then(function(res) {
         if (res.code === 0 && res.data) {
-            localStorage.setItem('gensphere_user', JSON.stringify(res.data));
+            localStorage.setItem(USER_KEY, JSON.stringify(res.data));
         }
-        // 不管成功失败都进主页
-        window.location.assign('/');
+        window.location.href = '/';
     }).catch(function() {
-        window.location.assign('/');
+        window.location.href = '/';
     });
 }
