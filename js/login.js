@@ -156,6 +156,10 @@ loginForm.addEventListener('submit', async (e) => {
         // 自动登录设置
         localStorage.setItem(AUTO_LOGIN_KEY, autoLoginCheck.checked ? 'true' : 'false');
         
+        // 记住登录状态
+        const rememberMe = document.getElementById('rememberMeCheck')?.checked ?? true;
+        localStorage.setItem('gensphere_remember', rememberMe ? 'true' : 'false');
+        
         // 跳转
         redirectAfterLogin(user);
     } else {

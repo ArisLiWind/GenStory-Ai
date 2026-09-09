@@ -253,6 +253,30 @@ function getCharacterFromBody(body) {
     return body;
 }
 
+// ===== Auth Service =====
+const TEST_CODE = '335566';
+const users = new Map(); // phone -> user data
+const userTokens = new Map(); // token -> phone
+
+function generateToken() {
+    return 'tk_' + Math.random().toString(36).slice(2, 12) + Date.now().toString(36);
+}
+
+function getOrCreateUser(phone) {
+    if (users.has(phone)) return users.get(phone);
+    const user = {
+        id: 'u_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
+        phone,
+        username: '用户' + phone.slice(-4),
+        avatar: '',
+        isAdmin: false,
+        onboardingComplete: false,
+        createdAt: Date.now()
+    };
+    users.set(phone, user);
+    return user;
+}
+
 // ===== Main Handler =====
 export async function onRequest(context) {
     const { request, env } = context;
@@ -263,6 +287,71 @@ export async function onRequest(context) {
     const path = url.pathname;
 
     try {
+        // ===== Auth: Send Code =====
+        if (path === '/api/auth/send-code' && request.method === 'POST') {
+            const body = await parseBody(request);
+            const phone = body.phone || '';
+            if (!/^1[3-9]\d{9}$/.test(phone)) {
+                return errorResponse(400, '请输入正确的手机号');
+            }
+            // Always succeed - test code is 335566
+            return jsonResponse({ code: 0, data: { sent: true } });
+        }
+
+        // ===== Auth: Login =====
+        if (path === '/api/auth/login' && request.method === 'POST') {
+            const body = await parseBody(request);
+            const phone = body.phone || '';
+            const code = body.code || '';
+            if (!/^1[3-9]\d{9}$/.test(phone)) {
+                return errorResponse(400, '请输入正确的手机号');
+            }
+            if (code !== TEST_CODE) {
+                return errorResponse(400, '验证码错误');
+            }
+            const user = getOrCreateUser(phone);
+            const token = generateToken();
+            userTokens.set(token, phone);
+            return jsonResponse({
+                code: 0,
+                data: {
+                    token,
+                    user,
+                    isNewUser: !user.onboardingComplete
+                }
+            });
+        }
+
+        // ===== Auth: Get Me =====
+        if (path === '/api/auth/me' && request.method === 'GET') {
+            const authHeader = request.headers.get('Authorization') || '';
+            const token = authHeader.replace('Bearer ', '');
+            const phone = userTokens.get(token);
+            if (!phone) {
+                return errorResponse(401, '未登录或登录已过期');
+            }
+            const user = users.get(phone);
+            if (!user) {
+                return errorResponse(401, '用户不存在');
+            }
+            return jsonResponse({ code: 0, data: { user } });
+        }
+
+        // ===== Auth: Update Me =====
+        if (path === '/api/auth/me' && request.method === 'PUT') {
+            const authHeader = request.headers.get('Authorization') || '';
+            const token = authHeader.replace('Bearer ', '');
+            const phone = userTokens.get(token);
+            if (!phone) return errorResponse(401, '未登录');
+            const user = users.get(phone);
+            if (!user) return errorResponse(401, '用户不存在');
+            const body = await parseBody(request);
+            if (body.username) user.username = body.username;
+            if (body.onboardingComplete !== undefined) user.onboardingComplete = body.onboardingComplete;
+            if (body.avatar !== undefined) user.avatar = body.avatar;
+            return jsonResponse({ code: 0, data: { user } });
+        }
+
         // ===== Admin: Stats =====
         if (path === '/api/admin/stats' && request.method === 'GET') {
             if (!checkAdmin(request, env)) return errorResponse(403, '无权访问');
