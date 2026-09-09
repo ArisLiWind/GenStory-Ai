@@ -66,7 +66,7 @@ window.onload = function() {
     });
 
     function loadTopics() {
-        return GenSphereAPI.categories.list().then(function(res) {
+        return GenSphereAPI.categories.getAll().then(function(res) {
             if (res.code === 0 && res.data && Array.isArray(res.data)) {
                 allTopics = res.data.map(function(c) { return c.name || c; });
             }
