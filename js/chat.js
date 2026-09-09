@@ -879,11 +879,12 @@ function formatRpgText(text) {
     // Format bold **text**
     html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
     
+    // Format dialogue: "text" -> quoted style (do this BEFORE action formatting,
+    // before any HTML class attributes with quotes are introduced)
+    html = html.replace(/"([^"]+)"/g, '<span class="rpg-dialogue">"$1"</span>');
+    
     // Format action descriptions: *action* -> italic action style
     html = html.replace(/(?<!\*)\*(?!\*)(.+?)(?<!\*)\*(?!\*)/g, '<em class="rpg-action-text">$1</em>');
-    
-    // Format dialogue: "text" -> quoted style
-    html = html.replace(/"([^"]+)"/g, '<span class="rpg-dialogue">"$1"</span>');
     
     // Line breaks
     html = html.replace(/\n/g, '<br>');

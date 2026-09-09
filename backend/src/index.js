@@ -7,7 +7,7 @@ import { handleCharacters } from './routes/characters.js';
 import { handleChat } from './routes/chat.js';
 import { handleAdmin } from './routes/admin.js';
 import { handleCategories } from './routes/categories.js';
-import { jsonResponse, errorResponse, getTokenFromRequest, verifyToken } from './utils.js';
+import { jsonResponse, errorResponse, getTokenFromRequest, verifyToken, ensureDBInitialized } from './utils.js';
 
 export default {
     async fetch(request, env, ctx) {
@@ -36,6 +36,9 @@ export default {
         };
 
         try {
+            // Ensure database tables exist
+            await ensureDBInitialized(env);
+
             let response;
 
             // API routes
