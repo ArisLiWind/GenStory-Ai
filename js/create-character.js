@@ -13,7 +13,6 @@ function initCreatePage() {
     const params = new URLSearchParams(window.location.search);
     editingId = params.get('edit');
     
-    setupTabNavigation();
     setupImageUpload();
     setupTags();
     setupPreviewSync();
@@ -85,27 +84,6 @@ async function loadCharacterForEdit(id) {
     } catch (error) {
         console.error('Failed to load character for edit:', error);
     }
-}
-
-// ===== Tab Navigation =====
-function setupTabNavigation() {
-    const navItems = document.querySelectorAll('.side-nav-item');
-    const tabContents = document.querySelectorAll('.tab-content');
-    
-    navItems.forEach(item => {
-        item.addEventListener('click', () => {
-            const tabId = item.dataset.tab;
-            
-            // Update nav
-            navItems.forEach(nav => nav.classList.remove('active'));
-            item.classList.add('active');
-            
-            // Update content
-            tabContents.forEach(content => content.classList.remove('active'));
-            const targetTab = document.getElementById('tab-' + tabId);
-            if (targetTab) targetTab.classList.add('active');
-        });
-    });
 }
 
 // ===== Image Upload =====

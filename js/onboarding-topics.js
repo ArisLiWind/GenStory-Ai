@@ -57,7 +57,7 @@ async function finishOnboarding() {
     finishBtn.innerHTML = '<span class="btn-text">设置中...</span>';
     
     // 调用 API 更新用户信息
-    const result = await GenSphereAPI.auth.updateUser(currentUser.phone, {
+    const result = await GenSphereAPI.auth.updateUser({
         topics: selectedTopics,
         onboardingComplete: true
     });
@@ -89,7 +89,7 @@ function goBack() {
 async function skipOnboarding() {
     if (!currentUser) return;
     
-    await GenSphereAPI.auth.updateUser(currentUser.phone, {
+    await GenSphereAPI.auth.updateUser({
         topics: [],
         onboardingComplete: true
     });

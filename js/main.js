@@ -237,6 +237,8 @@ function generateCharacters(count, startId = 1) {
         // 使用本地素材图，超过数量则循环复用
         const image = localImages[(charId - 1) % localImages.length];
         
+        const ratings = [3.5, 3.6, 3.7, 3.8, 3.9, 4.0, 4.1, 4.2, 4.3, 4.4, 4.5, 4.6, 4.7, 4.8, 4.9, 5.0];
+        
         chars.push({
             id: charId,
             title: titles[idx] + (startId > 1 ? ` ${Math.ceil((startId + i) / titles.length)}` : ''),
@@ -246,7 +248,7 @@ function generateCharacters(count, startId = 1) {
             views: formatViews(Math.floor(Math.random() * 50000000) + 100000),
             chats: Math.floor(Math.random() * 500) + 5,
             tokens: Math.floor(Math.random() * 5000) + 200,
-            rating: (Math.random() * 1.5 + 3.5).toFixed(1),
+            rating: ratings[Math.floor(Math.random() * ratings.length)],
             tags: tags[idx],
             category: categories[idx],
             image: image,

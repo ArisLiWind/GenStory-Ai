@@ -154,77 +154,20 @@ function initCharacterPage() {
 }
 
 async function loadCharacterDetail(id) {
-    try {
-        const res = await GenSphereAPI.characters.getDetail(id);
-        if (res.code === 0 && res.data) {
-            currentCharacter = res.data;
-            // 确保有图片
-            if (!currentCharacter.image) {
-                currentCharacter.image = `https://picsum.photos/seed/char${id}/400/520`;
-            }
-            renderCharacter(res.data);
-            loadComments(id);
-        } else {
-            loadMockCharacter(id);
-        }
-    } catch (error) {
-        console.error('Failed to load character:', error);
-        loadMockCharacter(id);
+    const numericId = parseInt(id) || 1;
+    if (typeof generateCharacters === 'function') {
+        const chars = generateCharacters(Math.max(numericId, 8), 1);
+        currentCharacter = chars.find(c => c.id === numericId) || chars[0];
     }
+    if (!currentCharacter) {
+        currentCharacter = { id: id, title: '未知角色', image: 'assets/char-knight.jpg', description: '角色信息加载中...', tags: [] };
+    }
+    renderCharacter(currentCharacter);
+    loadMockComments();
 }
 
 function loadMockCharacter(id = 1) {
-    const titles = [
-        "Mafia Boss", "Willson Wáng", "Neglectful family", "Ayato Hiroshi",
-        "Second Life Isekai", "Giovanni Moretti", "Your Three Older Brothers",
-        "Your tyrant father", "Best friends trio", "Snow your edgy sister",
-        "Another Magic Academy", "星际指挥官", "古代剑客", "龙骑士传说",
-        "末世幸存者", "吸血鬼恋人", "校园恋爱物语", "赛博朋克2077",
-        "神秘侦探", "精灵王子", "机械少女", "时空旅行者", "海底王国",
-        "天使与恶魔", "狼人传说", "魔法少女", "忍者物语", "海盗冒险",
-        "超能力学院", "幽灵公寓", "美食厨师", "偶像练习生", "电竞选手",
-        "医生与患者", "师生恋曲", "总裁的秘书", "邻家女孩", "青梅竹马",
-        "双胞胎兄弟", "傲娇大小姐", "忠犬男友", "病娇女友", "高冷学霸"
-    ];
-    const creators = [
-        "KLOOMSY", "Shxou_Huang", "hornybite", "Rowlemal", "Hurricanezer",
-        "Emi Yuu", "Лик.", "scifiauthor", "wuxiamaster", "storyweaver",
-        "edgyqueen", "wizardmaster", "digitalartist", "fantasywriter",
-        "romanceking", "darklord", "cutemaker", "sama_senpai"
-    ];
-    const tagsList = [
-        ['男性', 'OC', '虚构', '反派', '无限制'],
-        ['男性', 'OC', '虚构', '甜'],
-        ['男性', '女性', '虚构', '多人'],
-        ['男性', 'OC', '虚构'],
-        ['无限制', '游戏', '动漫', '魔法', '剧情'],
-        ['无限制', '男性', 'OC', '虚构', '甜'],
-        ['男性', '多人', '剧情'],
-        ['男性', '虚构', '剧情'],
-        ['多人', '甜', 'OC'],
-        ['女性', 'OC', '剧情']
-    ];
-    
-    const numericId = parseInt(id) || 1;
-    const idx = (numericId - 1) % titles.length;
-    
-    currentCharacter = {
-        id: id,
-        title: titles[idx],
-        chatName: titles[idx],
-        description: '一位神秘的角色，有着不为人知的过去和令人着迷的性格。在这个充满奇幻色彩的世界里，你们将展开一段难忘的冒险。',
-        image: `https://picsum.photos/seed/char${numericId}/400/520`,
-        tags: tagsList[idx % tagsList.length],
-        creator: creators[idx % creators.length],
-        creatorVerified: Math.random() > 0.6,
-        views: Math.floor(Math.random() * 5000000) + 100000,
-        chats: Math.floor(Math.random() * 500000) + 5000,
-        createdAt: '2023年6月4日',
-        updatedAt: '2024年10月24日',
-        allowAgent: true
-    };
-    renderCharacter(currentCharacter);
-    loadMockComments();
+    loadCharacterDetail(id);
 }
 
 function renderCharacter(char) {
@@ -249,17 +192,18 @@ function renderCharacter(char) {
     // Tags
     renderTags(char.tags || []);
     
-    // Image
+    // Image - use local image path from generateCharacters
     const charImg = document.getElementById('charImg');
     if (char.image) {
         charImg.src = char.image;
         charImg.alt = char.title;
     } else {
-        charImg.style.display = 'none';
+        charImg.src = 'assets/char-knight.jpg';
+        charImg.alt = char.title;
     }
     
     // Verified badge
-    if (char.creatorVerified) {
+    if (char.verified || char.creatorVerified) {
         document.getElementById('creatorVerified').style.display = 'inline';
     }
     
@@ -267,6 +211,55 @@ function renderCharacter(char) {
     if (char.allowAgent) {
         document.getElementById('agentBadge').style.display = 'block';
     }
+
+    // ===== Accordion panels: use real character data =====
+    // Persona accordion
+    const personaBody = document.querySelector('.char-accordion.open .char-accordion-body');
+    if (personaBody) {
+        personaBody.textContent = char.personality || '暂无性格设定。';
+    }
+
+    // Scenario accordion
+    const accordions = document.querySelectorAll('.char-accordion');
+    if (accordions[1]) {
+        const scenarioBody = accordions[1].querySelector('.char-accordion-body');
+        if (scenarioBody) {
+            scenarioBody.textContent = char.scenario || '暂无场景设定。';
+        }
+    }
+
+    // Example messages accordion
+    if (accordions[2]) {
+        const exampleBody = accordions[2].querySelector('.char-accordion-body');
+        if (exampleBody) {
+            const dialog = char.exampleDialog || char.exampleDialogue || '';
+            if (dialog) {
+                exampleBody.innerHTML = formatDialogHtml(dialog);
+            } else {
+                exampleBody.textContent = '暂无示例对话。';
+            }
+        }
+    }
+
+    // Creator's note accordion (definition)
+    if (accordions[3]) {
+        const noteBody = accordions[3].querySelector('.char-accordion-body');
+        if (noteBody) {
+            noteBody.textContent = char.definition || '暂无创作者备注。';
+        }
+    }
+}
+
+// Format example dialog text into HTML paragraphs
+function formatDialogHtml(text) {
+    if (!text) return '';
+    const lines = text.split('\n');
+    return lines.map(line => {
+        if (line.trim()) {
+            return '<p style="margin-top:8px;">' + escapeHtml(line) + '</p>';
+        }
+        return '';
+    }).join('');
 }
 
 function renderTags(tags) {

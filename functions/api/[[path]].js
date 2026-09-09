@@ -8,7 +8,9 @@ const MEM = {
     apiKeys: [],
     keyIdCounter: 1,
     sessions: new Map(),
-    nextSessionId: 1
+    nextSessionId: 1,
+    characters: [],
+    charIdCounter: 1
 };
 
 const DEFAULT_ADMIN_TOKEN = 'gensphere-admin-2024';
@@ -349,6 +351,7 @@ export async function onRequest(context) {
             if (body.username) user.username = body.username;
             if (body.onboardingComplete !== undefined) user.onboardingComplete = body.onboardingComplete;
             if (body.avatar !== undefined) user.avatar = body.avatar;
+            if (body.topics !== undefined) user.topics = body.topics;
             return jsonResponse({ code: 0, data: { user } });
         }
 
@@ -518,8 +521,111 @@ export async function onRequest(context) {
             return jsonResponse({ code: 0, data: { sessions: [] } });
         }
 
-        // ===== Characters (stub - generated client-side) =====
-        if (path === '/api/characters' || path === '/api/characters/featured') {
+        // ===== Characters CRUD =====
+        // GET /api/characters/mine - get current user's characters
+        if (path === '/api/characters/mine' && request.method === 'GET') {
+            const authHeader = request.headers.get('Authorization') || '';
+            const token = authHeader.replace('Bearer ', '');
+            const phone = userTokens.get(token);
+            const myChars = phone
+                ? MEM.characters.filter(c => c.creatorPhone === phone)
+                : [];
+            return jsonResponse({ code: 0, data: myChars });
+        }
+
+        // POST /api/characters - create a character
+        if (path === '/api/characters' && request.method === 'POST') {
+            const authHeader = request.headers.get('Authorization') || '';
+            const token = authHeader.replace('Bearer ', '');
+            const phone = userTokens.get(token);
+            if (!phone) return errorResponse(401, '未登录');
+
+            const body = await parseBody(request);
+            const newId = MEM.charIdCounter++;
+            const characterData = {
+                id: newId,
+                title: body.title || '未命名角色',
+                chatName: body.chatName || body.title || '未命名角色',
+                description: body.description || '',
+                personality: body.personality || '',
+                scenario: body.scenario || '',
+                firstMessage: body.firstMessage || '',
+                exampleDialogue: body.exampleDialogue || body.exampleDialog || '',
+                definition: body.definition || '',
+                contentLevel: body.contentLevel || body.contentRating || 'SFW',
+                image: body.image || '',
+                tags: body.tags || [],
+                categories: body.categories || [],
+                status: body.status || 'published',
+                creatorPhone: phone,
+                creator: body.creator || '',
+                createdAt: Date.now(),
+                updatedAt: Date.now()
+            };
+            MEM.characters.push(characterData);
+            return jsonResponse({ code: 0, data: { id: newId, ...characterData } }, 201);
+        }
+
+        // GET /api/characters/:id - get a single character by ID
+        const charIdMatch = path.match(/^\/api\/characters\/(\d+)$/);
+        if (charIdMatch && request.method === 'GET') {
+            const charId = parseInt(charIdMatch[1]);
+            const character = MEM.characters.find(c => c.id === charId);
+            if (!character) {
+                return errorResponse(404, '角色不存在');
+            }
+            return jsonResponse({ code: 0, data: character });
+        }
+
+        // PUT /api/characters/:id - update a character
+        if (charIdMatch && request.method === 'PUT') {
+            const authHeader = request.headers.get('Authorization') || '';
+            const token = authHeader.replace('Bearer ', '');
+            const phone = userTokens.get(token);
+            if (!phone) return errorResponse(401, '未登录');
+
+            const charId = parseInt(charIdMatch[1]);
+            const character = MEM.characters.find(c => c.id === charId);
+            if (!character) return errorResponse(404, '角色不存在');
+
+            const body = await parseBody(request);
+            if (body.title !== undefined) character.title = body.title;
+            if (body.chatName !== undefined) character.chatName = body.chatName;
+            if (body.description !== undefined) character.description = body.description;
+            if (body.personality !== undefined) character.personality = body.personality;
+            if (body.scenario !== undefined) character.scenario = body.scenario;
+            if (body.firstMessage !== undefined) character.firstMessage = body.firstMessage;
+            if (body.exampleDialogue !== undefined) character.exampleDialogue = body.exampleDialogue;
+            if (body.definition !== undefined) character.definition = body.definition;
+            if (body.contentLevel !== undefined) character.contentLevel = body.contentLevel;
+            if (body.image !== undefined) character.image = body.image;
+            if (body.tags !== undefined) character.tags = body.tags;
+            if (body.categories !== undefined) character.categories = body.categories;
+            if (body.status !== undefined) character.status = body.status;
+            character.updatedAt = Date.now();
+            return jsonResponse({ code: 0, data: character });
+        }
+
+        // DELETE /api/characters/:id - delete a character
+        if (charIdMatch && request.method === 'DELETE') {
+            const authHeader = request.headers.get('Authorization') || '';
+            const token = authHeader.replace('Bearer ', '');
+            const phone = userTokens.get(token);
+            if (!phone) return errorResponse(401, '未登录');
+
+            const charId = parseInt(charIdMatch[1]);
+            const index = MEM.characters.findIndex(c => c.id === charId);
+            if (index === -1) return errorResponse(404, '角色不存在');
+            const deleted = MEM.characters.splice(index, 1)[0];
+            return jsonResponse({ code: 0, data: { id: charId, deleted: true } });
+        }
+
+        // ===== Characters list (stub - generated client-side) =====
+        if (path === '/api/characters' && request.method === 'GET') {
+            return jsonResponse({ code: 0, data: { items: MEM.characters, total: MEM.characters.length } });
+        }
+
+        if (path === '/api/characters/featured') {
             return jsonResponse({ items: [], total: 0 });
         }
 

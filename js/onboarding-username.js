@@ -74,7 +74,7 @@ usernameForm.addEventListener('submit', async (e) => {
     nextBtn.innerHTML = '<span class="btn-text">保存中...</span>';
     
     // 调用 API 更新用户名
-    const result = await GenSphereAPI.auth.updateUser(currentUser.phone, {
+    const result = await GenSphereAPI.auth.updateUser({
         username
     });
     
@@ -109,7 +109,7 @@ async function skipOnboarding() {
     
     const randomName = '用户' + Math.floor(Math.random() * 10000);
     
-    await GenSphereAPI.auth.updateUser(currentUser.phone, {
+    await GenSphereAPI.auth.updateUser({
         username: randomName,
         topics: [],
         onboardingComplete: true

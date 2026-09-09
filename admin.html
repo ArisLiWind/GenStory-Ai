@@ -212,8 +212,14 @@
     <div id="tokenPrompt" class="token-prompt">
         <h2>管理后台</h2>
         <p>请输入管理员令牌以访问管理后台</p>
-        <input type="password" id="adminTokenInput" class="form-input" placeholder="输入 Admin Token" style="margin-bottom: 16px;">
+        <input type="password" id="adminTokenInput" class="form-input" placeholder="输入 Admin Token" style="margin-bottom: 16px;" onkeydown="if(event.key==='Enter') loginAdmin()">
         <button class="btn btn-primary" onclick="loginAdmin()">进入管理后台</button>
+        <div style="text-align: center; margin-top: 16px;">
+            <label style="font-size: 13px; color: rgba(255,255,255,0.4); cursor: pointer; display: inline-flex; align-items: center; gap: 6px;">
+                <input type="checkbox" id="rememberMeCheck" checked style="width: 14px; height: 14px; accent-color: #6366f1;">
+                <span>下次自动登录</span>
+            </label>
+        </div>
     </div>
 
     <div id="adminApp" class="admin-layout" style="display: none;">
@@ -436,7 +442,16 @@
             const token = document.getElementById('adminTokenInput').value.trim();
             if (!token) return;
             adminToken = token;
-            localStorage.setItem('admin_token', token);
+            // 下次自动登录：勾选时保存到 localStorage 'gensphere_admin_remember'
+            const rememberMe = document.getElementById('rememberMeCheck');
+            if (rememberMe && rememberMe.checked) {
+                localStorage.setItem('gensphere_admin_remember', token);
+                localStorage.setItem('admin_token', token);
+            } else {
+                localStorage.removeItem('gensphere_admin_remember');
+                localStorage.removeItem('admin_token');
+                adminToken = token;
+            }
             checkAccess();
         }
 
@@ -453,6 +468,8 @@
                     alert('令牌无效');
                     adminToken = '';
                     localStorage.removeItem('admin_token');
+                    localStorage.removeItem('gensphere_admin_remember');
+                    document.getElementById('adminTokenInput').value = '';
                 }
             } catch (e) {
                 alert('连接失败，请确保后端API已部署');
@@ -733,8 +750,16 @@
             loadUsers();
         }
 
-        // Auto check on load
-        if (adminToken) checkAccess();
+        // Auto check on load - auto-fill token if "下次自动登录" was checked
+        (function autoFillToken() {
+            const remembered = localStorage.getItem('gensphere_admin_remember');
+            const storedToken = localStorage.getItem('admin_token') || '';
+            if (remembered && storedToken) {
+                adminToken = storedToken;
+                document.getElementById('adminTokenInput').value = storedToken;
+                checkAccess();
+            }
+        })();
     </script>
 </body>
 </html>
