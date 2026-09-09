@@ -1,6 +1,5 @@
 // ============================================
-// 兴趣选择页 - 重写版
-// 职责：新用户选兴趣，选完调用 completeOnboarding 完成注册
+// 兴趣选择页 - 重写版（修正ID匹配）
 // ============================================
 
 const TOKEN_KEY = 'gensphere_token';
@@ -8,7 +7,7 @@ const USER_KEY = 'gensphere_user';
 const MAX_TOPICS = 5;
 
 let selectedTopics = [];
-let username = '';
+let allTopics = [];
 
 document.addEventListener('DOMContentLoaded', async () => {
     const token = localStorage.getItem(TOKEN_KEY);
@@ -28,7 +27,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     const user = res.data;
     localStorage.setItem(USER_KEY, JSON.stringify(user));
-    username = user.username || '';
 
     // 已经完成 onboarding → 直接进主页
     if (user.onboardingComplete) {
@@ -37,169 +35,129 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     // 没有用户名 → 回用户名页
-    if (!username || username.length === 0) {
+    if (!user.username || user.username.length === 0) {
         window.location.href = 'onboarding-username.html';
         return;
     }
 
-    // 正常流程：加载分类标签，让用户选兴趣
+    // 如果用户已经有选择的兴趣，恢复选中状态
+    if (user.topics && user.topics.length > 0) {
+        selectedTopics = [...user.topics];
+    }
+
+    // 加载兴趣标签
     await loadTopics();
+
+    // 初始化页面
     initTopicsPage();
 });
 
 async function loadTopics() {
-    const topicsGrid = document.getElementById('topicsGrid');
-    if (!topicsGrid) return;
-
-    topicsGrid.innerHTML = '<div style="text-align:center;color:#9ca3af;padding:40px;">加载中...</div>';
-
     try {
-        const res = await GenSphereAPI.categories.getAll();
-
-        let topics = [];
-        if (res.code === 0 && res.data && res.data.length > 0) {
-            topics = res.data.map(cat => ({
-                id: cat.slug || cat.id,
-                name: cat.name,
-                icon: cat.icon || '🎭'
-            }));
-        } else {
-            // 备用数据（和主页一致）
-            topics = [
-                { id: 'all', name: '全部', icon: '✨' },
-                { id: 'xianxia', name: '仙侠', icon: '⚔️' },
-                { id: 'xuanhuan', name: '玄幻', icon: '🐉' },
-                { id: 'dushi', name: '都市', icon: '🏙️' },
-                { id: 'yanqing', name: '言情', icon: '💕' },
-                { id: 'lishi', name: '历史', icon: '📜' },
-                { id: 'keh', name: '科幻', icon: '🚀' },
-                { id: 'xuanyi', name: '悬疑', icon: '🔍' },
-                { id: 'tongren', name: '同人', icon: '🎭' },
-                { id: 'youxi', name: '游戏', icon: '🎮' },
-                { id: 'dongman', name: '动漫', icon: '🎬' },
-                { id: 'junshi', name: '军事', icon: '🎖️' },
-                { id: 'tiyu', name: '体育', icon: '⚽' },
-            ];
+        const res = await GenSphereAPI.categories.list();
+        if (res.code === 0 && res.data && Array.isArray(res.data)) {
+            allTopics = res.data.map(c => c.name || c);
         }
-
-        renderTopics(topics);
     } catch (e) {
-        topicsGrid.innerHTML = '<div style="text-align:center;color:#ef4444;padding:40px;">加载失败，请刷新重试</div>';
-    }
-}
-
-function renderTopics(topics) {
-    const topicsGrid = document.getElementById('topicsGrid');
-    if (!topicsGrid) return;
-
-    topicsGrid.innerHTML = '';
-
-    topics.forEach(topic => {
-        const tag = document.createElement('div');
-        tag.className = 'topic-tag';
-        tag.dataset.id = topic.id;
-        tag.innerHTML = `
-            <span class="topic-check">✓</span>
-            <span class="topic-icon">${topic.icon || '🎭'}</span>
-            <span class="topic-name">${topic.name}</span>
-        `;
-
-        tag.addEventListener('click', () => toggleTopic(topic.id, topic.name, tag));
-        topicsGrid.appendChild(tag);
-    });
-
-    updateNextButton();
-}
-
-function toggleTopic(id, name, tagEl) {
-    const idx = selectedTopics.findIndex(t => t.id === id);
-
-    if (idx > -1) {
-        // 取消选中
-        selectedTopics.splice(idx, 1);
-        tagEl.classList.remove('selected');
-    } else {
-        // 选中
-        if (selectedTopics.length >= MAX_TOPICS) {
-            // 超过最大数量，提示
-            const countText = document.getElementById('selectedCount');
-            if (countText) {
-                countText.style.color = '#ef4444';
-                countText.textContent = `最多选 ${MAX_TOPICS} 个`;
-                setTimeout(() => {
-                    countText.style.color = '';
-                    updateNextButton();
-                }, 1500);
-            }
-            return;
-        }
-        selectedTopics.push({ id, name });
-        tagEl.classList.add('selected');
+        console.warn('加载分类失败，使用备用数据');
     }
 
-    updateNextButton();
-}
-
-function updateNextButton() {
-    const nextBtn = document.getElementById('nextBtn');
-    const countText = document.getElementById('selectedCount');
-
-    if (countText) {
-        countText.textContent = `已选 ${selectedTopics.length}/${MAX_TOPICS} 个`;
-    }
-
-    if (nextBtn) {
-        nextBtn.disabled = selectedTopics.length === 0;
+    // 备用数据（与主页一致）
+    if (!allTopics || allTopics.length === 0) {
+        allTopics = [
+            '恋爱养成', '玄幻奇幻', '都市生活', '悬疑推理',
+            '武侠江湖', '校园青春', '科幻未来', '历史穿越',
+            '恐怖灵异', '职场逆袭', '治愈日常', '搞笑沙雕',
+            '游戏世界', '二次元', '古风宫斗', '西幻魔法',
+            '末世生存', '无限流', '赛博朋克', '蒸汽朋克'
+        ];
     }
 }
 
 function initTopicsPage() {
-    const nextBtn = document.getElementById('nextBtn');
-    const skipLink = document.getElementById('skipLink');
+    const topicGrid = document.getElementById('topicGrid');
+    const finishBtn = document.getElementById('finishBtn');
+    const selectedCount = document.getElementById('selectedCount');
 
-    // 完成 onboarding
-    nextBtn.addEventListener('click', async () => {
-        if (selectedTopics.length === 0) return;
+    if (!topicGrid || !finishBtn) {
+        console.error('兴趣选择页元素找不到，请检查HTML id');
+        return;
+    }
 
-        nextBtn.disabled = true;
-        nextBtn.textContent = '保存中...';
+    // 渲染标签
+    renderTopics();
 
-        try {
-            const topicIds = selectedTopics.map(t => t.id);
-            const res = await GenSphereAPI.auth.completeOnboarding(username, topicIds);
+    // 完成按钮
+    finishBtn.addEventListener('click', finishOnboarding);
 
-            if (res.code === 0 && res.data) {
-                localStorage.setItem(USER_KEY, JSON.stringify(res.data));
-                // 进主页
-                window.location.href = 'index.html';
-            } else {
-                alert(res.message || '保存失败，请重试');
-                nextBtn.disabled = false;
-                nextBtn.textContent = '完成';
+    function renderTopics() {
+        topicGrid.innerHTML = '';
+
+        allTopics.forEach(topic => {
+            const tag = document.createElement('div');
+            tag.className = 'topic-tag' + (selectedTopics.includes(topic) ? ' active' : '');
+            tag.textContent = topic;
+            tag.addEventListener('click', () => toggleTopic(topic));
+            topicGrid.appendChild(tag);
+        });
+
+        updateCount();
+    }
+
+    function toggleTopic(topic) {
+        const idx = selectedTopics.indexOf(topic);
+        if (idx > -1) {
+            selectedTopics.splice(idx, 1);
+        } else {
+            if (selectedTopics.length >= MAX_TOPICS) {
+                return; // 最多选5个
             }
-        } catch (e) {
-            alert('网络错误，请稍后重试');
-            nextBtn.disabled = false;
-            nextBtn.textContent = '完成';
+            selectedTopics.push(topic);
         }
-    });
 
-    // 跳过（不推荐，但保留）
-    if (skipLink) {
-        skipLink.addEventListener('click', async (e) => {
-            e.preventDefault();
-            if (!confirm('跳过兴趣选择可能会影响内容推荐质量，确定跳过吗？')) return;
-
-            // 跳过的话，用默认分类完成 onboarding
-            try {
-                const res = await GenSphereAPI.auth.completeOnboarding(username, ['all']);
-                if (res.code === 0 && res.data) {
-                    localStorage.setItem(USER_KEY, JSON.stringify(res.data));
-                    window.location.href = 'index.html';
-                }
-            } catch (e) {
-                alert('网络错误，请稍后重试');
+        // 更新 UI
+        const tags = topicGrid.querySelectorAll('.topic-tag');
+        tags.forEach(tag => {
+            if (tag.textContent === topic) {
+                tag.classList.toggle('active');
             }
         });
+
+        updateCount();
+    }
+
+    function updateCount() {
+        if (selectedCount) {
+            selectedCount.textContent = selectedTopics.length;
+        }
+        finishBtn.disabled = selectedTopics.length === 0;
+    }
+}
+
+// 全局函数，供 HTML onclick 调用
+async function finishOnboarding() {
+    const finishBtn = document.getElementById('finishBtn');
+    if (!finishBtn) return;
+
+    if (selectedTopics.length === 0) return;
+
+    finishBtn.disabled = true;
+    finishBtn.textContent = '保存中...';
+
+    try {
+        const res = await GenSphereAPI.auth.completeOnboarding({ topics: selectedTopics });
+
+        if (res.code === 0 && res.data) {
+            localStorage.setItem(USER_KEY, JSON.stringify(res.data));
+            window.location.href = 'index.html';
+        } else {
+            alert(res.message || '保存失败，请重试');
+            finishBtn.disabled = false;
+            finishBtn.textContent = '完成';
+        }
+    } catch (e) {
+        alert('网络错误，请稍后重试');
+        finishBtn.disabled = false;
+        finishBtn.textContent = '完成';
     }
 }
