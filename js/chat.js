@@ -762,10 +762,13 @@ function renderRpgBotMessage(msg, rpgData, avatarText) {
     const sceneDesc = rpgData.sceneDesc || '';
     const npcReaction = rpgData.npcReaction || '';
     const statusChanges = rpgData.statusChanges || [];
+    const currentStatus = rpgData.currentStatus || '';
+    const currentQuest = rpgData.currentQuest || '';
+    const knownIntel = rpgData.knownIntel || [];
 
     let bodyHtml = '';
 
-    // Scene description
+    // Scene description (includes time/weather/location + scene body)
     if (sceneDesc) {
         bodyHtml += `
             <div class="rpg-scene-desc">
@@ -774,8 +777,8 @@ function renderRpgBotMessage(msg, rpgData, avatarText) {
         `;
     }
 
-    // NPC reaction (action + dialogue)
-    if (npcReaction) {
+    // NPC reaction (only render if different from scene desc)
+    if (npcReaction && npcReaction !== sceneDesc) {
         bodyHtml += `
             <div class="rpg-npc-reaction">
                 <div class="rpg-npc-name">${escapeHtml(msg.name)}</div>
@@ -784,7 +787,39 @@ function renderRpgBotMessage(msg, rpgData, avatarText) {
         `;
     }
 
-    // Status changes as badges
+    // Current status
+    if (currentStatus) {
+        bodyHtml += `
+            <div class="rpg-status-section">
+                <div class="rpg-status-label">当前状态</div>
+                <div class="rpg-status-content">${formatRpgText(currentStatus)}</div>
+            </div>
+        `;
+    }
+
+    // Current quest
+    if (currentQuest) {
+        bodyHtml += `
+            <div class="rpg-quest-section">
+                <div class="rpg-quest-label">当前任务</div>
+                <div class="rpg-quest-content">${formatRpgText(currentQuest)}</div>
+            </div>
+        `;
+    }
+
+    // Known intel
+    if (knownIntel.length > 0) {
+        bodyHtml += `
+            <div class="rpg-intel-section">
+                <div class="rpg-intel-label">已知情报</div>
+                <ul class="rpg-intel-list">
+                    ${knownIntel.map(intel => `<li>${escapeHtml(intel)}</li>`).join('')}
+                </ul>
+            </div>
+        `;
+    }
+
+    // Status changes as badges (legacy format support)
     if (statusChanges.length > 0) {
         bodyHtml += `
             <div class="rpg-status-changes">
@@ -932,33 +967,20 @@ async function sendMessage() {
     // Show typing indicator
     showTypingIndicator();
 
-    // Mock mode: no real backend session
+    // No backend session - show error
     if (!currentSessionId) {
-        setTimeout(() => {
-            removeTypingIndicator();
-            const mockReply = generateMockReply(text);
-            const botMsg = {
-                id: 'b_' + Date.now(),
-                role: 'bot',
-                name: currentCharacter.chatName || currentCharacter.title,
-                content: mockReply,
-                timestamp: Date.now(),
-                verified: false
-            };
-            messages.push(botMsg);
-            renderMessages();
-
-            // Parse RPG data from reply
-            const rpgData = parseRpgMessage(mockReply);
-            if (rpgData?.isRpg) {
-                if (rpgData.worldState) updateWorldState(rpgData.worldState);
-                updateActionOptions(rpgData.actionOptions);
-            } else {
-                updateActionOptions([]);
-            }
-
-            isSending = false;
-        }, 1200 + Math.random() * 800);
+        removeTypingIndicator();
+        const errorMsg = {
+            id: 'b_' + Date.now(),
+            role: 'bot',
+            name: currentCharacter.chatName || currentCharacter.title,
+            content: '(AI服务未连接，请稍后重试。)',
+            timestamp: Date.now(),
+            verified: false
+        };
+        messages.push(errorMsg);
+        renderMessages();
+        isSending = false;
         return;
     }
 
@@ -1023,23 +1045,6 @@ async function sendMessage() {
 
     renderMessages();
     isSending = false;
-}
-
-// Generate mock reply based on character
-function generateMockReply(userText) {
-    const char = currentCharacter;
-    if (!char) return '...';
-
-    const replies = [
-        '*他微微挑眉，目光中带着几分玩味地看着你*\n\n"有意思，继续说。"',
-        '*他沉默了片刻，缓缓开口*\n\n"你说的这些... 我凭什么相信你？"',
-        '*他轻笑一声，似乎觉得有些好笑*\n\n"你倒是挺有胆量的，敢在我面前说这种话。"',
-        '*他站起身，背对着你望向窗外*\n\n"这个世界不是非黑即白的... 你还太年轻了。"',
-        '*他的手指轻轻敲击着桌面，似乎在思考什么*\n\n"你的提议... 我需要考虑一下。"',
-        '*他的目光变得锐利起来*\n\n"你最好不要骗我，否则后果自负。"'
-    ];
-
-    return replies[Math.floor(Math.random() * replies.length)];
 }
 
 // ===== Typing Indicator =====
