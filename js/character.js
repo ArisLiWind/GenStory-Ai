@@ -88,10 +88,37 @@ async function loadCharacterDetail(id) {
             return;
         }
 
-        // API 返回错误
+        // Backend returned error — try frontend default characters
+        if (typeof getDefaultCharacter === 'function') {
+            const defaultChar = getDefaultCharacter(id);
+            if (defaultChar) {
+                currentCharacter = normalizeCharacter(defaultChar);
+                isFavorited = false;
+                renderCharacter(currentCharacter);
+                hideLoadingState();
+                loadMockComments();
+                return;
+            }
+        }
+
+        // API returned error and no default match
         renderCharacterError(result.message || '角色信息加载失败');
     } catch (err) {
         console.error('Load character error:', err);
+
+        // Network error — try frontend default characters
+        if (typeof getDefaultCharacter === 'function') {
+            const defaultChar = getDefaultCharacter(id);
+            if (defaultChar) {
+                currentCharacter = normalizeCharacter(defaultChar);
+                isFavorited = false;
+                renderCharacter(currentCharacter);
+                hideLoadingState();
+                loadMockComments();
+                return;
+            }
+        }
+
         renderCharacterError('网络错误，请稍后重试');
     }
 }

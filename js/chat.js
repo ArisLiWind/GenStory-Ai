@@ -86,10 +86,33 @@ async function loadCharacterData(characterId) {
             return;
         }
 
+        // Backend returned error — try frontend default characters
+        if (typeof getDefaultCharacter === 'function') {
+            const defaultChar = getDefaultCharacter(characterId);
+            if (defaultChar) {
+                currentCharacter = normalizeCharacter(defaultChar);
+                renderCharacterInfo();
+                startChatSession();
+                return;
+            }
+        }
+
         // 加载失败，显示错误
         showCharacterLoadError(result.message || '角色不存在或已被删除');
     } catch (err) {
         console.error('Load character error:', err);
+
+        // Network error — try frontend default characters
+        if (typeof getDefaultCharacter === 'function') {
+            const defaultChar = getDefaultCharacter(characterId);
+            if (defaultChar) {
+                currentCharacter = normalizeCharacter(defaultChar);
+                renderCharacterInfo();
+                startChatSession();
+                return;
+            }
+        }
+
         showCharacterLoadError('网络错误，请稍后重试');
     }
 }
