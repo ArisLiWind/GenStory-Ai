@@ -23,8 +23,9 @@ async function loadMyCharacters() {
     try {
         const res = await GenSphereAPI.characters.getMine();
         
-        if (res.code === 0 && res.data && res.data.items && res.data.items.length > 0) {
-            const chars = res.data.items.map(item => ({
+        const items = Array.isArray(res.data) ? res.data : (res.data?.items || []);
+        if (res.code === 0 && items.length > 0) {
+            const chars = items.map(item => ({
                 id: item.id,
                 title: item.title,
                 description: item.description,

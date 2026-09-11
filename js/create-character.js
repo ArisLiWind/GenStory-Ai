@@ -395,8 +395,11 @@ function setupCreateButton() {
             }
             
             if (res.code === 0) {
+                const characterId = editingId || res.data?.id;
                 alert(editingId ? '角色修改成功！' : '角色创建成功！');
-                window.location.href = 'my-characters.html';
+                window.location.href = characterId
+                    ? 'character.html?id=' + encodeURIComponent(characterId)
+                    : 'my-characters.html';
             } else {
                 alert((editingId ? '修改失败：' : '创建失败：') + (res.message || '未知错误'));
                 createBtn.disabled = false;

@@ -552,14 +552,26 @@ async function insertSampleCharacters(env) {
     ];
 
     const sysUserId = 'user_system_00001';
+    const creatorByTitle = {
+        'Mafia Boss': 'NocturneLab',
+        '仙界剑尊': '青玄阁主',
+        '赛博朋克：霓虹猎人': 'NeonMancer',
+        'Willson Wáng': 'VelvetCircuit',
+        'Ayato Hiroshi': 'SeirinAfterDark',
+        'Second Life Isekai': 'Chapter47',
+        'Giovanni Moretti': 'PastaPoet',
+        'Another Magic Academy': 'AetherisArchivist',
+        'Your Three Older Brothers': 'HomefrontStories',
+        'Best friends trio': 'SummerTreehouse',
+        'Snow - Your Edgy Sister': 'StaticHeart',
+        'Your Tyrant Father': 'GlassEstate'
+    };
+
     // Create system user for sample characters
     await env.DB.prepare(`
         INSERT OR IGNORE INTO users (id, phone, username, is_admin, created_at, status)
         VALUES (?, 'system', '系统官方', 1, ?, 'active')
     `).bind(sysUserId, ts).run();
-
-    // Delete old system characters first (in case we updated the sample data)
-    await env.DB.prepare(`DELETE FROM characters WHERE creator_id = ?`).bind(sysUserId).run();
 
     const stmt = env.DB.prepare(`
         INSERT INTO characters (
@@ -570,9 +582,21 @@ async function insertSampleCharacters(env) {
     `);
 
     for (const c of samples) {
+        const creatorName = creatorByTitle[c.title] || 'GenSphere Studio';
+        const existing = await env.DB.prepare(
+            'SELECT id FROM characters WHERE creator_id = ? AND title = ? LIMIT 1'
+        ).bind(sysUserId, c.title).first();
+
+        if (existing) {
+            await env.DB.prepare(
+                'UPDATE characters SET creator_name = ?, verified = 1, updated_at = ? WHERE id = ?'
+            ).bind(creatorName, ts, existing.id).run();
+            continue;
+        }
+
         await stmt.bind(
             c.title, c.chat_name, c.description, c.personality, c.scenario,
-            c.first_message, c.example_dialogue, c.image, sysUserId, '官方精选',
+            c.first_message, c.example_dialogue, c.image, sysUserId, creatorName,
             c.tags, c.categories, c.view_count, c.chat_count, c.token_count,
             c.rating, c.rating_count, ts
         ).run();

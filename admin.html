@@ -116,6 +116,67 @@
             border-bottom: 1px solid rgba(255,255,255,0.04);
         }
         .data-table tr:hover { background: rgba(255,255,255,0.02); }
+        .admin-character-list { display: grid; gap: 12px; }
+        .admin-character-card {
+            display: grid;
+            grid-template-columns: 88px minmax(0, 1fr) auto;
+            gap: 16px;
+            align-items: center;
+            padding: 12px;
+            background: rgba(255,255,255,0.035);
+            border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 12px;
+        }
+        .admin-character-image {
+            width: 88px;
+            aspect-ratio: 3 / 4;
+            object-fit: cover;
+            border-radius: 8px;
+            background: rgba(255,255,255,0.08);
+        }
+        .admin-character-title {
+            font-size: 16px;
+            font-weight: 700;
+            margin-bottom: 5px;
+        }
+        .admin-character-meta {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            color: rgba(255,255,255,0.58);
+            font-size: 12px;
+            margin-bottom: 8px;
+        }
+        .admin-character-desc {
+            color: rgba(255,255,255,0.72);
+            font-size: 13px;
+            line-height: 1.5;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+            margin-bottom: 8px;
+        }
+        .admin-character-tags { display: flex; flex-wrap: wrap; gap: 6px; }
+        .admin-character-tag {
+            padding: 3px 8px;
+            border-radius: 999px;
+            background: rgba(129,140,248,0.14);
+            color: #c7d2fe;
+            font-size: 11px;
+        }
+        .admin-character-actions {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: flex-end;
+            gap: 8px;
+            max-width: 240px;
+        }
+        @media (max-width: 860px) {
+            .admin-character-card { grid-template-columns: 72px minmax(0, 1fr); }
+            .admin-character-image { width: 72px; }
+            .admin-character-actions { grid-column: 1 / -1; justify-content: flex-start; max-width: none; }
+        }
 
         .badge {
             display: inline-block;
@@ -308,21 +369,9 @@
             <div id="page-characters" class="page" style="display: none;">
                 <div class="page-header">
                     <h1 class="page-title">角色管理</h1>
+                    <button class="btn btn-primary" onclick="newCharacter()">新建角色</button>
                 </div>
-                <table class="data-table">
-                    <thead>
-                        <tr>
-                            <th>ID</th>
-                            <th>角色名</th>
-                            <th>创作者</th>
-                            <th>状态</th>
-                            <th>浏览量</th>
-                            <th>聊天数</th>
-                            <th>操作</th>
-                        </tr>
-                    </thead>
-                    <tbody id="charactersTable"></tbody>
-                </table>
+                <div class="admin-character-list" id="charactersTable"></div>
             </div>
 
             <!-- Users -->
@@ -449,6 +498,10 @@
             <div class="form-group">
                 <label class="form-label">头像图片URL (image)</label>
                 <input type="text" class="form-input" id="charImage" placeholder="头像图片链接">
+            </div>
+            <div class="form-group">
+                <label class="form-label">创作者名 (creatorName)</label>
+                <input type="text" class="form-input" id="charCreatorName" placeholder="例如：青玄阁主 / NeonMancer / 你的品牌名">
             </div>
             <div class="form-group">
                 <label class="form-label">简介 (description)</label>
@@ -793,21 +846,88 @@
                 headers: { 'X-Admin-Token': adminToken }
             });
             const data = await res.json();
-            const tbody = document.getElementById('charactersTable');
-            tbody.innerHTML = data.data.items.map(c => `
-                <tr>
-                    <td>${c.id}</td>
-                    <td>${c.title}</td>
-                    <td>${c.creator_name}</td>
-                    <td><span class="badge ${c.status === 'published' ? 'badge-published' : 'badge-draft'}">${c.status === 'published' ? '已发布' : '草稿'}</span></td>
-                    <td>${c.view_count}</td>
-                    <td>${c.chat_count}</td>
-                    <td class="action-btns">
+            const list = document.getElementById('charactersTable');
+            const items = data.data?.items || [];
+            if (items.length === 0) {
+                list.innerHTML = '<div style="padding:48px;text-align:center;color:rgba(255,255,255,0.45);">暂无角色，先新建一个角色。</div>';
+                return;
+            }
+            list.innerHTML = items.map(c => {
+                const tags = Array.isArray(c.tags) ? c.tags : [];
+                const creator = c.creatorName || c.creator_name || '未知创作者';
+                const statusText = c.status === 'published' ? '已发布' : '草稿';
+                return `
+                <div class="admin-character-card">
+                    <img class="admin-character-image" src="${escapeAttr(c.image || 'assets/char-knight.jpg')}" alt="${escapeAttr(c.title || '角色')}">
+                    <div>
+                        <div class="admin-character-title">${escapeHtml(c.title || '未命名角色')}</div>
+                        <div class="admin-character-meta">
+                            <span>@${escapeHtml(creator)}</span>
+                            <span class="badge ${c.status === 'published' ? 'badge-published' : 'badge-draft'}">${statusText}</span>
+                            <span>${formatNumber(c.viewCount ?? c.view_count ?? 0)} 浏览</span>
+                            <span>${formatNumber(c.chatCount ?? c.chat_count ?? 0)} 聊天</span>
+                        </div>
+                        <div class="admin-character-desc">${escapeHtml(c.description || '暂无简介')}</div>
+                        <div class="admin-character-tags">
+                            ${tags.slice(0, 5).map(tag => `<span class="admin-character-tag">${escapeHtml(tag)}</span>`).join('')}
+                        </div>
+                    </div>
+                    <div class="admin-character-actions">
+                        <button class="action-btn" onclick="openCharacterDetail(${c.id})">详情</button>
+                        <button class="action-btn" onclick="openCharacterChat(${c.id})">聊天</button>
                         <button class="action-btn" onclick="editCharacter(${c.id})">编辑</button>
                         <button class="action-btn" onclick="toggleCharStatus(${c.id}, '${c.status}')">${c.status === 'published' ? '下架' : '发布'}</button>
-                    </td>
-                </tr>
-            `).join('');
+                    </div>
+                </div>`;
+            }).join('');
+        }
+
+        function openCharacterDetail(id) {
+            window.open(`character.html?id=${id}`, '_blank');
+        }
+
+        function openCharacterChat(id) {
+            window.open(`chat.html?character=${id}`, '_blank');
+        }
+
+        function newCharacter() {
+            editingCharId = null;
+            document.getElementById('characterModalTitle').textContent = '新建角色';
+            fillCharacterForm({
+                title: '',
+                chatName: '',
+                creatorName: 'GenSphere 创作者',
+                image: 'assets/char-knight.jpg',
+                description: '',
+                personality: '',
+                scenario: '',
+                firstMessage: '',
+                exampleDialogue: '',
+                tags: [],
+                categories: ['oc'],
+                contentRating: 'general',
+                status: 'published',
+                isPublic: true,
+                verified: false
+            });
+            document.getElementById('characterModal').classList.add('active');
+        }
+
+        function escapeHtml(value) {
+            const div = document.createElement('div');
+            div.textContent = value == null ? '' : String(value);
+            return div.innerHTML;
+        }
+
+        function escapeAttr(value) {
+            return escapeHtml(value).replace(/"/g, '&quot;');
+        }
+
+        function formatNumber(num) {
+            const value = Number(num) || 0;
+            if (value >= 10000) return (value / 10000).toFixed(1) + '万';
+            if (value >= 1000) return (value / 1000).toFixed(1) + 'k';
+            return String(value);
         }
 
         async function toggleCharStatus(id, currentStatus) {
@@ -861,6 +981,7 @@
             document.getElementById('charTitle').value = char.title || '';
             document.getElementById('charChatName').value = char.chatName || char.chat_name || '';
             document.getElementById('charImage').value = char.image || '';
+            document.getElementById('charCreatorName').value = char.creatorName || char.creator_name || char.creator || '';
             document.getElementById('charDescription').value = char.description || '';
             document.getElementById('charPersonality').value = char.personality || '';
             document.getElementById('charScenario').value = char.scenario || '';
@@ -896,6 +1017,7 @@
             return {
                 title: document.getElementById('charTitle').value,
                 chatName: document.getElementById('charChatName').value,
+                creatorName: document.getElementById('charCreatorName').value,
                 image: document.getElementById('charImage').value,
                 description: document.getElementById('charDescription').value,
                 personality: document.getElementById('charPersonality').value,
@@ -912,8 +1034,6 @@
         }
 
         async function saveCharacter() {
-            if (!editingCharId) return;
-
             const body = collectCharacterForm();
             const saveBtn = document.querySelector('#characterModal .btn-primary');
             const originalText = saveBtn.textContent;
@@ -921,8 +1041,11 @@
             saveBtn.disabled = true;
 
             try {
-                const res = await fetch(`${API_BASE}/admin/characters/${editingCharId}`, {
-                    method: 'PUT',
+                const url = editingCharId
+                    ? `${API_BASE}/admin/characters/${editingCharId}`
+                    : `${API_BASE}/admin/characters`;
+                const res = await fetch(url, {
+                    method: editingCharId ? 'PUT' : 'POST',
                     headers: {
                         'Content-Type': 'application/json',
                         'X-Admin-Token': adminToken
@@ -933,8 +1056,12 @@
                 const data = await res.json();
 
                 if (res.ok && (data.code === 0 || data.success)) {
+                    const newId = data.data?.id || editingCharId;
                     closeCharacterModal();
-                    loadCharacters();
+                    await loadCharacters();
+                    if (newId) {
+                        window.open(`character.html?id=${newId}`, '_blank');
+                    }
                 } else {
                     alert('保存失败：' + (data.message || '未知错误'));
                 }

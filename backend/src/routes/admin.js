@@ -62,6 +62,9 @@ export async function handleAdmin(request, env, path) {
     if (path === '/api/admin/characters' && request.method === 'GET') {
         return listAllCharacters(request, env);
     }
+    if (path === '/api/admin/characters' && request.method === 'POST') {
+        return adminCreateCharacter(request, env);
+    }
     const charAdminMatch = path.match(/^\/api\/admin\/characters\/(\d+)$/);
     if (charAdminMatch) {
         const id = parseInt(charAdminMatch[1]);
@@ -233,18 +236,73 @@ async function listAllCharacters(request, env) {
 
     const offset = (page - 1) * pageSize;
     const result = await env.DB.prepare(`
-        SELECT id, title, creator_name, status, is_public, view_count, chat_count, created_at
+        SELECT id, title, chat_name, description, image, creator_name, verified,
+               tags, categories, status, is_public, view_count, chat_count,
+               token_count, rating, rating_count, content_rating, created_at, updated_at
         FROM characters
         ORDER BY created_at DESC
         LIMIT ? OFFSET ?
     `).bind(pageSize, offset).all();
 
     return jsonResponse({
-        items: result.results || [],
+        items: (result.results || []).map(row => ({
+            ...row,
+            tags: safeJsonParse(row.tags, []),
+            categories: safeJsonParse(row.categories, []),
+            chatName: row.chat_name,
+            creatorName: row.creator_name,
+            viewCount: row.view_count,
+            chatCount: row.chat_count,
+            tokenCount: row.token_count,
+            ratingCount: row.rating_count,
+            contentRating: row.content_rating,
+            isPublic: !!row.is_public,
+            createdAt: row.created_at,
+            updatedAt: row.updated_at
+        })),
         total: countResult.total,
         page,
         pageSize
     });
+}
+
+async function adminCreateCharacter(request, env) {
+    const body = await parseBody(request);
+    const title = (body.title || '').trim();
+    if (!title) return errorResponse(400, '请输入角色名称');
+
+    const createdAt = now();
+    const creatorName = (body.creatorName || body.creator || 'GenSphere 创作者').trim();
+    const creatorId = body.creatorId || `admin_${creatorName.replace(/\s+/g, '_').toLowerCase()}`;
+
+    const result = await env.DB.prepare(`
+        INSERT INTO characters (
+            title, chat_name, description, personality, scenario, first_message,
+            example_dialogue, image, creator_id, creator_name, verified,
+            tags, categories, content_rating, status, is_public, created_at, updated_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).bind(
+        title,
+        body.chatName || body.chat_name || title,
+        body.description || '',
+        body.personality || '',
+        body.scenario || '',
+        body.firstMessage || body.first_message || '',
+        body.exampleDialogue || body.example_dialogue || '',
+        body.image || 'assets/char-knight.jpg',
+        creatorId,
+        creatorName,
+        body.verified ? 1 : 0,
+        JSON.stringify(body.tags || []),
+        JSON.stringify(body.categories || []),
+        body.contentRating || body.content_rating || 'general',
+        body.status || 'published',
+        body.isPublic === false || body.is_public === 0 ? 0 : 1,
+        createdAt,
+        createdAt
+    ).run();
+
+    return jsonResponse({ id: result.meta.last_row_id, created: true }, 201);
 }
 
 async function adminGetCharacter(env, id) {
@@ -266,6 +324,7 @@ async function adminUpdateCharacter(request, env, id) {
 
     const allowedFields = [
         'title', 'chatName', 'chat_name',
+        'creatorName', 'creator_name',
         'description', 'personality', 'scenario',
         'firstMessage', 'first_message',
         'exampleDialogue', 'example_dialogue',
@@ -276,6 +335,7 @@ async function adminUpdateCharacter(request, env, id) {
 
     const fieldMap = {
         chatName: 'chat_name',
+        creatorName: 'creator_name',
         firstMessage: 'first_message',
         exampleDialogue: 'example_dialogue',
         contentRating: 'content_rating',

@@ -201,6 +201,7 @@ async function loadCharactersFromBackend() {
 function normalizeCharFromBackend(char) {
     const viewCount = char.viewCount ?? char.view_count ?? 0;
     const chatCount = char.chatCount ?? char.chat_count ?? 0;
+    const tokenCount = char.tokenCount ?? char.token_count ?? char.tokens ?? 0;
 
     return {
         id: char.id,
@@ -214,7 +215,7 @@ function normalizeCharFromBackend(char) {
         categories: Array.isArray(char.categories) ? char.categories : [],
         views: formatNumber(viewCount),
         chats: formatNumber(chatCount),
-        tokens: formatNumber(viewCount),
+        tokens: formatNumber(tokenCount),
         rating: char.rating || 0,
         createdAt: char.createdAt || char.created_at,
         category: Array.isArray(char.categories) ? char.categories : (char.category || [])
