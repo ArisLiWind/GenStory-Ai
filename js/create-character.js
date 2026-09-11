@@ -363,10 +363,10 @@ function setupCreateButton() {
     createBtn.addEventListener('click', async () => {
         if (!validateForm()) return;
         
-        const createBtn = document.getElementById('createCharBtn');
-        const originalText = createBtn.textContent;
-        createBtn.disabled = true;
-        createBtn.textContent = editingId ? '保存中...' : '创建中...';
+        const btn = document.getElementById('createCharBtn');
+        const originalText = btn.textContent;
+        btn.disabled = true;
+        btn.textContent = editingId ? '保存中...' : '创建中...';
         
         try {
             // Get image data — try multiple selectors to find the uploaded image
@@ -435,25 +435,20 @@ function setupCreateButton() {
                     : 'my-characters.html';
                 
                 // 显示成功提示后跳转
-                const btn = document.getElementById('createCharBtn');
-                if (btn) {
-                    btn.textContent = '✓ 创建成功！正在跳转...';
-                    btn.style.background = 'linear-gradient(135deg, #10b981, #059669)';
-                }
+                btn.textContent = '✓ 创建成功！正在跳转...';
+                btn.style.background = 'linear-gradient(135deg, #10b981, #059669)';
                 
                 setTimeout(() => {
                     window.location.href = targetUrl;
                 }, 1500);
             } else {
                 console.error('[CreateChar] Failed:', res);
-                const btn = document.getElementById('createCharBtn');
                 btn.disabled = false;
                 btn.textContent = originalText;
                 alert((editingId ? '修改失败：' : '创建失败：') + (res.message || '未知错误'));
             }
         } catch (error) {
             console.error('[CreateChar] Error:', error);
-            const btn = document.getElementById('createCharBtn');
             btn.disabled = false;
             btn.textContent = originalText;
             alert((editingId ? '修改失败：' : '创建失败：') + (error.message || '网络错误'));
