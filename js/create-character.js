@@ -396,20 +396,36 @@ function setupCreateButton() {
             
             if (res.code === 0) {
                 const characterId = editingId || res.data?.id;
-                alert(editingId ? '角色修改成功！' : '角色创建成功！');
-                window.location.href = characterId
+                console.log('[CreateChar] Success! characterId:', characterId, 'response:', res);
+                
+                // 直接跳转，不用 alert 阻塞
+                const targetUrl = characterId
                     ? 'character.html?id=' + encodeURIComponent(characterId)
                     : 'my-characters.html';
+                
+                // 显示成功提示后跳转
+                const btn = document.getElementById('createCharBtn');
+                if (btn) {
+                    btn.textContent = '✓ 创建成功！正在跳转...';
+                    btn.style.background = 'linear-gradient(135deg, #10b981, #059669)';
+                }
+                
+                setTimeout(() => {
+                    window.location.href = targetUrl;
+                }, 1500);
             } else {
+                console.error('[CreateChar] Failed:', res);
+                const btn = document.getElementById('createCharBtn');
+                btn.disabled = false;
+                btn.textContent = originalText;
                 alert((editingId ? '修改失败：' : '创建失败：') + (res.message || '未知错误'));
-                createBtn.disabled = false;
-                createBtn.textContent = originalText;
             }
         } catch (error) {
-            console.error('Create/Update error:', error);
-            alert((editingId ? '修改失败：' : '创建失败：') + '网络错误，请稍后重试');
-            createBtn.disabled = false;
-            createBtn.textContent = originalText;
+            console.error('[CreateChar] Error:', error);
+            const btn = document.getElementById('createCharBtn');
+            btn.disabled = false;
+            btn.textContent = originalText;
+            alert((editingId ? '修改失败：' : '创建失败：') + (error.message || '网络错误'));
         }
     });
 }
