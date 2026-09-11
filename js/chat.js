@@ -900,15 +900,7 @@ function renderMessage(msg) {
     const isRpg = rpgData?.isRpg && !isUser;
 
     if (isRpg) {
-        // 安全兜底：如果场景描述内容过少，说明解析可能有问题
-        // 降级为普通气泡渲染，确保用户总能看到完整内容
-        const sceneLen = (rpgData.sceneDesc || '').trim().length;
-        if (sceneLen < 20) {
-            console.warn('[RPG] 场景描述内容过少，降级为普通气泡渲染。sceneLen=', sceneLen);
-            // fall through to classic style below
-        } else {
-            return renderRpgBotMessage(msg, rpgData, avatarText);
-        }
+        return renderRpgBotMessage(msg, rpgData, avatarText);
     }
 
     // Bot message - classic bubble style (fallback)
@@ -946,35 +938,31 @@ function renderMessage(msg) {
 }
 
 function renderRpgBotMessage(msg, rpgData, avatarText) {
-    let sceneDesc = rpgData.sceneDesc || '';
+    // 【重要】永远使用完整原文作为正文，确保内容绝对不会丢失
+    // 状态面板和选项是解析出来的增强UI，解析失败不影响正文显示
+    const fullContent = rpgData.rawContent || msg.content || '';
     const currentStatus = rpgData.currentStatus || '';
     const currentQuest = rpgData.currentQuest || '';
     const knownIntel = rpgData.knownIntel || [];
     const hasStatusPanel = currentStatus || currentQuest || knownIntel.length > 0;
-
-    // 关键修复：如果场景描述为空，直接使用原始内容
-    // 确保用户总能看到完整文本，不会出现空白消息
-    if (!sceneDesc && rpgData.rawContent) {
-        sceneDesc = rpgData.rawContent;
-    }
+    const hasOptions = rpgData.actionOptions && rpgData.actionOptions.length > 0;
 
     let bodyHtml = '';
 
-    // 场景正文放最前面（故事叙述、NPC对话）
-    if (sceneDesc) {
-        bodyHtml += `
-            <div class="rpg-scene-desc">
-                ${formatRpgText(sceneDesc)}
-            </div>
-        `;
+    // ===== 主内容：完整原文 =====
+    // 永远显示完整内容，这是用户最核心的需求
+    bodyHtml += `
+        <div class="rpg-main-content">
+            ${formatRpgText(fullContent)}
+        </div>
+    `;
+
+    // 分隔线
+    if (hasStatusPanel || hasOptions) {
+        bodyHtml += `<div class="rpg-panel-divider"><span>游戏面板</span></div>`;
     }
 
-    // 分隔线（场景正文和状态面板之间）
-    if (sceneDesc && hasStatusPanel) {
-        bodyHtml += `<div class="rpg-turn-divider"><span>━━━</span></div>`;
-    }
-
-    // 状态面板
+    // ===== 状态面板（增强UI） =====
     if (currentStatus) {
         bodyHtml += `
             <div class="rpg-status-section">
@@ -1004,10 +992,8 @@ function renderRpgBotMessage(msg, rpgData, avatarText) {
         `;
     }
 
-    // Turn divider - 只有在有内容时才显示
-    if (bodyHtml) {
-        bodyHtml += `<div class="rpg-turn-divider"><span>— 回合结束 —</span></div>`;
-    }
+    // Turn divider
+    bodyHtml += `<div class="rpg-turn-divider"><span>— 回合结束 —</span></div>`;
 
     return `
         <div class="message bot rpg-turn" data-msg-id="${msg.id}">

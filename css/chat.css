@@ -733,6 +733,43 @@
     border-radius: 0 8px 8px 0;
 }
 
+/* 主内容区（完整原文） */
+.rpg-main-content {
+    font-size: 15px;
+    line-height: 1.75;
+    color: #dbdee1;
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+
+.rpg-main-content .rpg-dialogue {
+    color: #f3e8ff;
+    font-weight: 500;
+}
+
+.rpg-main-content .rpg-action-text {
+    color: #a5b4fc;
+    font-style: italic;
+}
+
+/* 游戏面板分隔线 */
+.rpg-panel-divider {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 16px 0 12px;
+    padding-top: 12px;
+    border-top: 1px dashed rgba(255, 255, 255, 0.08);
+}
+
+.rpg-panel-divider span {
+    font-size: 11px;
+    color: rgba(255, 255, 255, 0.3);
+    letter-spacing: 2px;
+    padding: 0 12px;
+    background: transparent;
+}
+
 /* NPC Reaction */
 .rpg-npc-reaction {
     display: flex;
