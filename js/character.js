@@ -88,38 +88,11 @@ async function loadCharacterDetail(id) {
             return;
         }
 
-        // Backend returned error — try frontend default characters
-        if (typeof getDefaultCharacter === 'function') {
-            const defaultChar = getDefaultCharacter(id);
-            if (defaultChar) {
-                currentCharacter = normalizeCharacter(defaultChar);
-                isFavorited = false;
-                renderCharacter(currentCharacter);
-                hideLoadingState();
-                loadMockComments();
-                return;
-            }
-        }
-
-        // API returned error and no default match
+        // 后端返回错误 — 显示具体错误（不回退到默认角色，避免 ID 不匹配）
         renderCharacterError(result.message || '角色信息加载失败');
     } catch (err) {
-        console.error('Load character error:', err);
-
-        // Network error — try frontend default characters
-        if (typeof getDefaultCharacter === 'function') {
-            const defaultChar = getDefaultCharacter(id);
-            if (defaultChar) {
-                currentCharacter = normalizeCharacter(defaultChar);
-                isFavorited = false;
-                renderCharacter(currentCharacter);
-                hideLoadingState();
-                loadMockComments();
-                return;
-            }
-        }
-
-        renderCharacterError('网络错误，请稍后重试');
+        console.error('[Character] Load error:', err);
+        renderCharacterError('网络错误：' + (err.message || '请稍后重试'));
     }
 }
 

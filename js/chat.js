@@ -86,34 +86,12 @@ async function loadCharacterData(characterId) {
             return;
         }
 
-        // Backend returned error — try frontend default characters
-        if (typeof getDefaultCharacter === 'function') {
-            const defaultChar = getDefaultCharacter(characterId);
-            if (defaultChar) {
-                currentCharacter = normalizeCharacter(defaultChar);
-                renderCharacterInfo();
-                startChatSession();
-                return;
-            }
-        }
-
-        // 加载失败，显示错误
+        // 后端返回错误 — 显示具体错误信息，不回退到默认角色
+        // （默认角色 ID 与数据库不匹配，会导致会话创建失败）
         showCharacterLoadError(result.message || '角色不存在或已被删除');
     } catch (err) {
-        console.error('Load character error:', err);
-
-        // Network error — try frontend default characters
-        if (typeof getDefaultCharacter === 'function') {
-            const defaultChar = getDefaultCharacter(characterId);
-            if (defaultChar) {
-                currentCharacter = normalizeCharacter(defaultChar);
-                renderCharacterInfo();
-                startChatSession();
-                return;
-            }
-        }
-
-        showCharacterLoadError('网络错误，请稍后重试');
+        console.error('[Chat] Load character error:', err);
+        showCharacterLoadError('网络错误：' + (err.message || '请稍后重试'));
     }
 }
 
@@ -695,23 +673,23 @@ async function startChatSession() {
                     </div>
                 `;
             } else {
-                // 会话创建失败，但仍可使用游客模式聊天
+                // 会话创建失败 — 显示具体错误
                 messagesContainer.innerHTML = `
                     <div style="text-align:center;padding:40px 20px;">
                         <div style="font-size:48px;margin-bottom:16px;">⚠️</div>
-                        <h3 style="color:#fff;margin-bottom:8px;">会话连接异常</h3>
-                        <p style="color:#888;font-size:14px;line-height:1.6;max-width:400px;margin:0 auto;margin-bottom:16px;">
+                        <h3 style="color:#fff;margin-bottom:8px;">会话创建失败</h3>
+                        <p style="color:#888;font-size:14px;line-height:1.6;max-width:400px;margin:0 auto;">
                             ${escapeHtml(error?.message || '后端服务暂时不可用，请稍后重试。')}
                         </p>
-                        <p style="color:#666;font-size:13px;line-height:1.6;max-width:400px;margin:0 auto;">
-                            你仍可以在下方输入框直接发送消息进行聊天。
+                        <p style="color:#666;font-size:13px;margin-top:12px;">
+                            请刷新页面重试，或重新登录后再次尝试。
                         </p>
                     </div>
                 `;
             }
         }
         
-        // 仍然显示角色的首条消息，让用户可以开始聊天
+        // 仍然显示角色的首条消息
         if (currentCharacter.firstMessage) {
             messages = [{
                 id: 'm_first',
@@ -1027,69 +1005,24 @@ async function sendMessage() {
     // Show typing indicator
     showTypingIndicator();
 
-    // No backend session — use guest chat (still works with API keys)
+    // 没有会话 — 显示明确的错误提示（不使用游客模式）
     if (!currentSessionId) {
-        try {
-            // Build history from current messages (exclude the one just added)
-            const history = messages.slice(0, -1).map(m => ({
-                role: m.role === 'bot' ? 'assistant' : 'user',
-                content: m.content
-            }));
-
-            const res = await GenSphereAPI.chat.guestSend(currentCharacter.id, text, history);
-            removeTypingIndicator();
-
-            if (res && res.code === 0 && res.data) {
-                const replyContent = res.data.content || res.data.reply || '';
-                const botMsg = {
-                    id: 'b_' + Date.now(),
-                    role: 'bot',
-                    name: currentCharacter.chatName || currentCharacter.title,
-                    content: replyContent,
-                    timestamp: Date.now(),
-                    verified: false
-                };
-                messages.push(botMsg);
-
-                const rpgData = parseRpgMessage(replyContent);
-                if (rpgData?.isRpg) {
-                    if (rpgData.worldState) updateWorldState(rpgData.worldState);
-                    updateActionOptions(rpgData.actionOptions);
-                } else {
-                    updateActionOptions([]);
-                }
-            } else {
-                const errorMsg = {
-                    id: 'b_' + Date.now(),
-                    role: 'bot',
-                    name: currentCharacter.chatName || currentCharacter.title,
-                    content: '(AI服务暂时不可用。错误：' + (res?.message || '未知错误') + ')',
-                    timestamp: Date.now(),
-                    verified: false
-                };
-                messages.push(errorMsg);
-                updateActionOptions([]);
-            }
-        } catch (error) {
-            console.error('[Chat] Guest send error:', error);
-            removeTypingIndicator();
-            const errorMsg = {
-                id: 'b_' + Date.now(),
-                role: 'bot',
-                name: currentCharacter.chatName || currentCharacter.title,
-                content: '(网络请求失败：' + (error.message || '未知错误') + ')',
-                timestamp: Date.now(),
-                verified: false
-            };
-            messages.push(errorMsg);
-            updateActionOptions([]);
-        }
-
+        removeTypingIndicator();
+        const errorMsg = {
+            id: 'b_' + Date.now(),
+            role: 'bot',
+            name: currentCharacter.chatName || currentCharacter.title,
+            content: '(会话未创建，请刷新页面重试。如果问题持续，请重新登录。)',
+            timestamp: Date.now(),
+            verified: false
+        };
+        messages.push(errorMsg);
+        renderMessages();
         isSending = false;
         return;
     }
 
-    // Call real API with session
+    // 用正式 session 发送消息
     try {
         const res = await GenSphereAPI.chat.sendMessage(currentSessionId, text);
 
@@ -1125,7 +1058,7 @@ async function sendMessage() {
                 id: 'b_' + Date.now(),
                 role: 'bot',
                 name: currentCharacter.chatName || currentCharacter.title,
-                content: '(AI服务暂时不可用，请稍后再试。错误信息：' + (res.message || '未知错误') + ')',
+                content: '(AI服务暂时不可用，请稍后再试。错误：' + (res?.message || '未知错误') + ')',
                 timestamp: Date.now(),
                 verified: false
             };
@@ -1140,7 +1073,7 @@ async function sendMessage() {
             id: 'b_' + Date.now(),
             role: 'bot',
             name: currentCharacter.chatName || currentCharacter.title,
-            content: '(网络请求失败，请检查网络连接后重试。)',
+            content: '(网络请求失败：' + (error.message || '未知错误') + ')',
             timestamp: Date.now(),
             verified: false
         };

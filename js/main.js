@@ -167,10 +167,10 @@ async function loadCharactersFromBackend() {
         console.error('Failed to load characters from backend:', e);
     }
 
-    // 后端加载失败或返回空数据时，使用默认角色数据作为 fallback
-    allCharacters = [...DEFAULT_CHARACTERS];
-    filteredCharacters = [...allCharacters];
-    totalCharacters = allCharacters.length;
+    // 后端加载失败 — 显示空状态，不使用默认角色（避免 ID 不匹配导致聊天失败）
+    allCharacters = [];
+    filteredCharacters = [];
+    totalCharacters = 0;
     hasMore = false;
     useBackendData = false;
     isLoading = false;

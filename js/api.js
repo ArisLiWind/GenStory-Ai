@@ -222,14 +222,6 @@ const GenSphereAPI = {
 
         async getOrCreateSession(characterId) {
             return request(`/chat/character/${characterId}`);
-        },
-
-        // 游客聊天（不需要登录，会话创建失败时降级使用）
-        async guestSend(characterId, content, history = []) {
-            return request('/chat/guest-send', {
-                method: 'POST',
-                body: JSON.stringify({ characterId, content, history })
-            });
         }
     }
 };
