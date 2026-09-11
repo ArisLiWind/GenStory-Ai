@@ -186,6 +186,53 @@ function updateWorldStateBar() {
     }
 }
 
+// ===== Prologue Detection =====
+function isPrologueMessage(content) {
+    if (!content) return false;
+    // Prologue messages contain 【故事背景】 or 【你的身份】 or 【历险目标】
+    // but do NOT contain 【当前状态】 or 【你可以】 (those are RPG turns)
+    const hasPrologueMarker = content.includes('【故事背景】') ||
+                              content.includes('【你的身份】') ||
+                              content.includes('【历险目标】');
+    const hasRpgMarker = content.includes('【当前状态】') || content.includes('【你可以】');
+    return hasPrologueMarker && !hasRpgMarker;
+}
+
+function parsePrologue(content) {
+    const result = {
+        storyBackground: '',
+        playerIdentity: '',
+        adventureGoal: '',
+        rawContent: content
+    };
+
+    const sections = {};
+    const sectionRegex = /【([^】]+)】/g;
+    const sectionPositions = [];
+    let match;
+    while ((match = sectionRegex.exec(content)) !== null) {
+        sectionPositions.push({
+            name: match[1].trim(),
+            start: match.index,
+            end: match.index + match[0].length
+        });
+    }
+
+    for (let i = 0; i < sectionPositions.length; i++) {
+        const sec = sectionPositions[i];
+        const nextStart = i < sectionPositions.length - 1
+            ? sectionPositions[i + 1].start
+            : content.length;
+        sections[sec.name] = content.substring(sec.end, nextStart).trim();
+    }
+
+    result.storyBackground = sections['故事背景'] || '';
+    result.playerIdentity = sections['你的身份'] || '';
+    result.adventureGoal = sections['历险目标'] || '';
+
+    return result;
+}
+
 // ===== RPG Message Parsing =====
 function parseRpgMessage(content) {
     if (!content) return null;
@@ -647,8 +694,9 @@ async function startChatSession() {
             renderMessages();
 
             // Parse last bot message for RPG data (action options, etc.)
+            // Skip action options if the last message is a prologue
             const lastBotMsg = [...messages].reverse().find(m => m.role === 'bot');
-            if (lastBotMsg) {
+            if (lastBotMsg && !isPrologueMessage(lastBotMsg.content)) {
                 const rpgData = parseRpgMessage(lastBotMsg.content);
                 if (rpgData?.isRpg) {
                     if (rpgData.worldState) updateWorldState(rpgData.worldState);
@@ -656,6 +704,9 @@ async function startChatSession() {
                         updateActionOptions(rpgData.actionOptions);
                     }
                 }
+            } else if (lastBotMsg && isPrologueMessage(lastBotMsg.content)) {
+                // 前情提要：隐藏选项面板
+                updateActionOptions([]);
             }
         } else {
             console.warn('[Chat] Session creation failed:', result);
@@ -733,8 +784,6 @@ function renderMessages() {
 function renderMessage(msg) {
     const isUser = msg.role === 'user';
     const avatarText = isUser ? '我' : (msg.name || '角色').charAt(0).toUpperCase();
-    const rpgData = parseRpgMessage(msg.content);
-    const isRpg = rpgData?.isRpg && !isUser;
 
     // User message - always simple style
     if (isUser) {
@@ -765,7 +814,15 @@ function renderMessage(msg) {
         `;
     }
 
+    // ===== 前情提要消息：专用渲染 + "接下来"按钮 =====
+    if (isPrologueMessage(msg.content)) {
+        return renderPrologueMessage(msg, avatarText);
+    }
+
     // Bot message - RPG style if detected
+    const rpgData = parseRpgMessage(msg.content);
+    const isRpg = rpgData?.isRpg && !isUser;
+
     if (isRpg) {
         return renderRpgBotMessage(msg, rpgData, avatarText);
     }
@@ -890,6 +947,99 @@ function renderRpgBotMessage(msg, rpgData, avatarText) {
         </div>
     `;
 }
+
+// ===== 前情提要渲染 =====
+function renderPrologueMessage(msg, avatarText) {
+    const prologue = parsePrologue(msg.content);
+
+    let bodyHtml = '';
+
+    // 前情提要头部标记
+    bodyHtml += `<div class="prologue-header">前情提要</div>`;
+
+    // 故事背景
+    if (prologue.storyBackground) {
+        bodyHtml += `
+            <div class="prologue-section">
+                <div class="prologue-section-label">故事背景</div>
+                <div class="prologue-section-content">${formatRpgText(prologue.storyBackground)}</div>
+            </div>
+        `;
+    }
+
+    // 你的身份
+    if (prologue.playerIdentity) {
+        bodyHtml += `
+            <div class="prologue-section">
+                <div class="prologue-section-label">你的身份</div>
+                <div class="prologue-section-content">${formatRpgText(prologue.playerIdentity)}</div>
+            </div>
+        `;
+    }
+
+    // 历险目标
+    if (prologue.adventureGoal) {
+        bodyHtml += `
+            <div class="prologue-section">
+                <div class="prologue-section-label">历险目标</div>
+                <div class="prologue-section-content">${formatRpgText(prologue.adventureGoal)}</div>
+            </div>
+        `;
+    }
+
+    // 如果没有解析到结构化内容，显示原始内容
+    if (!prologue.storyBackground && !prologue.playerIdentity && !prologue.adventureGoal) {
+        bodyHtml += `<div class="prologue-section-content">${formatRpgText(msg.content)}</div>`;
+    }
+
+    // 接下来按钮
+    bodyHtml += `
+        <div class="prologue-start-btn-wrapper">
+            <button class="prologue-start-btn" onclick="startAdventure()">
+                <span>接下来，开始冒险</span>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20">
+                    <line x1="5" y1="12" x2="19" y2="12"/>
+                    <polyline points="12 5 19 12 12 19"/>
+                </svg>
+            </button>
+        </div>
+    `;
+
+    return `
+        <div class="message bot prologue-card" data-msg-id="${msg.id}">
+            <div class="message-avatar">${avatarText}</div>
+            <div class="message-content">
+                <div class="prologue-body">
+                    ${bodyHtml}
+                </div>
+                <div class="message-actions">
+                    <button class="message-action-btn" title="重新生成" onclick="regenerateMessage('${msg.id}')">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <polyline points="23 4 23 10 17 10"/>
+                            <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
+                        </svg>
+                    </button>
+                    <button class="message-action-btn" title="复制" onclick="copyMessage('${msg.id}')">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
+                            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+// ===== 开始冒险：点击"接下来"按钮 =====
+window.startAdventure = function() {
+    if (isSending) return;
+    const input = document.getElementById('chatInput');
+    if (input) {
+        input.value = '（开始冒险）';
+        sendMessage();
+    }
+};
 
 // Format RPG text (actions + dialogue)
 function formatRpgText(text) {

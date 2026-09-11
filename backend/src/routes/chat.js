@@ -3,7 +3,7 @@
 // ============================================
 
 import { jsonResponse, errorResponse, parseBody, getCurrentUser, now, generateId, safeJsonParse } from '../utils.js';
-import { callLLM, generateNarrative } from '../services/llm.js';
+import { callLLM, generateNarrative, generatePrologue } from '../services/llm.js';
 
 export async function handleChat(request, env, path) {
     // List sessions
@@ -199,17 +199,32 @@ async function createSession(request, env) {
         VALUES (?, ?, ?, ?, ?, ?, 0)
     `).bind(sessionId, user.id, characterId, character.title, createdAt, createdAt).run();
 
-    // If character has first message, add it
-    if (character.first_message) {
-        await env.DB.prepare(`
-            INSERT INTO chat_messages (session_id, role, content, created_at)
-            VALUES (?, 'assistant', ?, ?)
-        `).bind(sessionId, character.first_message, createdAt).run();
+    // ===== 生成前情提要作为第一条消息 =====
+    // 新会话：用AI生成前情提要替代原始first_message
+    let prologueContent = '';
 
-        await env.DB.prepare(
-            'UPDATE chat_sessions SET message_count = 1 WHERE id = ?'
-        ).bind(sessionId).run();
+    console.log('[Chat] Generating prologue for new session...');
+    try {
+        prologueContent = await generatePrologue(env, character);
+        console.log(`[Chat] Prologue generated, length=${prologueContent.length}`);
+    } catch (err) {
+        console.error('[Chat] Prologue generation failed:', err.message);
+        // Fallback to first_message or basic text
+        prologueContent = character.first_message ||
+            `【故事背景】\n${character.scenario || character.description || '一段未知的冒险即将展开。'}\n\n` +
+            `【你的身份】\n你是这个故事中的旅人，即将与${character.chat_name || character.title}展开一段旅程。\n\n` +
+            `【历险目标】\n探索未知，揭开真相。`;
     }
+
+    // 存储前情提要
+    await env.DB.prepare(`
+        INSERT INTO chat_messages (session_id, role, content, created_at)
+        VALUES (?, 'assistant', ?, ?)
+    `).bind(sessionId, prologueContent, createdAt).run();
+
+    await env.DB.prepare(
+        'UPDATE chat_sessions SET message_count = 1 WHERE id = ?'
+    ).bind(sessionId).run();
 
     const messages = await getMessagesForSession(env, sessionId);
     return jsonResponse({ id: sessionId, sessionId, characterId, title: character.title, messages }, 201);
@@ -635,15 +650,28 @@ async function getOrCreateSession(request, env, characterId) {
         VALUES (?, ?, ?, ?, ?, ?, 0)
     `).bind(sessionId, user.id, characterId, character.title, createdAt, createdAt).run();
 
-    if (character.first_message) {
-        await env.DB.prepare(`
-            INSERT INTO chat_messages (session_id, role, content, created_at)
-            VALUES (?, 'assistant', ?, ?)
-        `).bind(sessionId, character.first_message, createdAt).run();
-        await env.DB.prepare(
-            'UPDATE chat_sessions SET message_count = 1 WHERE id = ?'
-        ).bind(sessionId).run();
+    // ===== 生成前情提要作为第一条消息 =====
+    let prologueContent = '';
+
+    console.log('[Chat] Generating prologue for new session (getOrCreate)...');
+    try {
+        prologueContent = await generatePrologue(env, character);
+        console.log(`[Chat] Prologue generated, length=${prologueContent.length}`);
+    } catch (err) {
+        console.error('[Chat] Prologue generation failed:', err.message);
+        prologueContent = character.first_message ||
+            `【故事背景】\n${character.scenario || character.description || '一段未知的冒险即将展开。'}\n\n` +
+            `【你的身份】\n你是这个故事中的旅人，即将与${character.chat_name || character.title}展开一段旅程。\n\n` +
+            `【历险目标】\n探索未知，揭开真相。`;
     }
+
+    await env.DB.prepare(`
+        INSERT INTO chat_messages (session_id, role, content, created_at)
+        VALUES (?, 'assistant', ?, ?)
+    `).bind(sessionId, prologueContent, createdAt).run();
+    await env.DB.prepare(
+        'UPDATE chat_sessions SET message_count = 1 WHERE id = ?'
+    ).bind(sessionId).run();
 
     return jsonResponse({
         sessionId,

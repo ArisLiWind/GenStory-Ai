@@ -286,6 +286,59 @@ NPC：${npcSummary}
 }
 
 // ============================================
+// Prologue Generator — 前情提要
+// ============================================
+
+export async function generatePrologue(env, character) {
+    const title = character.title || character.chat_name || character.chatName || '未知角色';
+    const chatName = character.chat_name || character.chatName || title;
+    const description = character.description || '';
+    const personality = character.personality || '';
+    const scenario = character.scenario || '';
+    const firstMessage = character.first_message || character.firstMessage || '';
+
+    const systemPrompt = `你是RPG叙事引擎。根据角色设定，生成前情提要，让玩家快速进入故事。
+
+【角色】${title}（${chatName}）
+【简介】${description}
+【性格】${personality}
+【场景】${scenario}
+${firstMessage ? '【初始参考】' + firstMessage.slice(0, 300) : ''}
+
+请生成前情提要，严格包含以下三个部分，每部分用【】标记：
+
+【故事背景】
+（80-150字。描述这个世界的基本设定、时代背景、关键势力或事件。营造氛围，让玩家身临其境。不要照搬角色简介，要扩展世界观。）
+
+【你的身份】
+（50-100字。描述玩家在这个故事中的身份、处境、与角色的关系。用"你"指代玩家。让玩家明确自己是谁。）
+
+【历险目标】
+（50-100字。描述玩家需要达成的目标或面临的挑战。给出明确的方向感和紧迫感。）
+
+铁律：
+- 绝不说教、绝不给现实建议
+- 绝不提AI、游戏、系统
+- 用小说化语言，沉浸感强
+- 不包含选项、不包含状态面板
+- 直接输出三个部分，不加开头寒暄
+- 总长200-350字`;
+
+    try {
+        const result = await callLLMWithPrompt(env, systemPrompt, [{ role: 'user', content: '请生成前情提要。' }], 0.9);
+        return result;
+    } catch (err) {
+        console.error('[Prologue] LLM failed, constructing fallback:', err.message);
+        // Fallback: construct a basic prologue from character data
+        let fallback = '';
+        fallback += `【故事背景】\n${scenario || description || '一个充满未知与冒险的世界正在展开。'}\n\n`;
+        fallback += `【你的身份】\n你是一个踏入这段旅程的旅人，与${chatName}的命运交织在一起。\n\n`;
+        fallback += `【历险目标】\n探索这个世界，了解${chatName}的秘密，在冒险中做出你的选择。`;
+        return fallback;
+    }
+}
+
+// ============================================
 // Action Parser (kept for compatibility but simplified)
 // ============================================
 

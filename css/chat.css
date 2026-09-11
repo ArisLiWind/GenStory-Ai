@@ -989,3 +989,129 @@
         padding: 8px 12px;
     }
 }
+
+/* ============================================
+   Prologue Card — 前情提要
+   ============================================ */
+
+.prologue-card {
+    position: relative;
+}
+
+.prologue-body {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    background: linear-gradient(135deg, rgba(99, 102, 241, 0.06), rgba(139, 92, 246, 0.04));
+    border: 1px solid rgba(99, 102, 241, 0.15);
+    border-radius: 14px;
+    overflow: hidden;
+}
+
+.prologue-header {
+    text-align: center;
+    font-size: 16px;
+    font-weight: 700;
+    color: #a5b4fc;
+    letter-spacing: 4px;
+    padding: 18px 20px 14px;
+    border-bottom: 1px solid rgba(99, 102, 241, 0.12);
+    text-shadow: 0 0 20px rgba(99, 102, 241, 0.3);
+}
+
+.prologue-section {
+    padding: 14px 20px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+.prologue-section:last-of-type {
+    border-bottom: none;
+}
+
+.prologue-section-label {
+    font-size: 12px;
+    font-weight: 700;
+    color: #818cf8;
+    letter-spacing: 2px;
+    margin-bottom: 8px;
+    text-transform: none;
+}
+
+.prologue-section-content {
+    font-size: 14px;
+    line-height: 1.8;
+    color: rgba(255, 255, 255, 0.7);
+}
+
+.prologue-section-content em {
+    color: #a5b4fc;
+}
+
+.prologue-section-content .rpg-dialogue {
+    color: #e9d5ff;
+    font-weight: 500;
+}
+
+/* "接下来" button */
+.prologue-start-btn-wrapper {
+    padding: 18px 20px 20px;
+    text-align: center;
+    border-top: 1px solid rgba(99, 102, 241, 0.12);
+    background: rgba(99, 102, 241, 0.04);
+}
+
+.prologue-start-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 32px;
+    background: linear-gradient(135deg, #6366f1, #8b5cf6);
+    color: #fff;
+    border: none;
+    border-radius: 24px;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 20px rgba(99, 102, 241, 0.3);
+}
+
+.prologue-start-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 28px rgba(99, 102, 241, 0.45);
+}
+
+.prologue-start-btn:active {
+    transform: translateY(0);
+}
+
+.prologue-start-btn svg {
+    transition: transform 0.3s ease;
+}
+
+.prologue-start-btn:hover svg {
+    transform: translateX(4px);
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .prologue-header {
+        font-size: 14px;
+        letter-spacing: 3px;
+        padding: 14px 16px 10px;
+    }
+
+    .prologue-section {
+        padding: 12px 16px;
+    }
+
+    .prologue-section-content {
+        font-size: 13px;
+        line-height: 1.7;
+    }
+
+    .prologue-start-btn {
+        padding: 10px 24px;
+        font-size: 14px;
+    }
+}
