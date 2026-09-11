@@ -420,12 +420,15 @@ function parseOptionsText(optionsText) {
                 break;
             }
         }
-        const optText = optionsText.substring(startIdx, endIdx).trim()
+        let optText = optionsText.substring(startIdx, endIdx).trim()
             .replace(/\n/g, ' ').replace(/\s+/g, ' ').trim();
-        // 跳过"自由行动"选项（第6项），它在下方输入框实现
-        if (optText && !optText.includes('自由行动') && !optText.includes('输入你想')) {
-            options.push(optText);
-        }
+        // 跳过无效选项：自由行动、横线分隔符、空内容
+        if (!optText) continue;
+        if (optText.includes('自由行动') || optText.includes('输入你想')) continue;
+        // 过滤纯横线/分隔符选项（如 ━━━, ───, ──）
+        if (/^[━─━│┃═]+$/.test(optText)) continue;
+        if (optText.length < 2) continue;
+        options.push(optText);
     }
 
     // If no circled numbers, try numbered list
@@ -435,9 +438,11 @@ function parseOptionsText(optionsText) {
             const numMatch = line.match(/^\d+[\.、]\s*(.+)/);
             if (numMatch) {
                 const opt = numMatch[1].trim();
-                if (opt && !opt.includes('自由行动') && !opt.includes('输入你想')) {
-                    options.push(opt);
-                }
+                if (!opt) continue;
+                if (opt.includes('自由行动') || opt.includes('输入你想')) continue;
+                if (/^[━─━│┃═]+$/.test(opt)) continue;
+                if (opt.length < 2) continue;
+                options.push(opt);
             }
         }
     }
@@ -490,9 +495,11 @@ function parseOptionsFromEnd(text) {
         }
         // Remove numbered list prefix
         cleaned = cleaned.replace(/^\d+[\.、]\s*/, '').trim();
-        if (cleaned && cleaned !== '自由行动') {
-            options.push(cleaned);
-        }
+        // Skip invalid options
+        if (!cleaned || cleaned.length < 2) continue;
+        if (cleaned.includes('自由行动') || cleaned.includes('输入你想')) continue;
+        if (/^[━─━│┃═]+$/.test(cleaned)) continue;
+        options.push(cleaned);
     }
     return options;
 }
@@ -989,10 +996,11 @@ async function sendMessage() {
     // 没有会话 — 显示明确的错误提示（不使用游客模式）
     if (!currentSessionId) {
         removeTypingIndicator();
+        const charName = (currentCharacter?.chatName || currentCharacter?.title) || '角色';
         const errorMsg = {
             id: 'b_' + Date.now(),
             role: 'bot',
-            name: currentCharacter.chatName || currentCharacter.title,
+            name: charName,
             content: '(会话未创建，请刷新页面重试。如果问题持续，请重新登录。)',
             timestamp: Date.now(),
             verified: false

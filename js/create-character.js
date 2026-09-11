@@ -443,15 +443,17 @@ async function compressImageIfNeeded(dataUrl, maxSize, quality) {
     return new Promise((resolve) => {
         const img = new Image();
         img.onload = () => {
-            // 如果图片小于 200KB，直接返回
-            if (dataUrl.length < 200000) {
+            // 如果图片小于 100KB，直接返回
+            if (dataUrl.length < 100000) {
                 resolve(dataUrl);
                 return;
             }
 
+            // 限制最大尺寸到 600px（角色头像不需要太大）
+            const maxDimension = 600;
             let { width, height } = img;
-            if (width > maxSize || height > maxSize) {
-                const ratio = maxSize / Math.max(width, height);
+            if (width > maxDimension || height > maxDimension) {
+                const ratio = maxDimension / Math.max(width, height);
                 width = Math.round(width * ratio);
                 height = Math.round(height * ratio);
             }
@@ -461,18 +463,30 @@ async function compressImageIfNeeded(dataUrl, maxSize, quality) {
             canvas.height = height;
             const ctx = canvas.getContext('2d');
             ctx.drawImage(img, 0, 0, width, height);
-            
-            // 尝试压缩为 JPEG（更小）
-            let compressed = canvas.toDataURL('image/jpeg', quality);
-            
-            // 如果压缩后仍大于 500KB，降低质量
-            if (compressed.length > 500000) {
-                compressed = canvas.toDataURL('image/jpeg', 0.6);
+
+            // 先尝试 JPEG 0.7
+            let compressed = canvas.toDataURL('image/jpeg', 0.7);
+
+            // 如果仍大于 300KB，进一步压缩
+            if (compressed.length > 300000) {
+                compressed = canvas.toDataURL('image/jpeg', 0.5);
             }
-            
+            // 如果还是太大，缩小尺寸再压缩
+            if (compressed.length > 300000) {
+                const ratio2 = 400 / Math.max(width, height);
+                canvas.width = Math.round(width * ratio2);
+                canvas.height = Math.round(height * ratio2);
+                ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                compressed = canvas.toDataURL('image/jpeg', 0.4);
+            }
+
+            console.log(`[CreateChar] Image compressed: ${dataUrl.length} -> ${compressed.length} bytes`);
             resolve(compressed);
         };
-        img.onerror = () => resolve(dataUrl);
+        img.onerror = () => {
+            console.warn('[CreateChar] Image compression failed, using original');
+            resolve(dataUrl);
+        };
         img.src = dataUrl;
     });
 }

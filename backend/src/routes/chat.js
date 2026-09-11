@@ -287,65 +287,30 @@ async function sendMessage(request, env, sessionId) {
 
     const messages = historyResult.results || [];
 
-    // ===== Simplified RPG Flow — 直接调 LLM，减少 DB 操作 =====
+    // ===== Simplified Flow — 直接用 callLLM，避免 generateNarrative 的复杂构造 =====
     let reply = '';
 
-    // 先尝试 RPG 叙事生成
     try {
-        // 获取或创建世界状态（一次 DB 查询，失败用默认值）
-        let worldState = null;
-        try {
-            worldState = await getOrCreateWorldState(env, sessionId, character);
-        } catch (e) {
-            console.warn('[RPG] World state init failed:', e.message);
+        // 直接构建消息数组给 LLM：历史消息 + 当前用户消息
+        // messages 已包含用户刚保存的消息（最后一条）
+        const llmMessages = messages.map(m => ({
+            role: m.role,  // 'user' or 'assistant'
+            content: m.content
+        }));
+
+        // 确保第一条不是 assistant（某些API拒绝）
+        if (llmMessages.length > 0 && llmMessages[0].role === 'assistant') {
+            llmMessages.unshift({ role: 'user', content: '(开始对话)' });
         }
 
-        const ws = worldState || {
-            current_location: '初始场景',
-            current_time: '白天',
-            weather: '晴朗'
-        };
+        console.log(`[Chat] Sending to LLM: ${llmMessages.length} messages, session=${sessionId}`);
 
-        // 简化的 NPC 和玩家状态（不需要额外 DB 查询）
-        const ns = [{
-            npc_key: 'main',
-            name: character.chat_name || character.title || 'NPC',
-            location: ws.current_location,
-            mood: 'neutral',
-            health: 100,
-            relationship: 0,
-            goals_json: []
-        }];
-        const ps = {
-            location: ws.current_location,
-            inventory_json: [],
-            stats_json: {},
-            quests_json: []
-        };
+        reply = await callLLM(env, character, llmMessages);
 
-        const simpleAction = {
-            action_type: 'other',
-            target: '',
-            content: content.trim(),
-            intent: '',
-            expected_effects: []
-        };
-
-        // 历史消息排除最后一条（当前用户消息）
-        const historyForNarrative = messages.slice(0, -1);
-
-        reply = await generateNarrative(env, character, ws, ns, ps, simpleAction, historyForNarrative);
-
+        console.log(`[Chat] LLM reply received, length=${reply.length}`);
     } catch (llmErr) {
-        console.error('[RPG] Narrative generation failed, trying simple LLM:', llmErr.message);
-
-        // Fallback: 简单 LLM 调用
-        try {
-            reply = await callLLM(env, character, messages);
-        } catch (llmErr2) {
-            console.error('[LLM] All calls failed:', llmErr2.message);
-            reply = '（AI服务暂时不可用。错误：' + (llmErr2.message || '未知错误') + '）';
-        }
+        console.error('[Chat] LLM call failed:', llmErr.message);
+        reply = '（AI服务暂时不可用。' + (llmErr.message || '未知错误') + '。请检查后台API Key配置或稍后重试。）';
     }
 
     // Save assistant reply

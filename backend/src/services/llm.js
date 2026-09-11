@@ -40,27 +40,26 @@ function buildSystemPrompt(character) {
     }
 
     prompt += `【RPG回复格式】
-每次回复必须包含以下部分，总长度 400-600 字：
+每次回复严格按以下顺序，总长300-500字：
 
 【当前状态】
-生命：XXX/XXX｜金币：XXX｜等级：X｜装备：XXX
-当前位置：XXX｜时间：XXX
+生命：XX/XX｜金币：XX｜等级：X
+当前位置：XX｜时间：XX
 
 【当前任务】
-任务名称｜进度
+任务名｜进度
 
 【已知情报】
 • 情报1
 • 情报2
-• 情报3
 
-━━━━━━━━━━━━
+━━━
 
-【场景标题】（简洁的地点或场景名）
+【场景标题】
 
-（场景正文 200-400 字：环境描写、NPC反应、事件推进、悬念。用*斜体*写动作，用"引号"写对话。第三人称视角，用"你"指代玩家。像小说一样生动。）
+（场景正文150-300字。*动作描写*，"对话"。第三人称，用"你"指代玩家。环境描写+NPC反应+事件推进+悬念。）
 
-━━━━━━━━━━━━
+━━━
 
 【你可以】
 ① 选项一
@@ -69,13 +68,15 @@ function buildSystemPrompt(character) {
 ④ 选项四
 ⑤ 选项五
 
-重要规则：
-- 状态面板在最前面，场景在中间，选项在最后
-- 不要说教、不要给人生建议、不要跳出角色
-- 不要提到AI、游戏、系统等元信息
-- 每次回复都要推进剧情
-- 选项要有不同方向，不能换汤不换药
-- 历史对话是已发生的事实，延续剧情不断重置`;
+铁律：
+- 状态面板在最前，场景在中间，选项在最后
+- 绝不说教、绝不给建议、绝不跳出角色
+- 绝不提AI、游戏、系统
+- 每次推进剧情，不原地踏步
+- 5个选项方向各异
+- 延续历史对话，不重置剧情
+- 只输出5个选项，不要第6个"自由行动"选项
+- 不要在选项后面加横线或分隔符`;
 
     return prompt;
 }
@@ -93,23 +94,41 @@ export async function callLLM(env, character, messages) {
 // Try all keys with a custom system prompt
 async function callLLMWithPrompt(env, systemPrompt, messages, temperature = 0.8) {
     const keys = await loadKeys(env);
-    if (keys.length === 0) throw new Error('No API keys configured');
+    if (keys.length === 0) {
+        console.error('[LLM] No API keys found in database');
+        throw new Error('未配置API密钥，请在后台管理中添加API Key');
+    }
+
+    console.log(`[LLM] Found ${keys.length} active key(s), trying in order...`);
+
+    // Ensure messages don't start with assistant role (some APIs reject this)
+    const cleanedMessages = messages.filter(m => m.content && m.content.trim());
+    // If first message is from assistant, prepend a user message
+    if (cleanedMessages.length > 0 && cleanedMessages[0].role === 'assistant') {
+        cleanedMessages.unshift({ role: 'user', content: '(开始对话)' });
+    }
 
     let lastError = null;
     for (const key of keys) {
+        const keyLabel = `key#${key.id}(${key.provider}/${key.model || 'default'})`;
         try {
             const apiMessages = [
                 { role: 'system', content: systemPrompt },
-                ...messages.map(m => ({
+                ...cleanedMessages.map(m => ({
                     role: m.role === 'assistant' ? 'assistant' : 'user',
                     content: m.content
                 }))
             ];
 
-            const baseUrl = key.base_url || 'https://api.openai.com/v1';
+            // Fix base_url: remove trailing slash, ensure no double slash
+            let baseUrl = (key.base_url || 'https://api.openai.com/v1').trim();
+            baseUrl = baseUrl.replace(/\/+$/, ''); // Remove trailing slashes
             const model = key.model || 'gpt-3.5-turbo';
 
-            const response = await fetch(`${baseUrl}/chat/completions`, {
+            const url = `${baseUrl}/chat/completions`;
+            console.log(`[LLM] Trying ${keyLabel}: ${url} model=${model}`);
+
+            const response = await fetch(url, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -119,18 +138,27 @@ async function callLLMWithPrompt(env, systemPrompt, messages, temperature = 0.8)
                     model,
                     messages: apiMessages,
                     temperature,
-                    max_tokens: 2000,
+                    max_tokens: 1500,
                     presence_penalty: 0.3,
                     frequency_penalty: 0.3
                 })
             });
 
             if (!response.ok) {
-                throw new Error(`LLM API error: ${response.status}`);
+                const errBody = await response.text().catch(() => '');
+                console.error(`[LLM] ${keyLabel} HTTP ${response.status}: ${errBody.substring(0, 500)}`);
+                throw new Error(`API返回 ${response.status}: ${errBody.substring(0, 200) || 'Unknown error'}`);
             }
 
             const data = await response.json();
             const reply = data.choices?.[0]?.message?.content || '';
+
+            if (!reply || !reply.trim()) {
+                console.error(`[LLM] ${keyLabel} returned empty content`, JSON.stringify(data).substring(0, 500));
+                throw new Error('API返回空内容');
+            }
+
+            console.log(`[LLM] ${keyLabel} success! Reply length: ${reply.length}`);
 
             await env.DB.prepare(`
                 UPDATE api_keys SET usage_count = usage_count + 1, last_used_at = ?
@@ -139,12 +167,12 @@ async function callLLMWithPrompt(env, systemPrompt, messages, temperature = 0.8)
 
             return reply.trim();
         } catch (err) {
+            console.error(`[LLM] ${keyLabel} failed:`, err.message);
             lastError = err;
-            console.error(`LLM key ${key.id} failed:`, err.message);
             continue;
         }
     }
-    throw lastError || new Error('All API keys failed');
+    throw lastError || new Error('所有API密钥均失败');
 }
 
 // ============================================
@@ -200,27 +228,26 @@ NPC：${npcSummary}
 
 【玩家行动】${actionDesc}
 
-【输出格式】（严格按此顺序，总长400-600字）
+【输出格式】（严格按此顺序，总长300-500字）
 
 【当前状态】
-生命：XXX/XXX｜金币：XXX｜等级：X｜装备：XXX
-当前位置：XXX｜时间：XXX
+生命：XX/XX｜金币：XX｜等级：X
+当前位置：XX｜时间：XX
 
 【当前任务】
-任务名称｜进度
+任务名｜进度
 
 【已知情报】
 • 情报1
 • 情报2
-• 情报3
 
-━━━━━━━━━━━━
+━━━
 
 【场景标题】
 
-（场景正文200-400字。第三人称，用"你"指代玩家。*动作描写*，"对话"。要有环境描写、NPC反应、事件推进、悬念。不要说教不要给建议。）
+（场景正文150-300字。第三人称，用"你"指代玩家。*动作描写*，"对话"。环境描写+NPC反应+事件推进+悬念。不说教不出戏。）
 
-━━━━━━━━━━━━
+━━━
 
 【你可以】
 ① 选项一
@@ -229,12 +256,13 @@ NPC：${npcSummary}
 ④ 选项四
 ⑤ 选项五
 
-规则：
+铁律：
 - 状态面板在最前，场景在中间，选项在最后
-- 400-600字，不要写太长
-- 不说教、不出戏、不提AI
+- 300-500字，简短有力
+- 绝不说教、绝不给建议、绝不提AI
 - 推进剧情，不原地踏步
-- 5个选项要有不同方向`;
+- 只输出5个选项，不要第6个
+- 不要在选项后加横线或分隔符`;
 
     // Build message history (last 10 messages for context)
     const historyMessages = (history || []).slice(-10).map(m => ({

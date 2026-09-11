@@ -181,6 +181,14 @@ async function createCharacter(request, env) {
         return errorResponse(400, '请输入角色名称');
     }
 
+    // Safety check: if image is too large for D1 (base64 > 500KB), truncate
+    let safeImage = image || '';
+    if (safeImage.length > 500000) {
+        console.warn(`[Character] Image too large (${safeImage.length} bytes), truncating`);
+        // Keep the data URL prefix and truncate the base64 data
+        safeImage = safeImage.substring(0, 500000);
+    }
+
     const createdAt = now();
     const result = await env.DB.prepare(`
         INSERT INTO characters (
@@ -196,7 +204,7 @@ async function createCharacter(request, env) {
         scenario,
         firstMessage,
         exampleDialogue,
-        image,
+        safeImage,
         user.id,
         user.username || '匿名用户',
         JSON.stringify(tags),
@@ -261,6 +269,14 @@ async function updateCharacter(request, env, id) {
                 values.push(JSON.stringify(body[field]));
             } else if (field === 'isPublic') {
                 values.push(body[field] ? 1 : 0);
+            } else if (field === 'image') {
+                // Safety: truncate large images
+                let imgVal = body[field] || '';
+                if (imgVal.length > 500000) {
+                    console.warn(`[Character] Update image too large (${imgVal.length} bytes), truncating`);
+                    imgVal = imgVal.substring(0, 500000);
+                }
+                values.push(imgVal);
             } else {
                 values.push(body[field]);
             }
