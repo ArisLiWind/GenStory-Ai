@@ -20,6 +20,7 @@ function initCreatePage() {
     setupCreateButton();
     setupScrollSpy();
     setupSmoothScroll();
+    setupTokenCounter();
     
     // If editing, load character data
     if (editingId) {
@@ -142,6 +143,9 @@ async function loadCharacterForEdit(id) {
             // Update preview
             document.getElementById('previewTitle').textContent = char.title || '角色标题';
             document.getElementById('previewDesc').textContent = char.description || '角色简介将显示在这里...';
+            
+            // Recalculate token count after loading data
+            updateTokenCounter();
             
             validateForm();
         }
@@ -494,4 +498,61 @@ async function compressImageIfNeeded(dataUrl, maxSize, quality) {
         };
         img.src = dataUrl;
     });
+}
+
+// ===== Token Counter =====
+function setupTokenCounter() {
+    // All text fields that contribute to token count
+    const fields = ['charTitle', 'charName', 'charDesc', 'charPersonality', 'charScene', 'charFirstMsg', 'charExample', 'charCreatorNote'];
+    fields.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) {
+            el.addEventListener('input', updateTokenCounter);
+        }
+    });
+    updateTokenCounter();
+}
+
+function estimateTokens(text) {
+    if (!text) return 0;
+    let cjk = 0;
+    let other = 0;
+    for (const ch of text) {
+        if (/[\u4e00-\u9fff\u3400-\u4dbf]/.test(ch)) {
+            cjk++;
+        } else if (/\S/.test(ch)) {
+            other++;
+        }
+    }
+    // CJK: ~1.5 tokens per char; Latin: ~1 token per 4 chars
+    return Math.ceil(cjk * 1.5 + other / 4);
+}
+
+function updateTokenCounter() {
+    // Total = all text fields
+    const totalFields = ['charTitle', 'charName', 'charDesc', 'charPersonality', 'charScene', 'charFirstMsg', 'charExample', 'charCreatorNote'];
+    // Permanent = fields sent to LLM every turn (excluding title/name/desc which are metadata)
+    const permanentFields = ['charPersonality', 'charScene', 'charFirstMsg', 'charExample', 'charCreatorNote'];
+
+    let totalTokens = 0;
+    let permanentTokens = 0;
+
+    totalFields.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) {
+            totalTokens += estimateTokens(el.value || '');
+        }
+    });
+
+    permanentFields.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) {
+            permanentTokens += estimateTokens(el.value || '');
+        }
+    });
+
+    const totalEl = document.getElementById('totalTokenCount');
+    const permEl = document.getElementById('permanentTokenCount');
+    if (totalEl) totalEl.textContent = totalTokens;
+    if (permEl) permEl.textContent = permanentTokens;
 }
