@@ -604,14 +604,17 @@
                     document.getElementById('adminApp').style.display = 'flex';
                     loadStats();
                 } else {
-                    alert('令牌无效');
+                    const errData = await res.json().catch(() => null);
+                    alert('令牌无效' + (errData?.message ? '：' + errData.message : ''));
                     adminToken = '';
                     localStorage.removeItem('admin_token');
                     localStorage.removeItem('gensphere_admin_remember');
                     document.getElementById('adminTokenInput').value = '';
+                    document.getElementById('rememberMeCheck').checked = false;
                 }
             } catch (e) {
-                alert('连接失败，请确保后端API已部署');
+                console.error('Admin checkAccess error:', e);
+                alert('连接失败：' + e.message + '\n请检查网络连接，或稍后重试。');
             }
         }
 
@@ -656,6 +659,7 @@
                     <td>${k.priority}</td>
                     <td>${k.usage_count || 0}</td>
                     <td class="action-btns">
+                        <button class="action-btn" onclick="testApiKey(${k.id}, this)">测试</button>
                         <button class="action-btn" onclick="editKey(${k.id})">编辑</button>
                         <button class="action-btn danger" onclick="deleteKey(${k.id})">删除</button>
                     </td>
@@ -761,6 +765,37 @@
 
         function closeKeyModal() {
             document.getElementById('keyModal').classList.remove('active');
+        }
+
+        // ===== Test API Key =====
+        async function testApiKey(id, btn) {
+            const originalText = btn.textContent;
+            btn.disabled = true;
+            btn.textContent = '测试中...';
+
+            try {
+                const res = await fetch(`${API_BASE}/admin/api-keys/${id}/test`, {
+                    method: 'POST',
+                    headers: { 'X-Admin-Token': adminToken }
+                });
+                const data = await res.json();
+
+                if (res.ok && data.code === 0) {
+                    const result = data.data;
+                    if (result.success) {
+                        alert('✅ 测试成功！\n服务商: ' + result.provider + '\n模型: ' + result.model + '\n回复: ' + (result.reply || '').substring(0, 100));
+                    } else {
+                        alert('❌ 测试失败：' + (result.error || '未知错误'));
+                    }
+                } else {
+                    alert('❌ 请求失败：' + (data?.message || 'HTTP ' + res.status));
+                }
+            } catch (e) {
+                alert('❌ 网络错误：' + e.message);
+            } finally {
+                btn.disabled = false;
+                btn.textContent = originalText;
+            }
         }
 
         async function deleteKey(id) {

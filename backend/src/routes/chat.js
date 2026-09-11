@@ -3,7 +3,7 @@
 // ============================================
 
 import { jsonResponse, errorResponse, parseBody, getCurrentUser, now, generateId, safeJsonParse } from '../utils.js';
-import { callLLM, parseAction, generateNarrative } from '../services/llm.js';
+import { callLLM, generateNarrative } from '../services/llm.js';
 
 export async function handleChat(request, env, path) {
     // List sessions
@@ -181,44 +181,36 @@ async function sendMessage(request, env, sessionId) {
 
     const messages = historyResult.results || [];
 
-    // ===== RPG Turn-based Flow =====
+    // ===== Single-call RPG Flow =====
+    // 旧流程调用两次 LLM（parseAction + generateNarrative），太慢且容易超时
+    // 新流程：一次调用 generateNarrative，内部完成行动解析+叙事生成
     let reply = '';
     try {
-        // Step 1: Get or initialize world/NPC/player states
         const worldState = await getOrCreateWorldState(env, sessionId, character);
         const npcStates = await getOrCreateNpcStates(env, sessionId, character, worldState);
         const playerState = await getOrCreatePlayerState(env, sessionId, worldState);
 
-        // Step 2: Parse user action (non-fatal — if it fails, use fallback)
-        let parsedAction;
-        try {
-            parsedAction = await parseAction(env, content.trim(), character, worldState);
-        } catch (parseErr) {
-            console.warn('Action parse failed, using fallback:', parseErr.message);
-            parsedAction = {
-                action_type: 'other',
-                target: '',
-                content: content.trim(),
-                intent: '',
-                expected_effects: []
-            };
-        }
+        // 更新世界状态（简化版，不需要 parseAction，直接用原始用户输入）
+        const simpleAction = {
+            action_type: 'other',
+            target: '',
+            content: content.trim(),
+            intent: '',
+            expected_effects: []
+        };
+        await updateWorldStateAfterAction(env, sessionId, worldState, npcStates, playerState, simpleAction, character);
 
-        // Step 3: Update world state
-        await updateWorldStateAfterAction(env, sessionId, worldState, npcStates, playerState, parsedAction, character);
-
-        // Step 4: Generate RPG narrative (pass history WITHOUT the current message to avoid duplication)
+        // 一次 LLM 调用生成 RPG 叙事（包含行动理解+场景生成）
         const updatedWorldState = await getOrCreateWorldState(env, sessionId, character);
         const updatedNpcStates = await getOrCreateNpcStates(env, sessionId, character, updatedWorldState);
         const updatedPlayerState = await getOrCreatePlayerState(env, sessionId, updatedWorldState);
 
-        // Exclude the last user message from history (it was already saved to DB)
-        // generateNarrative will add the parsed action as the user message
-        const historyForNarrative = messages.slice(0, -1); // remove last (current user message)
+        // 历史消息排除最后一条（当前用户消息），generateNarrative 内部会添加
+        const historyForNarrative = messages.slice(0, -1);
 
-        reply = await generateNarrative(env, character, updatedWorldState, updatedNpcStates, updatedPlayerState, parsedAction, historyForNarrative);
+        reply = await generateNarrative(env, character, updatedWorldState, updatedNpcStates, updatedPlayerState, simpleAction, historyForNarrative);
 
-        // Step 5: Parse status changes from narrative and update DB (best-effort)
+        // 尝试更新状态（非关键）
         try {
             await applyStatusChangesFromNarrative(env, sessionId, reply, character);
         } catch (parseErr) {
@@ -227,12 +219,12 @@ async function sendMessage(request, env, sessionId) {
 
     } catch (err) {
         console.error('RPG Chat Error:', err);
-        // Fallback to regular LLM call
+        // Fallback to regular LLM call (no RPG formatting)
         try {
             reply = await callLLM(env, character, messages);
         } catch (llmErr) {
             console.error('LLM Fallback Error:', llmErr);
-            reply = '（抱歉，AI服务暂时不可用，请检查管理后台的API Key配置是否正确。错误信息：' + (llmErr.message || '未知错误') + '）';
+            reply = '（AI服务暂时不可用。错误信息：' + (llmErr.message || '未知错误') + '。请到管理后台测试API Key是否正常。）';
         }
     }
 

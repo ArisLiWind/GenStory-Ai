@@ -46,6 +46,12 @@ export async function handleAdmin(request, env, path) {
         if (request.method === 'DELETE') return deleteApiKey(env, id);
     }
 
+    // Test API Key
+    const testMatch = path.match(/^\/api\/admin\/api-keys\/(\d+)\/test$/);
+    if (testMatch && request.method === 'POST') {
+        return testApiKey(env, parseInt(testMatch[1]));
+    }
+
     // Category management
     if (path === '/api/admin/categories' && request.method === 'POST') {
         return createCategory(request, env);
@@ -146,6 +152,64 @@ async function updateApiKey(request, env, id) {
 async function deleteApiKey(env, id) {
     await env.DB.prepare('DELETE FROM api_keys WHERE id = ?').bind(id).run();
     return jsonResponse({ deleted: true });
+}
+
+// ===== Test API Key =====
+async function testApiKey(env, id) {
+    const key = await env.DB.prepare(
+        'SELECT * FROM api_keys WHERE id = ?'
+    ).bind(id).first();
+
+    if (!key) return errorResponse(404, 'API Key 不存在');
+
+    const baseUrl = key.base_url || 'https://api.openai.com/v1';
+    const model = key.model || 'gpt-3.5-turbo';
+
+    try {
+        const response = await fetch(`${baseUrl}/chat/completions`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${key.api_key}`
+            },
+            body: JSON.stringify({
+                model,
+                messages: [
+                    { role: 'system', content: 'You are a test assistant. Reply with exactly: TEST_OK' },
+                    { role: 'user', content: 'Hello, please reply with TEST_OK' }
+                ],
+                max_tokens: 50,
+                temperature: 0
+            })
+        });
+
+        if (!response.ok) {
+            const errText = await response.text();
+            return jsonResponse({
+                success: false,
+                provider: key.provider,
+                model,
+                error: `HTTP ${response.status}: ${errText.substring(0, 200)}`
+            });
+        }
+
+        const data = await response.json();
+        const reply = data.choices?.[0]?.message?.content || '';
+
+        return jsonResponse({
+            success: true,
+            provider: key.provider,
+            model,
+            reply
+        });
+    } catch (err) {
+        return jsonResponse({
+            success: false,
+            provider: key.provider,
+            model,
+            error: err.message
+        });
+    }
 }
 
 // ===== Categories =====
