@@ -21,9 +21,7 @@ async function loadKeys(env) {
 
 // Get next API key (round-robin)
 async function getNextKey(env) {
-    if (KEY_ROTATION.keys.length === 0) {
-        await loadKeys(env);
-    }
+    await loadKeys(env);
     if (KEY_ROTATION.keys.length === 0) {
         throw new Error('No API keys configured');
     }

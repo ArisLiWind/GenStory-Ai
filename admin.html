@@ -660,15 +660,26 @@
         }
 
         async function saveKey() {
+            const saveBtn = document.querySelector('#keyModal .btn-primary');
             const body = {
-                name: document.getElementById('keyName').value,
-                provider: document.getElementById('keyProvider').value,
-                apiKey: document.getElementById('keyApiKey').value,
-                baseUrl: document.getElementById('keyBaseUrl').value,
-                model: document.getElementById('keyModel').value,
-                priority: parseInt(document.getElementById('keyPriority').value),
+                name: document.getElementById('keyName').value.trim(),
+                provider: document.getElementById('keyProvider').value.trim(),
+                apiKey: document.getElementById('keyApiKey').value.trim(),
+                baseUrl: document.getElementById('keyBaseUrl').value.trim(),
+                model: document.getElementById('keyModel').value.trim(),
+                priority: parseInt(document.getElementById('keyPriority').value, 10) || 0,
                 isActive: document.getElementById('keyActive').checked
             };
+
+            if (!body.name || !body.provider || !body.apiKey) {
+                alert('请填写名称、服务商和 API Key');
+                return;
+            }
+
+            if (saveBtn) {
+                saveBtn.disabled = true;
+                saveBtn.textContent = '保存中...';
+            }
 
             const res = await fetch(`${API_BASE}/admin/api-keys`, {
                 method: 'POST',
@@ -679,11 +690,19 @@
                 body: JSON.stringify(body)
             });
 
+            const data = await res.json().catch(() => null);
             if (res.ok) {
                 closeKeyModal();
-                loadApiKeys();
+                await loadApiKeys();
+                await loadStats();
+                alert('API Key 已保存并启用');
             } else {
-                alert('保存失败');
+                alert('保存失败：' + (data?.message || '请检查后台接口'));
+            }
+
+            if (saveBtn) {
+                saveBtn.disabled = false;
+                saveBtn.textContent = '保存';
             }
         }
 
