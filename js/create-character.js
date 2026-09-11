@@ -369,17 +369,31 @@ function setupCreateButton() {
         createBtn.textContent = editingId ? '保存中...' : '创建中...';
         
         try {
-            // Get image data — 限制大小，压缩过大的图片
-            const previewImg = document.querySelector('.preview-card .card-image');
+            // Get image data — try multiple selectors to find the uploaded image
             let imageData = '';
-            if (previewImg && previewImg.src) {
-                // 如果是 base64 图片，检查大小并压缩
-                if (previewImg.src.startsWith('data:image')) {
-                    imageData = await compressImageIfNeeded(previewImg.src, 800, 0.85);
-                } else {
-                    imageData = previewImg.src;
+            
+            // Method 1: Check the card image element
+            const cardImg = document.querySelector('.preview-card .card-image');
+            if (cardImg && cardImg.src) {
+                if (cardImg.src.startsWith('data:image')) {
+                    imageData = await compressImageIfNeeded(cardImg.src, 800, 0.85);
+                } else if (cardImg.src.startsWith('http') || cardImg.src.startsWith('/')) {
+                    imageData = cardImg.src;
                 }
             }
+            
+            // Method 2: Check the preview placeholder inner img
+            if (!imageData) {
+                const previewPlaceholder = document.getElementById('previewImage');
+                if (previewPlaceholder) {
+                    const innerImg = previewPlaceholder.querySelector('img');
+                    if (innerImg && innerImg.src && innerImg.src.startsWith('data:image')) {
+                        imageData = await compressImageIfNeeded(innerImg.src, 800, 0.85);
+                    }
+                }
+            }
+            
+            console.log('[CreateChar] Image data length:', imageData.length, 'starts with:', imageData.substring(0, 30));
             
             // Get content rating
             const ratingValue = document.querySelector('input[name="rating"]:checked')?.value || 'nsfw';
@@ -452,14 +466,14 @@ async function compressImageIfNeeded(dataUrl, maxSize, quality) {
     return new Promise((resolve) => {
         const img = new Image();
         img.onload = () => {
-            // 如果图片小于 100KB，直接返回
-            if (dataUrl.length < 100000) {
+            // 如果图片小于 80KB，直接返回
+            if (dataUrl.length < 80000) {
                 resolve(dataUrl);
                 return;
             }
 
-            // 限制最大尺寸到 600px（角色头像不需要太大）
-            const maxDimension = 600;
+            // 限制最大尺寸到 400px（角色头像不需要太大）
+            const maxDimension = 400;
             let { width, height } = img;
             if (width > maxDimension || height > maxDimension) {
                 const ratio = maxDimension / Math.max(width, height);
@@ -473,28 +487,34 @@ async function compressImageIfNeeded(dataUrl, maxSize, quality) {
             const ctx = canvas.getContext('2d');
             ctx.drawImage(img, 0, 0, width, height);
 
-            // 先尝试 JPEG 0.7
+            // 逐步压缩，目标 < 150KB base64
             let compressed = canvas.toDataURL('image/jpeg', 0.7);
 
-            // 如果仍大于 300KB，进一步压缩
-            if (compressed.length > 300000) {
+            if (compressed.length > 150000) {
                 compressed = canvas.toDataURL('image/jpeg', 0.5);
             }
-            // 如果还是太大，缩小尺寸再压缩
-            if (compressed.length > 300000) {
-                const ratio2 = 400 / Math.max(width, height);
+            if (compressed.length > 150000) {
+                // 缩小尺寸再压缩
+                const ratio2 = 300 / Math.max(width, height);
                 canvas.width = Math.round(width * ratio2);
                 canvas.height = Math.round(height * ratio2);
                 ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
                 compressed = canvas.toDataURL('image/jpeg', 0.4);
             }
+            if (compressed.length > 150000) {
+                // 最后手段：极小尺寸
+                canvas.width = 200;
+                canvas.height = Math.round(200 * height / width);
+                ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                compressed = canvas.toDataURL('image/jpeg', 0.3);
+            }
 
-            console.log(`[CreateChar] Image compressed: ${dataUrl.length} -> ${compressed.length} bytes`);
+            console.log(`[CreateChar] Image compressed: ${dataUrl.length} -> ${compressed.length} chars`);
             resolve(compressed);
         };
         img.onerror = () => {
-            console.warn('[CreateChar] Image compression failed, using original');
-            resolve(dataUrl);
+            console.warn('[CreateChar] Image compression failed, returning empty');
+            resolve(''); // Return empty instead of corrupt data
         };
         img.src = dataUrl;
     });

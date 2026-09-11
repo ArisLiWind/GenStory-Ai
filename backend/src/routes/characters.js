@@ -195,16 +195,17 @@ async function createCharacter(request, env) {
         hasFirstMessage: !!firstMessage,
         hasExample: !!exampleDialogue,
         hasCreatorNote: !!creatorNote,
+        hasImage: !!(image && image.length > 50),
+        imageLength: image ? image.length : 0,
         status,
         isPublic
     });
 
-    // Safety check: if image is too large for D1 (base64 > 500KB), truncate
+    // Safety check: if image is too large for D1, skip it rather than truncate (truncation corrupts base64)
     let safeImage = image || '';
-    if (safeImage.length > 500000) {
-        console.warn(`[Character] Image too large (${safeImage.length} bytes), truncating`);
-        // Keep the data URL prefix and truncate the base64 data
-        safeImage = safeImage.substring(0, 500000);
+    if (safeImage.length > 300000) {
+        console.warn(`[Character] Image too large (${safeImage.length} chars), skipping image storage`);
+        safeImage = '';
     }
 
     const createdAt = now();
@@ -291,11 +292,11 @@ async function updateCharacter(request, env, id) {
             } else if (field === 'isPublic') {
                 values.push(body[field] ? 1 : 0);
             } else if (field === 'image') {
-                // Safety: truncate large images
+                // Safety: skip large images rather than truncate (truncation corrupts base64)
                 let imgVal = body[field] || '';
-                if (imgVal.length > 500000) {
-                    console.warn(`[Character] Update image too large (${imgVal.length} bytes), truncating`);
-                    imgVal = imgVal.substring(0, 500000);
+                if (imgVal.length > 300000) {
+                    console.warn(`[Character] Update image too large (${imgVal.length} chars), skipping`);
+                    imgVal = '';
                 }
                 values.push(imgVal);
             } else {

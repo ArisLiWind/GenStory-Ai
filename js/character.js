@@ -194,8 +194,20 @@ function renderCharacter(char) {
     document.getElementById('charTitle').textContent = char.title || '未命名角色';
     document.getElementById('chatBtnName').textContent = char.chatName || char.title || '角色';
 
-    // 描述
-    document.getElementById('charDescription').textContent = char.description || '暂无描述';
+    // 描述 — 左侧卡片只显示极简摘要，截断长文本
+    const descEl = document.getElementById('charDescription');
+    if (descEl) {
+        const fullDesc = char.description || '暂无描述';
+        if (fullDesc.length > 120) {
+            descEl.textContent = fullDesc.substring(0, 120) + '...';
+            descEl.title = fullDesc; // 鼠标悬停看全部
+            descEl.style.cursor = 'help';
+        } else {
+            descEl.textContent = fullDesc;
+            descEl.title = '';
+            descEl.style.cursor = 'default';
+        }
+    }
 
     // 创作者
     document.getElementById('charCreator').textContent = char.creator || '未知创作者';
@@ -218,14 +230,24 @@ function renderCharacter(char) {
 
     // 图片
     const charImg = document.getElementById('charImg');
-    if (char.image) {
-        charImg.src = char.image;
-        charImg.alt = char.title;
-        charImg.style.opacity = '1';
-    } else {
-        charImg.src = 'assets/char-knight.jpg';
-        charImg.alt = char.title;
-        charImg.style.opacity = '1';
+    if (charImg) {
+        // Add error handler: if image fails to load, show fallback
+        charImg.onerror = function() {
+            this.onerror = null;
+            this.src = 'assets/char-knight.jpg';
+        };
+        
+        if (char.image && char.image.length > 50) {
+            // Valid image data (base64 or URL)
+            charImg.src = char.image;
+            charImg.alt = char.title;
+            charImg.style.opacity = '1';
+        } else {
+            // No image or too short to be valid — use fallback
+            charImg.src = 'assets/char-knight.jpg';
+            charImg.alt = char.title;
+            charImg.style.opacity = '1';
+        }
     }
 
     // 认证徽章
