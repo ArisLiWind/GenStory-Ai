@@ -16,6 +16,11 @@ export async function handleChat(request, env, path) {
         return createSession(request, env);
     }
 
+    // Guest chat (no login required) — send message as guest
+    if (path === '/api/chat/guest-send' && request.method === 'POST') {
+        return guestChat(request, env);
+    }
+
     // Session messages
     const sessionMatch = path.match(/^\/api\/chat\/sessions\/([^/]+)$/);
     if (sessionMatch) {
@@ -39,6 +44,106 @@ export async function handleChat(request, env, path) {
     return errorResponse(404, 'Not found');
 }
 
+// ===== Guest Chat (no login required) =====
+// 允许未登录用户直接和角色聊天，不保存历史记录
+async function guestChat(request, env) {
+    const guestBody = await parseBody(request);
+    const characterId = parseInt(guestBody.characterId);
+    const { content, history } = guestBody;
+
+    if (!characterId) return errorResponse(400, '缺少角色ID');
+    if (!content || !content.trim()) return errorResponse(400, '请输入消息内容');
+
+    const character = await env.DB.prepare(
+        'SELECT * FROM characters WHERE id = ?'
+    ).bind(characterId).first();
+
+    if (!character) return errorResponse(404, '角色不存在');
+
+    // Build message history from frontend-provided history (or use first_message)
+    const messages = [];
+
+    // Add character's first message as context if available
+    if (character.first_message) {
+        messages.push({ role: 'assistant', content: character.first_message });
+    }
+
+    // Add history from frontend (limited to last 20 messages)
+    if (Array.isArray(history)) {
+        for (const m of history.slice(-20)) {
+            messages.push({
+                role: m.role === 'assistant' ? 'assistant' : 'user',
+                content: m.content
+            });
+        }
+    }
+
+    // Add current user message
+    messages.push({ role: 'user', content: content.trim() });
+
+    let reply = '';
+
+    // Try RPG narrative generation first
+    try {
+        const worldState = {
+            current_location: '初始场景',
+            weather: '晴朗',
+            current_time: '白天'
+        };
+
+        // Try to extract location from scenario
+        const scenario = character.scenario || '';
+        const locMatch = scenario.match(/在(.{2,20}?)[，。,.]/);
+        if (locMatch) worldState.current_location = locMatch[1].trim();
+
+        const npcStates = [{
+            npc_key: 'main',
+            name: character.chat_name || character.title || 'NPC',
+            location: worldState.current_location,
+            mood: 'neutral',
+            health: 100,
+            relationship: 0,
+            goals_json: []
+        }];
+
+        const playerState = {
+            location: worldState.current_location,
+            inventory_json: [],
+            stats_json: {},
+            quests_json: []
+        };
+
+        const simpleAction = {
+            action_type: 'other',
+            target: '',
+            content: content.trim(),
+            intent: '',
+            expected_effects: []
+        };
+
+        // History for narrative (exclude current user message)
+        const historyForNarrative = messages.slice(0, -1);
+
+        reply = await generateNarrative(env, character, worldState, npcStates, playerState, simpleAction, historyForNarrative);
+    } catch (rpgErr) {
+        console.error('Guest RPG error (fallback to simple LLM):', rpgErr.message);
+
+        // Fallback: simple LLM call without RPG formatting
+        try {
+            reply = await callLLM(env, character, messages);
+        } catch (llmErr) {
+            console.error('Guest LLM error:', llmErr.message);
+            reply = '（AI服务暂时不可用。错误信息：' + (llmErr.message || '未知错误') + '。请稍后重试，或联系管理员检查API Key配置。）';
+        }
+    }
+
+    return jsonResponse({
+        role: 'assistant',
+        content: reply,
+        createdAt: now()
+    });
+}
+
 async function listSessions(request, env) {
     const user = await getCurrentUser(request, env);
     if (!user) return errorResponse(401, '请先登录');
@@ -58,7 +163,8 @@ async function createSession(request, env) {
     const user = await getCurrentUser(request, env);
     if (!user) return errorResponse(401, '请先登录');
 
-    const { characterId } = await parseBody(request);
+    const body = await parseBody(request);
+    const characterId = parseInt(body.characterId);
     if (!characterId) return errorResponse(400, '缺少角色ID');
 
     const character = await env.DB.prepare(
@@ -181,16 +287,21 @@ async function sendMessage(request, env, sessionId) {
 
     const messages = historyResult.results || [];
 
-    // ===== Single-call RPG Flow =====
-    // 旧流程调用两次 LLM（parseAction + generateNarrative），太慢且容易超时
-    // 新流程：一次调用 generateNarrative，内部完成行动解析+叙事生成
+    // ===== Simplified RPG Flow =====
+    // 先尝试获取 RPG 状态（失败不阻塞），再调用 LLM 生成叙事
     let reply = '';
-    try {
-        const worldState = await getOrCreateWorldState(env, sessionId, character);
-        const npcStates = await getOrCreateNpcStates(env, sessionId, character, worldState);
-        const playerState = await getOrCreatePlayerState(env, sessionId, worldState);
 
-        // 更新世界状态（简化版，不需要 parseAction，直接用原始用户输入）
+    // Step 1: 尝试获取/创建 RPG 世界状态（容错，失败用默认值）
+    let worldState = null;
+    let npcStates = null;
+    let playerState = null;
+
+    try {
+        worldState = await getOrCreateWorldState(env, sessionId, character);
+        npcStates = await getOrCreateNpcStates(env, sessionId, character, worldState);
+        playerState = await getOrCreatePlayerState(env, sessionId, worldState);
+
+        // 更新世界状态（非关键，失败不影响）
         const simpleAction = {
             action_type: 'other',
             target: '',
@@ -198,33 +309,68 @@ async function sendMessage(request, env, sessionId) {
             intent: '',
             expected_effects: []
         };
-        await updateWorldStateAfterAction(env, sessionId, worldState, npcStates, playerState, simpleAction, character);
+        try {
+            await updateWorldStateAfterAction(env, sessionId, worldState, npcStates, playerState, simpleAction, character);
+        } catch (updateErr) {
+            console.warn('[RPG] World state update failed (non-critical):', updateErr.message);
+        }
+    } catch (stateErr) {
+        console.warn('[RPG] State init failed, using defaults:', stateErr.message);
+    }
 
-        // 一次 LLM 调用生成 RPG 叙事（包含行动理解+场景生成）
-        const updatedWorldState = await getOrCreateWorldState(env, sessionId, character);
-        const updatedNpcStates = await getOrCreateNpcStates(env, sessionId, character, updatedWorldState);
-        const updatedPlayerState = await getOrCreatePlayerState(env, sessionId, updatedWorldState);
+    // Step 2: 调用 LLM 生成叙事（RPG 状态有就用，没有用默认值）
+    try {
+        const simpleAction = {
+            action_type: 'other',
+            target: '',
+            content: content.trim(),
+            intent: '',
+            expected_effects: []
+        };
+
+        // 使用已有状态或默认值
+        const ws = worldState || {
+            current_location: '初始场景',
+            current_time: '白天',
+            weather: '晴朗'
+        };
+        const ns = npcStates || [{
+            npc_key: 'main',
+            name: character.chat_name || character.title || 'NPC',
+            location: ws.current_location,
+            mood: 'neutral',
+            health: 100,
+            relationship: 0,
+            goals_json: []
+        }];
+        const ps = playerState || {
+            location: ws.current_location,
+            inventory_json: [],
+            stats_json: {},
+            quests_json: []
+        };
 
         // 历史消息排除最后一条（当前用户消息），generateNarrative 内部会添加
         const historyForNarrative = messages.slice(0, -1);
 
-        reply = await generateNarrative(env, character, updatedWorldState, updatedNpcStates, updatedPlayerState, simpleAction, historyForNarrative);
+        reply = await generateNarrative(env, character, ws, ns, ps, simpleAction, historyForNarrative);
 
         // 尝试更新状态（非关键）
         try {
             await applyStatusChangesFromNarrative(env, sessionId, reply, character);
         } catch (parseErr) {
-            console.warn('Status change parse failed (non-critical):', parseErr.message);
+            console.warn('[RPG] Status change parse failed (non-critical):', parseErr.message);
         }
 
-    } catch (err) {
-        console.error('RPG Chat Error:', err);
-        // Fallback to regular LLM call (no RPG formatting)
+    } catch (llmErr) {
+        console.error('[RPG] Narrative generation failed, trying simple LLM:', llmErr.message);
+
+        // Fallback: 简单 LLM 调用（不含 RPG 格式）
         try {
             reply = await callLLM(env, character, messages);
-        } catch (llmErr) {
-            console.error('LLM Fallback Error:', llmErr);
-            reply = '（AI服务暂时不可用。错误信息：' + (llmErr.message || '未知错误') + '。请到管理后台测试API Key是否正常。）';
+        } catch (llmErr2) {
+            console.error('[LLM] All calls failed:', llmErr2.message);
+            reply = '（AI服务暂时不可用。错误信息：' + (llmErr2.message || '未知错误') + '。请稍后重试，或到管理后台检查API Key配置。）';
         }
     }
 

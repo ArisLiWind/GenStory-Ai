@@ -129,15 +129,16 @@ async function loadCharacterDetail(id) {
 async function checkExistingChat(characterId) {
     try {
         const result = await GenSphereAPI.chat.getSessions();
-        if (result.code === 0 && result.data && Array.isArray(result.data)) {
-            const sessions = result.data;
+        if (result.code === 0 && result.data) {
+            // 后端返回 { items: [...] }，需要从 items 中取
+            const sessions = result.data.items || result.data || [];
             hasExistingChat = sessions.some(s =>
-                String(s.characterId) === String(characterId)
+                String(s.character_id || s.characterId) === String(characterId)
             );
             updateChatButton();
         }
     } catch (e) {
-        // 忽略错误，默认显示"开始聊天"
+        // 忽略错误，默认不显示"继续聊天"
         hasExistingChat = false;
         updateChatButton();
     }

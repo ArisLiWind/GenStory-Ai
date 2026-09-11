@@ -38,14 +38,32 @@ async function request(path, options = {}) {
             headers
         });
 
-        const data = await response.json();
+        // 检查响应是否为有效 JSON
+        const text = await response.text();
+        let data;
+        try {
+            data = JSON.parse(text);
+        } catch (parseErr) {
+            console.error('API Response Parse Error:', path, 'Status:', response.status, 'Body:', text.substring(0, 200));
+            return {
+                code: response.status || 500,
+                data: null,
+                message: `服务器返回格式错误 (HTTP ${response.status})`
+            };
+        }
+
+        // 如果 HTTP 状态码不是 2xx，但响应体有 code 字段，用响应体的 code
+        if (!response.ok && data.code === undefined) {
+            data.code = response.status;
+        }
+
         return data;
     } catch (err) {
-        console.error('API Request Error:', err);
+        console.error('API Request Error:', path, err);
         return {
             code: 500,
             data: null,
-            message: '网络请求失败'
+            message: '网络请求失败：' + (err.message || '未知错误')
         };
     }
 }
@@ -204,6 +222,14 @@ const GenSphereAPI = {
 
         async getOrCreateSession(characterId) {
             return request(`/chat/character/${characterId}`);
+        },
+
+        // 游客聊天（不需要登录，会话创建失败时降级使用）
+        async guestSend(characterId, content, history = []) {
+            return request('/chat/guest-send', {
+                method: 'POST',
+                body: JSON.stringify({ characterId, content, history })
+            });
         }
     }
 };
