@@ -422,7 +422,8 @@ function parseOptionsText(optionsText) {
         }
         const optText = optionsText.substring(startIdx, endIdx).trim()
             .replace(/\n/g, ' ').replace(/\s+/g, ' ').trim();
-        if (optText && optText !== '自由行动') {
+        // 跳过"自由行动"选项（第6项），它在下方输入框实现
+        if (optText && !optText.includes('自由行动') && !optText.includes('输入你想')) {
             options.push(optText);
         }
     }
@@ -434,7 +435,7 @@ function parseOptionsText(optionsText) {
             const numMatch = line.match(/^\d+[\.、]\s*(.+)/);
             if (numMatch) {
                 const opt = numMatch[1].trim();
-                if (opt && opt !== '自由行动') {
+                if (opt && !opt.includes('自由行动') && !opt.includes('输入你想')) {
                     options.push(opt);
                 }
             }
@@ -798,34 +799,13 @@ function renderMessage(msg) {
 
 function renderRpgBotMessage(msg, rpgData, avatarText) {
     const sceneDesc = rpgData.sceneDesc || '';
-    const npcReaction = rpgData.npcReaction || '';
-    const statusChanges = rpgData.statusChanges || [];
     const currentStatus = rpgData.currentStatus || '';
     const currentQuest = rpgData.currentQuest || '';
     const knownIntel = rpgData.knownIntel || [];
 
     let bodyHtml = '';
 
-    // Scene description (includes time/weather/location + scene body)
-    if (sceneDesc) {
-        bodyHtml += `
-            <div class="rpg-scene-desc">
-                ${formatRpgText(sceneDesc)}
-            </div>
-        `;
-    }
-
-    // NPC reaction (only render if different from scene desc)
-    if (npcReaction && npcReaction !== sceneDesc) {
-        bodyHtml += `
-            <div class="rpg-npc-reaction">
-                <div class="rpg-npc-name">${escapeHtml(msg.name)}</div>
-                <div class="rpg-npc-text">${formatRpgText(npcReaction)}</div>
-            </div>
-        `;
-    }
-
-    // Current status
+    // 状态面板放最前面
     if (currentStatus) {
         bodyHtml += `
             <div class="rpg-status-section">
@@ -835,7 +815,6 @@ function renderRpgBotMessage(msg, rpgData, avatarText) {
         `;
     }
 
-    // Current quest
     if (currentQuest) {
         bodyHtml += `
             <div class="rpg-quest-section">
@@ -845,7 +824,6 @@ function renderRpgBotMessage(msg, rpgData, avatarText) {
         `;
     }
 
-    // Known intel
     if (knownIntel.length > 0) {
         bodyHtml += `
             <div class="rpg-intel-section">
@@ -857,13 +835,16 @@ function renderRpgBotMessage(msg, rpgData, avatarText) {
         `;
     }
 
-    // Status changes as badges (legacy format support)
-    if (statusChanges.length > 0) {
+    // 分隔线
+    if (currentStatus || currentQuest || knownIntel.length > 0) {
+        bodyHtml += `<div class="rpg-turn-divider"><span>━━━</span></div>`;
+    }
+
+    // 场景正文
+    if (sceneDesc) {
         bodyHtml += `
-            <div class="rpg-status-changes">
-                ${statusChanges.map(change => `
-                    <span class="rpg-status-badge">${escapeHtml(change)}</span>
-                `).join('')}
+            <div class="rpg-scene-desc">
+                ${formatRpgText(sceneDesc)}
             </div>
         `;
     }

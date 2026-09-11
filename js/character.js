@@ -452,61 +452,18 @@ function escapeHtml(text) {
 }
 
 // ============================================
-// 评论区（使用 mock 数据）
+// 评论区（从后端加载，无后端时显示空状态）
 // ============================================
-const mockComments = [
-    {
-        id: 'c1',
-        username: '星河入梦',
-        avatarText: '星',
-        content: '这个角色太有代入感了！第一次对话就被他的气场震慑住了，每一个回应都很符合人设，完全不会出戏。',
-        likes: 498,
-        liked: false,
-        date: '3天前',
-        replies: [
-            {
-                id: 'r1',
-                username: '月光宝盒',
-                avatarText: '月',
-                content: '同意！我已经聊了快一个小时了，完全停不下来',
-                date: '3天前'
-            }
-        ]
-    },
-    {
-        id: 'c2',
-        username: '咖啡不加糖',
-        avatarText: '咖',
-        content: '场景描写太有画面感了，第一次对话的氛围感真的绝了！',
-        likes: 456,
-        liked: false,
-        date: '1周前',
-        replies: []
-    },
-    {
-        id: 'c3',
-        username: '南风知我意',
-        avatarText: '南',
-        content: '本来以为是个冷酷无情的角色，没想到聊到后面发现还有温柔的一面... 这种反差感真的太戳我了！',
-        likes: 369,
-        liked: false,
-        date: '2周前',
-        replies: []
-    },
-    {
-        id: 'c4',
-        username: '云淡风轻',
-        avatarText: '云',
-        content: '人设写得真好，对话风格很独特，每一句都很有分量。',
-        likes: 319,
-        liked: false,
-        date: '2周前',
-        replies: []
-    }
-];
+function loadComments(characterId) {
+    // TODO: 后端评论 API 实现后，从后端加载
+    // 目前显示空状态
+    allComments = [];
+    sortComments();
+}
 
 function loadMockComments() {
-    allComments = JSON.parse(JSON.stringify(mockComments));
+    // 兼容旧调用 — 显示空状态
+    allComments = [];
     sortComments();
 }
 

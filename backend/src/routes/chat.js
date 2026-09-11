@@ -274,67 +274,40 @@ async function sendMessage(request, env, sessionId) {
         VALUES (?, 'user', ?, ?)
     `).bind(sessionId, content.trim(), userMsgTime).run();
 
-    // Get conversation history (last 40 messages for RPG continuity)
+    // Get conversation history (last 20 messages for context)
     const historyResult = await env.DB.prepare(`
         SELECT role, content FROM (
             SELECT id, role, content, created_at
             FROM chat_messages
             WHERE session_id = ?
             ORDER BY created_at DESC
-            LIMIT 40
+            LIMIT 20
         ) ORDER BY created_at ASC
     `).bind(sessionId).all();
 
     const messages = historyResult.results || [];
 
-    // ===== Simplified RPG Flow =====
-    // 先尝试获取 RPG 状态（失败不阻塞），再调用 LLM 生成叙事
+    // ===== Simplified RPG Flow — 直接调 LLM，减少 DB 操作 =====
     let reply = '';
 
-    // Step 1: 尝试获取/创建 RPG 世界状态（容错，失败用默认值）
-    let worldState = null;
-    let npcStates = null;
-    let playerState = null;
-
+    // 先尝试 RPG 叙事生成
     try {
-        worldState = await getOrCreateWorldState(env, sessionId, character);
-        npcStates = await getOrCreateNpcStates(env, sessionId, character, worldState);
-        playerState = await getOrCreatePlayerState(env, sessionId, worldState);
-
-        // 更新世界状态（非关键，失败不影响）
-        const simpleAction = {
-            action_type: 'other',
-            target: '',
-            content: content.trim(),
-            intent: '',
-            expected_effects: []
-        };
+        // 获取或创建世界状态（一次 DB 查询，失败用默认值）
+        let worldState = null;
         try {
-            await updateWorldStateAfterAction(env, sessionId, worldState, npcStates, playerState, simpleAction, character);
-        } catch (updateErr) {
-            console.warn('[RPG] World state update failed (non-critical):', updateErr.message);
+            worldState = await getOrCreateWorldState(env, sessionId, character);
+        } catch (e) {
+            console.warn('[RPG] World state init failed:', e.message);
         }
-    } catch (stateErr) {
-        console.warn('[RPG] State init failed, using defaults:', stateErr.message);
-    }
 
-    // Step 2: 调用 LLM 生成叙事（RPG 状态有就用，没有用默认值）
-    try {
-        const simpleAction = {
-            action_type: 'other',
-            target: '',
-            content: content.trim(),
-            intent: '',
-            expected_effects: []
-        };
-
-        // 使用已有状态或默认值
         const ws = worldState || {
             current_location: '初始场景',
             current_time: '白天',
             weather: '晴朗'
         };
-        const ns = npcStates || [{
+
+        // 简化的 NPC 和玩家状态（不需要额外 DB 查询）
+        const ns = [{
             npc_key: 'main',
             name: character.chat_name || character.title || 'NPC',
             location: ws.current_location,
@@ -343,34 +316,35 @@ async function sendMessage(request, env, sessionId) {
             relationship: 0,
             goals_json: []
         }];
-        const ps = playerState || {
+        const ps = {
             location: ws.current_location,
             inventory_json: [],
             stats_json: {},
             quests_json: []
         };
 
-        // 历史消息排除最后一条（当前用户消息），generateNarrative 内部会添加
+        const simpleAction = {
+            action_type: 'other',
+            target: '',
+            content: content.trim(),
+            intent: '',
+            expected_effects: []
+        };
+
+        // 历史消息排除最后一条（当前用户消息）
         const historyForNarrative = messages.slice(0, -1);
 
         reply = await generateNarrative(env, character, ws, ns, ps, simpleAction, historyForNarrative);
 
-        // 尝试更新状态（非关键）
-        try {
-            await applyStatusChangesFromNarrative(env, sessionId, reply, character);
-        } catch (parseErr) {
-            console.warn('[RPG] Status change parse failed (non-critical):', parseErr.message);
-        }
-
     } catch (llmErr) {
         console.error('[RPG] Narrative generation failed, trying simple LLM:', llmErr.message);
 
-        // Fallback: 简单 LLM 调用（不含 RPG 格式）
+        // Fallback: 简单 LLM 调用
         try {
             reply = await callLLM(env, character, messages);
         } catch (llmErr2) {
             console.error('[LLM] All calls failed:', llmErr2.message);
-            reply = '（AI服务暂时不可用。错误信息：' + (llmErr2.message || '未知错误') + '。请稍后重试，或到管理后台检查API Key配置。）';
+            reply = '（AI服务暂时不可用。错误：' + (llmErr2.message || '未知错误') + '）';
         }
     }
 

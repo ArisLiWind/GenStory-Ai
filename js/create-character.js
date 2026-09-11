@@ -361,9 +361,17 @@ function setupCreateButton() {
         createBtn.textContent = editingId ? '保存中...' : '创建中...';
         
         try {
-            // Get image data
+            // Get image data — 限制大小，压缩过大的图片
             const previewImg = document.querySelector('.preview-card .card-image');
-            const imageData = previewImg ? previewImg.src : '';
+            let imageData = '';
+            if (previewImg && previewImg.src) {
+                // 如果是 base64 图片，检查大小并压缩
+                if (previewImg.src.startsWith('data:image')) {
+                    imageData = await compressImageIfNeeded(previewImg.src, 800, 0.85);
+                } else {
+                    imageData = previewImg.src;
+                }
+            }
             
             // Get content rating
             const ratingValue = document.querySelector('input[name="rating"]:checked')?.value || 'nsfw';
@@ -427,5 +435,44 @@ function setupCreateButton() {
             btn.textContent = originalText;
             alert((editingId ? '修改失败：' : '创建失败：') + (error.message || '网络错误'));
         }
+    });
+}
+
+// ===== 图片压缩 =====
+async function compressImageIfNeeded(dataUrl, maxSize, quality) {
+    return new Promise((resolve) => {
+        const img = new Image();
+        img.onload = () => {
+            // 如果图片小于 200KB，直接返回
+            if (dataUrl.length < 200000) {
+                resolve(dataUrl);
+                return;
+            }
+
+            let { width, height } = img;
+            if (width > maxSize || height > maxSize) {
+                const ratio = maxSize / Math.max(width, height);
+                width = Math.round(width * ratio);
+                height = Math.round(height * ratio);
+            }
+
+            const canvas = document.createElement('canvas');
+            canvas.width = width;
+            canvas.height = height;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0, width, height);
+            
+            // 尝试压缩为 JPEG（更小）
+            let compressed = canvas.toDataURL('image/jpeg', quality);
+            
+            // 如果压缩后仍大于 500KB，降低质量
+            if (compressed.length > 500000) {
+                compressed = canvas.toDataURL('image/jpeg', 0.6);
+            }
+            
+            resolve(compressed);
+        };
+        img.onerror = () => resolve(dataUrl);
+        img.src = dataUrl;
     });
 }
