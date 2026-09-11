@@ -201,12 +201,19 @@ async function createCharacter(request, env) {
         isPublic
     });
 
-    // Safety check: if image is too large for D1, skip it rather than truncate (truncation corrupts base64)
+    // Safety check: D1 has limits on text column values
+    // Keep image under 50KB base64 to ensure it can be stored
     let safeImage = image || '';
-    if (safeImage.length > 300000) {
-        console.warn(`[Character] Image too large (${safeImage.length} chars), skipping image storage`);
+    if (safeImage.length > 60000) {
+        console.warn(`[Character] Image too large for D1 (${safeImage.length} chars), skipping image storage`);
         safeImage = '';
     }
+    
+    console.log('[Character] Image storage:', {
+        hasImage: !!(safeImage && safeImage.length > 50),
+        imageLength: safeImage.length,
+        imagePreview: safeImage ? safeImage.substring(0, 50) : '(empty)'
+    });
 
     const createdAt = now();
     const result = await env.DB.prepare(`
@@ -292,12 +299,13 @@ async function updateCharacter(request, env, id) {
             } else if (field === 'isPublic') {
                 values.push(body[field] ? 1 : 0);
             } else if (field === 'image') {
-                // Safety: skip large images rather than truncate (truncation corrupts base64)
+                // Safety: skip large images for D1
                 let imgVal = body[field] || '';
-                if (imgVal.length > 300000) {
+                if (imgVal.length > 60000) {
                     console.warn(`[Character] Update image too large (${imgVal.length} chars), skipping`);
                     imgVal = '';
                 }
+                console.log('[Character] Update image:', { length: imgVal.length, hasImage: imgVal.length > 50 });
                 values.push(imgVal);
             } else {
                 values.push(body[field]);

@@ -3,6 +3,7 @@
 let selectedTags = [];
 let editingId = null;
 const maxTags = 10;
+let uploadedImageData = ''; // 全局变量：直接存储上传的图片 data URL，不经过 DOM 往返
 
 document.addEventListener('DOMContentLoaded', () => {
     initCreatePage();
@@ -120,19 +121,20 @@ async function loadCharacterForEdit(id) {
             
             // Set image
             if (char.image) {
+                uploadedImageData = char.image; // 保存到全局变量，以便编辑提交时保留
                 const previewImage = document.getElementById('previewImage');
-                previewImage.innerHTML = `<img src="${char.image}" alt="角色头像" style="position:absolute;top:0;left:0;width:100%;height:100%;object-fit:cover;">`;
+                if (previewImage) {
+                    previewImage.innerHTML = `<img src="${char.image}" alt="角色头像" style="position:absolute;top:0;left:0;width:100%;height:100%;object-fit:cover;">`;
+                }
                 const cardImgWrapper = document.querySelector('.preview-card .card-image-wrapper');
                 if (cardImgWrapper) {
-                    const existingImg = cardImgWrapper.querySelector('img');
-                    if (existingImg) {
-                        existingImg.src = char.image;
-                    } else {
-                        const img = document.createElement('img');
-                        img.src = char.image;
-                        img.className = 'card-image';
-                        cardImgWrapper.insertBefore(img, cardImgWrapper.firstChild);
+                    let cardImg = cardImgWrapper.querySelector('img');
+                    if (!cardImg) {
+                        cardImg = document.createElement('img');
+                        cardImg.style.cssText = 'position:absolute;top:0;left:0;width:100%;height:100%;object-fit:cover;';
+                        cardImgWrapper.insertBefore(cardImg, cardImgWrapper.firstChild);
                     }
+                    cardImg.src = char.image;
                 }
             }
             
@@ -190,21 +192,32 @@ function setupImageUpload() {
     function handleImageUpload(file) {
         const reader = new FileReader();
         reader.onload = (e) => {
-            // Update preview
-            previewImage.innerHTML = `<img src="${e.target.result}" alt="角色头像" style="position:absolute;top:0;left:0;width:100%;height:100%;object-fit:cover;">`;
-            // Also update the card image in preview
+            const dataUrl = e.target.result;
+            
+            // 1. 直接存储到全局变量 — 这是最可靠的方式，不经过 DOM 往返
+            uploadedImageData = dataUrl;
+            console.log('[ImageUpload] Image loaded, size:', dataUrl.length, 'chars');
+            
+            // 2. 更新预览（仅用于视觉展示，不影响数据存储）
+            if (previewImage) {
+                previewImage.innerHTML = `<img src="${dataUrl}" alt="角色头像" style="position:absolute;top:0;left:0;width:100%;height:100%;object-fit:cover;">`;
+            }
+            
+            // 3. 更新预览卡片
             const cardImgWrapper = document.querySelector('.preview-card .card-image-wrapper');
             if (cardImgWrapper) {
-                const existingImg = cardImgWrapper.querySelector('img');
-                if (existingImg) {
-                    existingImg.src = e.target.result;
-                } else {
-                    const img = document.createElement('img');
-                    img.src = e.target.result;
-                    img.className = 'card-image';
-                    cardImgWrapper.insertBefore(img, cardImgWrapper.firstChild);
+                let cardImg = cardImgWrapper.querySelector('img');
+                if (!cardImg) {
+                    cardImg = document.createElement('img');
+                    cardImg.style.cssText = 'position:absolute;top:0;left:0;width:100%;height:100%;object-fit:cover;';
+                    cardImgWrapper.insertBefore(cardImg, cardImgWrapper.firstChild);
                 }
+                cardImg.src = dataUrl;
             }
+        };
+        reader.onerror = () => {
+            console.error('[ImageUpload] FileReader error');
+            alert('图片读取失败，请重试');
         };
         reader.readAsDataURL(file);
     }
@@ -369,31 +382,20 @@ function setupCreateButton() {
         btn.textContent = editingId ? '保存中...' : '创建中...';
         
         try {
-            // Get image data — try multiple selectors to find the uploaded image
+            // 直接使用全局变量中的图片数据 — 不再从 DOM 读取
             let imageData = '';
             
-            // Method 1: Check the card image element
-            const cardImg = document.querySelector('.preview-card .card-image');
-            if (cardImg && cardImg.src) {
-                if (cardImg.src.startsWith('data:image')) {
-                    imageData = await compressImageIfNeeded(cardImg.src, 800, 0.85);
-                } else if (cardImg.src.startsWith('http') || cardImg.src.startsWith('/')) {
-                    imageData = cardImg.src;
-                }
+            if (uploadedImageData && uploadedImageData.startsWith('data:image')) {
+                console.log('[CreateChar] Found uploaded image, compressing...');
+                imageData = await compressImageIfNeeded(uploadedImageData);
+                console.log('[CreateChar] Compressed image:', imageData.length, 'chars, starts with:', imageData.substring(0, 30));
+            } else if (editingId) {
+                // 编辑模式下，如果没有新上传图片，尝试保留原有图片
+                console.log('[CreateChar] No new image uploaded, editing mode - will keep existing image');
+                // 不设置 image 字段，后端会保留原有值
+            } else {
+                console.log('[CreateChar] No image uploaded');
             }
-            
-            // Method 2: Check the preview placeholder inner img
-            if (!imageData) {
-                const previewPlaceholder = document.getElementById('previewImage');
-                if (previewPlaceholder) {
-                    const innerImg = previewPlaceholder.querySelector('img');
-                    if (innerImg && innerImg.src && innerImg.src.startsWith('data:image')) {
-                        imageData = await compressImageIfNeeded(innerImg.src, 800, 0.85);
-                    }
-                }
-            }
-            
-            console.log('[CreateChar] Image data length:', imageData.length, 'starts with:', imageData.substring(0, 30));
             
             // Get content rating
             const ratingValue = document.querySelector('input[name="rating"]:checked')?.value || 'nsfw';
@@ -457,60 +459,84 @@ function setupCreateButton() {
 }
 
 // ===== 图片压缩 =====
-async function compressImageIfNeeded(dataUrl, maxSize, quality) {
+// 目标：压缩到 < 50KB base64（约 37KB 实际图片数据）
+// 这是为了确保 D1 数据库能正常存储（D1 对大文本值有限制）
+async function compressImageIfNeeded(dataUrl) {
+    console.log('[Compress] Input size:', dataUrl.length, 'chars');
+    
+    // 如果图片小于 40KB，直接返回
+    if (dataUrl.length < 40000) {
+        console.log('[Compress] Small enough, skipping compression');
+        return dataUrl;
+    }
+    
     return new Promise((resolve) => {
         const img = new Image();
+        
         img.onload = () => {
-            // 如果图片小于 80KB，直接返回
-            if (dataUrl.length < 80000) {
-                resolve(dataUrl);
-                return;
+            console.log('[Compress] Image loaded, dimensions:', img.width, 'x', img.height);
+            
+            // 从小到大尝试，找到第一个 < 50KB 的结果
+            const configs = [
+                { maxSize: 256, quality: 0.6 },
+                { maxSize: 192, quality: 0.5 },
+                { maxSize: 150, quality: 0.4 },
+                { maxSize: 100, quality: 0.3 },
+                { maxSize: 80, quality: 0.2 },
+            ];
+            
+            for (const config of configs) {
+                let { width, height } = img;
+                
+                // 等比缩小
+                if (width > config.maxSize || height > config.maxSize) {
+                    const ratio = config.maxSize / Math.max(width, height);
+                    width = Math.round(width * ratio);
+                    height = Math.round(height * ratio);
+                }
+                
+                const canvas = document.createElement('canvas');
+                canvas.width = width;
+                canvas.height = height;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0, width, height);
+                
+                const compressed = canvas.toDataURL('image/jpeg', config.quality);
+                console.log(`[Compress] ${width}x${height} q=${config.quality}: ${compressed.length} chars`);
+                
+                if (compressed.length < 50000) {
+                    console.log('[Compress] Success! Final size:', compressed.length, 'chars');
+                    resolve(compressed);
+                    return;
+                }
             }
-
-            // 限制最大尺寸到 400px（角色头像不需要太大）
-            const maxDimension = 400;
+            
+            // 如果所有配置都超过 50KB，返回最后一个结果（已经是最小了）
+            const lastConfig = configs[configs.length - 1];
             let { width, height } = img;
-            if (width > maxDimension || height > maxDimension) {
-                const ratio = maxDimension / Math.max(width, height);
-                width = Math.round(width * ratio);
-                height = Math.round(height * ratio);
-            }
-
+            const ratio = lastConfig.maxSize / Math.max(width, height);
+            width = Math.round(width * ratio);
+            height = Math.round(height * ratio);
+            
             const canvas = document.createElement('canvas');
             canvas.width = width;
             canvas.height = height;
             const ctx = canvas.getContext('2d');
             ctx.drawImage(img, 0, 0, width, height);
-
-            // 逐步压缩，目标 < 150KB base64
-            let compressed = canvas.toDataURL('image/jpeg', 0.7);
-
-            if (compressed.length > 150000) {
-                compressed = canvas.toDataURL('image/jpeg', 0.5);
-            }
-            if (compressed.length > 150000) {
-                // 缩小尺寸再压缩
-                const ratio2 = 300 / Math.max(width, height);
-                canvas.width = Math.round(width * ratio2);
-                canvas.height = Math.round(height * ratio2);
-                ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-                compressed = canvas.toDataURL('image/jpeg', 0.4);
-            }
-            if (compressed.length > 150000) {
-                // 最后手段：极小尺寸
-                canvas.width = 200;
-                canvas.height = Math.round(200 * height / width);
-                ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-                compressed = canvas.toDataURL('image/jpeg', 0.3);
-            }
-
-            console.log(`[CreateChar] Image compressed: ${dataUrl.length} -> ${compressed.length} chars`);
-            resolve(compressed);
+            
+            const finalResult = canvas.toDataURL('image/jpeg', 0.15);
+            console.log('[Compress] Fallback final size:', finalResult.length, 'chars');
+            resolve(finalResult);
         };
+        
         img.onerror = () => {
-            console.warn('[CreateChar] Image compression failed, returning empty');
-            resolve(''); // Return empty instead of corrupt data
+            console.error('[Compress] Image failed to load');
+            // 如果压缩完全失败，尝试直接截取原始数据的前 50KB
+            // base64 截断会导致图片损坏，所以返回空
+            // 后端会使用默认图片
+            resolve('');
         };
+        
         img.src = dataUrl;
     });
 }
