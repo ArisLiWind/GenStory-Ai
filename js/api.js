@@ -222,6 +222,23 @@ const GenSphereAPI = {
 
         async getOrCreateSession(characterId) {
             return request(`/chat/character/${characterId}`);
+        },
+
+        async publishSession(sessionId, title) {
+            return request(`/chat/sessions/${sessionId}/publish`, {
+                method: 'POST',
+                body: JSON.stringify({ title })
+            });
+        },
+
+        async unpublishSession(sessionId) {
+            return request(`/chat/sessions/${sessionId}/publish`, {
+                method: 'DELETE'
+            });
+        },
+
+        async getPublishedChats(characterId) {
+            return request(`/chat/character/${characterId}/published`);
         }
     }
 };

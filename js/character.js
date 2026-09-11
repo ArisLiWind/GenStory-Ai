@@ -31,6 +31,9 @@ function initCharacterPage() {
     // 加载角色详情
     loadCharacterDetail(charId);
 
+    // 加载已发布聊天
+    loadPublishedChats(charId);
+
     // 检查是否有历史聊天（异步，不阻塞页面加载）
     checkExistingChat(charId);
 
@@ -140,6 +143,50 @@ function updateChatButton() {
 }
 
 // ============================================
+// 加载已发布聊天
+// ============================================
+async function loadPublishedChats(characterId) {
+    try {
+        const result = await GenSphereAPI.chat.getPublishedChats(characterId);
+        if (result.code === 0 && result.data && result.data.items) {
+            renderPublishedChats(result.data.items);
+        }
+    } catch (e) {
+        console.error('[Character] Load published chats error:', e);
+    }
+}
+
+function renderPublishedChats(chats) {
+    const listEl = document.getElementById('publishedChatsList');
+    const countEl = document.getElementById('publishedChatsCount');
+    if (!listEl) return;
+
+    if (countEl) countEl.textContent = chats.length;
+
+    if (chats.length === 0) {
+        listEl.innerHTML = '<div style="text-align:center;padding:40px 0;color:rgba(255,255,255,0.3);width:100%;">暂无已发布聊天，开始你的第一次对话吧</div>';
+        return;
+    }
+
+    listEl.innerHTML = chats.map(chat => {
+        const dateStr = chat.publishedAt ? formatDate(chat.publishedAt) : '';
+        return `
+            <div class="published-chat-card">
+                <div class="published-chat-header">${escapeHtml(chat.title)}</div>
+                <div class="published-chat-preview">${chat.messageCount || 0} 条消息</div>
+                <div class="published-chat-footer">
+                    <div class="published-chat-creator">
+                        <div class="published-chat-creator-avatar">${chat.creatorAvatar || 'U'}</div>
+                        <span>@${escapeHtml(chat.creatorName)}</span>
+                    </div>
+                    <span>${dateStr}</span>
+                </div>
+            </div>
+        `;
+    }).join('');
+}
+
+// ============================================
 // 渲染角色信息
 // ============================================
 function renderCharacter(char) {
@@ -198,7 +245,12 @@ function renderCharacter(char) {
     if (accordions[0]) {
         const body = accordions[0].querySelector('.char-accordion-body');
         if (body) {
-            body.textContent = char.personality || char.persona || '暂无性格设定。';
+            const content = char.personality || char.persona || '';
+            if (content) {
+                body.innerHTML = formatMultiLineText(content);
+            } else {
+                body.textContent = '暂无性格设定。';
+            }
         }
         // 更新 token 数
         const tokenEl = accordions[0].querySelector('.char-accordion-token');
@@ -211,7 +263,12 @@ function renderCharacter(char) {
     if (accordions[1]) {
         const body = accordions[1].querySelector('.char-accordion-body');
         if (body) {
-            body.textContent = char.scenario || '暂无场景设定。';
+            const content = char.scenario || '';
+            if (content) {
+                body.innerHTML = formatMultiLineText(content);
+            } else {
+                body.textContent = '暂无场景设定。';
+            }
         }
     }
 
@@ -219,9 +276,9 @@ function renderCharacter(char) {
     if (accordions[2]) {
         const body = accordions[2].querySelector('.char-accordion-body');
         if (body) {
-            const dialog = char.exampleDialog || char.exampleDialogue || char.firstMessage || '';
+            const dialog = char.exampleDialogue || char.example_dialogue || char.firstMessage || '';
             if (dialog) {
-                body.innerHTML = formatDialogHtml(dialog);
+                body.innerHTML = formatMultiLineText(dialog);
             } else {
                 body.textContent = '暂无示例对话。';
             }
@@ -232,9 +289,46 @@ function renderCharacter(char) {
     if (accordions[3]) {
         const body = accordions[3].querySelector('.char-accordion-body');
         if (body) {
-            body.textContent = char.definition || char.creatorNote || '暂无创作者备注。';
+            const content = char.creatorNote || char.creator_note || char.definition || '';
+            if (content) {
+                body.innerHTML = formatMultiLineText(content);
+            } else {
+                body.textContent = '暂无创作者备注。';
+            }
         }
     }
+}
+
+// ============================================
+// 格式化多行文本为 HTML（自动分段）
+// ============================================
+function formatMultiLineText(text) {
+    if (!text) return '';
+    // Normalize line endings: \r\n -> \n, \r -> \n
+    const normalized = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+    const lines = normalized.split('\n');
+    const paragraphs = [];
+    let currentParagraph = [];
+
+    for (const line of lines) {
+        if (line.trim()) {
+            currentParagraph.push(line);
+        } else {
+            // Empty line = paragraph break
+            if (currentParagraph.length > 0) {
+                paragraphs.push(currentParagraph.join('<br>'));
+                currentParagraph = [];
+            }
+        }
+    }
+    // Don't forget the last paragraph
+    if (currentParagraph.length > 0) {
+        paragraphs.push(currentParagraph.join('<br>'));
+    }
+
+    return paragraphs.map(p =>
+        '<p style="margin:0 0 12px;line-height:1.75;word-break:break-word;overflow-wrap:break-word;">' + escapeHtml(p).replace(/&lt;br&gt;/g, '<br>') + '</p>'
+    ).join('');
 }
 
 // ============================================
@@ -391,11 +485,11 @@ function normalizeCharacter(char) {
         title: char.title || '',
         chatName: char.chatName || char.chat_name || char.title || '',
         description: char.description || '',
-        personality: char.personality || char.persona || '',
+        personality: char.personality || '',
         scenario: char.scenario || '',
         firstMessage: char.firstMessage || char.first_message || '',
         exampleDialogue: char.exampleDialogue || char.example_dialogue || '',
-        definition: char.definition || char.creatorNote || '',
+        creatorNote: char.creatorNote || char.creator_note || char.definition || '',
         image: char.image || '',
         creator: char.creator || char.creatorName || char.creator_name || '未知创作者',
         creatorVerified: !!char.creatorVerified || !!char.verified,

@@ -178,6 +178,7 @@ export async function ensureDBInitialized(env) {
                     scenario TEXT DEFAULT '',
                     first_message TEXT DEFAULT '',
                     example_dialogue TEXT DEFAULT '',
+                    creator_note TEXT DEFAULT '',
                     image TEXT DEFAULT '',
                     creator_id TEXT NOT NULL,
                     creator_name TEXT NOT NULL,
@@ -196,6 +197,37 @@ export async function ensureDBInitialized(env) {
                     updated_at INTEGER
                 )
             `).run();
+
+            // Add missing columns if not exists (for existing databases)
+            const alterColumns = [
+                'ALTER TABLE characters ADD COLUMN creator_note TEXT DEFAULT \'\'',
+                'ALTER TABLE characters ADD COLUMN is_public INTEGER DEFAULT 1',
+                'ALTER TABLE characters ADD COLUMN status TEXT DEFAULT \'draft\'',
+                'ALTER TABLE characters ADD COLUMN personality TEXT DEFAULT \'\'',
+                'ALTER TABLE characters ADD COLUMN scenario TEXT DEFAULT \'\'',
+                'ALTER TABLE characters ADD COLUMN first_message TEXT DEFAULT \'\'',
+                'ALTER TABLE characters ADD COLUMN example_dialogue TEXT DEFAULT \'\'',
+                'ALTER TABLE characters ADD COLUMN chat_name TEXT DEFAULT \'\'',
+                'ALTER TABLE characters ADD COLUMN token_count INTEGER DEFAULT 0',
+                'ALTER TABLE characters ADD COLUMN content_rating TEXT DEFAULT \'general\''
+            ];
+            for (const sql of alterColumns) {
+                try {
+                    await env.DB.prepare(sql).run();
+                } catch(e) {
+                    // Column already exists
+                }
+            }
+
+            // Migration: fix existing characters that have status='draft' or is_public=0
+            // Set all characters to published and public so they appear in the hall
+            try {
+                await env.DB.prepare('UPDATE characters SET status = \'published\' WHERE status IS NULL OR status = \'\' OR status = \'draft\'').run();
+                await env.DB.prepare('UPDATE characters SET is_public = 1 WHERE is_public IS NULL OR is_public = 0').run();
+                console.log('[DB] Migration: updated character status and visibility');
+            } catch(e) {
+                console.error('[DB] Migration error:', e.message);
+            }
 
             await env.DB.prepare(`
                 CREATE TABLE IF NOT EXISTS api_keys (
@@ -221,9 +253,23 @@ export async function ensureDBInitialized(env) {
                     title TEXT DEFAULT '',
                     created_at INTEGER NOT NULL,
                     updated_at INTEGER,
-                    message_count INTEGER DEFAULT 0
+                    message_count INTEGER DEFAULT 0,
+                    is_published INTEGER DEFAULT 0,
+                    published_title TEXT DEFAULT '',
+                    published_at INTEGER
                 )
             `).run();
+
+            // Add published columns to chat_sessions if not exists
+            try {
+                await env.DB.prepare('ALTER TABLE chat_sessions ADD COLUMN is_published INTEGER DEFAULT 0').run();
+            } catch(e) {}
+            try {
+                await env.DB.prepare('ALTER TABLE chat_sessions ADD COLUMN published_title TEXT DEFAULT \'\'').run();
+            } catch(e) {}
+            try {
+                await env.DB.prepare('ALTER TABLE chat_sessions ADD COLUMN published_at INTEGER').run();
+            } catch(e) {}
 
             await env.DB.prepare(`
                 CREATE TABLE IF NOT EXISTS chat_messages (

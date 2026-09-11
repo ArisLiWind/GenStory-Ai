@@ -101,6 +101,10 @@ async function loadCharacterForEdit(id) {
             document.getElementById('charFirstMsg').value = char.firstMessage || '';
             document.getElementById('charExample').value = char.exampleDialogue || '';
             
+            // Set creator note
+            const noteEl = document.getElementById('charCreatorNote');
+            if (noteEl) noteEl.value = char.creatorNote || '';
+            
             // Set tags
             if (char.tags && Array.isArray(char.tags)) {
                 selectedTags = [...char.tags];
@@ -385,6 +389,7 @@ function setupCreateButton() {
                 scenario: document.getElementById('charScene').value.trim(),
                 firstMessage: document.getElementById('charFirstMsg').value.trim(),
                 exampleDialogue: document.getElementById('charExample').value.trim(),
+                creatorNote: document.getElementById('charCreatorNote')?.value.trim() || '',
                 image: imageData,
                 tags: selectedTags,
                 categories: [],

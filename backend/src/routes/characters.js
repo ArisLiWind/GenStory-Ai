@@ -67,6 +67,8 @@ async function listCharacters(request, env) {
     ).bind(...params).first();
     const total = countResult.total;
 
+    console.log(`[Characters] List query: total=${total}, page=${page}, pageSize=${pageSize}, category=${category}, sortBy=${sortBy}`);
+
     // Sort
     let orderSql = 'view_count DESC';
     if (sortBy === 'rating') orderSql = 'rating DESC';
@@ -98,6 +100,8 @@ async function listCharacters(request, env) {
         creatorName: row.creator_name,
         contentRating: row.content_rating
     }));
+
+    console.log(`[Characters] Returning ${items.length} items`);
 
     return jsonResponse({
         items,
@@ -144,6 +148,7 @@ async function getCharacterDetail(request, env, id) {
         chatName: row.chat_name,
         firstMessage: row.first_message,
         exampleDialogue: row.example_dialogue,
+        creatorNote: row.creator_note || '',
         creator: row.creator_name,
         views: row.view_count + 1,
         chats: row.chat_count,
@@ -169,6 +174,7 @@ async function createCharacter(request, env) {
         scenario = '',
         firstMessage = '',
         exampleDialogue = '',
+        creatorNote = '',
         image = '',
         tags = [],
         categories = [],
@@ -180,6 +186,18 @@ async function createCharacter(request, env) {
     if (!title || title.trim().length < 1) {
         return errorResponse(400, '请输入角色名称');
     }
+
+    console.log('[Character] Creating character:', {
+        title: title.trim(),
+        chatName,
+        hasPersonality: !!personality,
+        hasScenario: !!scenario,
+        hasFirstMessage: !!firstMessage,
+        hasExample: !!exampleDialogue,
+        hasCreatorNote: !!creatorNote,
+        status,
+        isPublic
+    });
 
     // Safety check: if image is too large for D1 (base64 > 500KB), truncate
     let safeImage = image || '';
@@ -193,9 +211,9 @@ async function createCharacter(request, env) {
     const result = await env.DB.prepare(`
         INSERT INTO characters (
             title, chat_name, description, personality, scenario, first_message,
-            example_dialogue, image, creator_id, creator_name, tags, categories,
+            example_dialogue, creator_note, image, creator_id, creator_name, tags, categories,
             content_rating, status, is_public, created_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).bind(
         title.trim(),
         chatName,
@@ -204,6 +222,7 @@ async function createCharacter(request, env) {
         scenario,
         firstMessage,
         exampleDialogue,
+        creatorNote,
         safeImage,
         user.id,
         user.username || '匿名用户',
@@ -216,6 +235,7 @@ async function createCharacter(request, env) {
     ).run();
 
     const characterId = result.meta.last_row_id;
+    console.log('[Character] Created successfully, id:', characterId);
 
     return jsonResponse({
         id: characterId,
@@ -246,7 +266,7 @@ async function updateCharacter(request, env, id) {
     const body = await parseBody(request);
     const allowedFields = [
         'title', 'chatName', 'description', 'personality', 'scenario',
-        'firstMessage', 'exampleDialogue', 'image', 'tags', 'categories',
+        'firstMessage', 'exampleDialogue', 'creatorNote', 'image', 'tags', 'categories',
         'contentRating', 'status', 'isPublic'
     ];
 
@@ -257,6 +277,7 @@ async function updateCharacter(request, env, id) {
         chatName: 'chat_name',
         firstMessage: 'first_message',
         exampleDialogue: 'example_dialogue',
+        creatorNote: 'creator_note',
         contentRating: 'content_rating',
         isPublic: 'is_public'
     };

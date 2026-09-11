@@ -693,6 +693,9 @@ async function startChatSession() {
             
             renderMessages();
 
+            // Show publish button if session has messages
+            updatePublishButton();
+
             // Parse last bot message for RPG data (action options, etc.)
             // Skip action options if the last message is a prologue
             const lastBotMsg = [...messages].reverse().find(m => m.role === 'bot');
@@ -1222,6 +1225,9 @@ async function sendMessage() {
 
     renderMessages();
     isSending = false;
+
+    // Update publish button visibility
+    updatePublishButton();
 }
 
 // ===== Typing Indicator =====
@@ -1373,5 +1379,61 @@ window.deleteMessage = function(msgId) {
     if (index > -1) {
         messages.splice(index, 1);
         renderMessages();
+    }
+};
+
+// ===== Publish Chat =====
+function updatePublishButton() {
+    const btn = document.getElementById('publishChatBtn');
+    if (!btn) return;
+    // Show publish button only when session exists and has enough messages
+    if (currentSessionId && messages.length >= 2) {
+        btn.style.display = 'flex';
+    } else {
+        btn.style.display = 'none';
+    }
+}
+
+window.publishChat = async function() {
+    if (!currentSessionId) {
+        showToast('会话未创建，无法发布');
+        return;
+    }
+    if (messages.length < 2) {
+        showToast('至少需要2条消息才能发布');
+        return;
+    }
+
+    const title = prompt('给这段对话起个标题：', currentCharacter?.title + ' - 精彩对话');
+    if (title === null) return; // User cancelled
+
+    const btn = document.getElementById('publishChatBtn');
+    if (btn) {
+        btn.disabled = true;
+        btn.querySelector('span').textContent = '发布中...';
+    }
+
+    try {
+        const res = await GenSphereAPI.chat.publishSession(currentSessionId, title || '精彩对话');
+        if (res.code === 0 && res.data) {
+            showToast('对话已发布！其他用户可以在角色页面看到这段对话。');
+            if (btn) {
+                btn.querySelector('span').textContent = '已发布';
+                btn.disabled = false;
+            }
+        } else {
+            showToast('发布失败：' + (res.message || '未知错误'));
+            if (btn) {
+                btn.disabled = false;
+                btn.querySelector('span').textContent = '发布对话';
+            }
+        }
+    } catch (error) {
+        console.error('[Chat] Publish error:', error);
+        showToast('发布失败：' + (error.message || '网络错误'));
+        if (btn) {
+            btn.disabled = false;
+            btn.querySelector('span').textContent = '发布对话';
+        }
     }
 };

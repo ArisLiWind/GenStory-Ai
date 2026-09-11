@@ -41,6 +41,19 @@ export async function handleChat(request, env, path) {
         return getOrCreateSession(request, env, parseInt(charMatch[1]));
     }
 
+    // Get published chats for a character
+    const publishedMatch = path.match(/^\/api\/chat\/character\/(\d+)\/published$/);
+    if (publishedMatch && request.method === 'GET') {
+        return getPublishedChats(request, env, parseInt(publishedMatch[1]));
+    }
+
+    // Publish / unpublish a session
+    const publishMatch = path.match(/^\/api\/chat\/sessions\/([^/]+)\/publish$/);
+    if (publishMatch) {
+        if (request.method === 'POST') return publishSession(request, env, publishMatch[1]);
+        if (request.method === 'DELETE') return unpublishSession(request, env, publishMatch[1]);
+    }
+
     return errorResponse(404, 'Not found');
 }
 
@@ -677,6 +690,92 @@ async function getOrCreateSession(request, env, characterId) {
         sessionId,
         messages: await getMessagesForSession(env, sessionId)
     }, 201);
+}
+
+// ===== Publish / Unpublish Chat Session =====
+async function publishSession(request, env, sessionId) {
+    const user = await getCurrentUser(request, env);
+    if (!user) return errorResponse(401, '请先登录');
+
+    const session = await env.DB.prepare(
+        'SELECT * FROM chat_sessions WHERE id = ? AND user_id = ?'
+    ).bind(sessionId, user.id).first();
+
+    if (!session) return errorResponse(404, '会话不存在');
+
+    // Check if session has enough messages
+    if ((session.message_count || 0) < 2) {
+        return errorResponse(400, '聊天消息太少，无法发布');
+    }
+
+    const body = await parseBody(request);
+    const publishedTitle = body.title || session.title || '精彩的对话';
+
+    const ts = now();
+    await env.DB.prepare(`
+        UPDATE chat_sessions
+        SET is_published = 1, published_title = ?, published_at = ?, updated_at = ?
+        WHERE id = ?
+    `).bind(publishedTitle, ts, ts, sessionId).run();
+
+    // Get messages for preview
+    const messages = await getMessagesForSession(env, sessionId);
+    const preview = messages.slice(0, 4).map(m => ({
+        role: m.role,
+        content: m.content.substring(0, 200)
+    ));
+
+    return jsonResponse({
+        sessionId,
+        isPublished: true,
+        publishedTitle,
+        publishedAt: ts,
+        messageCount: session.message_count,
+        preview
+    });
+}
+
+async function unpublishSession(request, env, sessionId) {
+    const user = await getCurrentUser(request, env);
+    if (!user) return errorResponse(401, '请先登录');
+
+    const session = await env.DB.prepare(
+        'SELECT * FROM chat_sessions WHERE id = ? AND user_id = ?'
+    ).bind(sessionId, user.id).first();
+
+    if (!session) return errorResponse(404, '会话不存在');
+
+    await env.DB.prepare(`
+        UPDATE chat_sessions
+        SET is_published = 0, published_title = '', published_at = NULL, updated_at = ?
+        WHERE id = ?
+    `).bind(now(), sessionId).run();
+
+    return jsonResponse({ sessionId, isPublished: false });
+}
+
+// ===== Get Published Chats for a Character =====
+async function getPublishedChats(request, env, characterId) {
+    const result = await env.DB.prepare(`
+        SELECT cs.id, cs.published_title, cs.message_count, cs.published_at,
+               cs.user_id, u.username as creator_name
+        FROM chat_sessions cs
+        LEFT JOIN users u ON cs.user_id = u.id
+        WHERE cs.character_id = ? AND cs.is_published = 1
+        ORDER BY cs.published_at DESC
+        LIMIT 20
+    `).bind(characterId).all();
+
+    const items = (result.results || []).map(row => ({
+        sessionId: row.id,
+        title: row.published_title || '精彩对话',
+        messageCount: row.message_count,
+        publishedAt: row.published_at,
+        creatorName: row.creator_name || '匿名用户',
+        creatorAvatar: (row.creator_name || 'U').charAt(0).toUpperCase()
+    }));
+
+    return jsonResponse({ items });
 }
 
 async function getMessagesForSession(env, sessionId) {

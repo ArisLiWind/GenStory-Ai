@@ -5,8 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>聊天 - GenSphere</title>
     <link rel="icon" type="image/png" href="assets/logo-icon.png">
-    <link rel="stylesheet" href="css/style.css?v=20260911h">
-    <link rel="stylesheet" href="css/chat.css?v=20260911h">
+    <link rel="stylesheet" href="css/style.css?v=20260911h2">
+    <link rel="stylesheet" href="css/chat.css?v=20260911h2">
 </head>
 <body class="chat-page-body">
     <div class="chat-layout">
@@ -31,7 +31,13 @@
                 </button>
             </div>
             <div class="chat-header-right">
-                <!-- Character info panel will be shown here when expanded -->
+                <button class="chat-publish-btn" id="publishChatBtn" onclick="publishChat()" title="发布这段对话" style="display:none;">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18">
+                        <path d="M22 2L11 13"/>
+                        <path d="M22 2l-7 20-4-9-9-4z"/>
+                    </svg>
+                    <span>发布对话</span>
+                </button>
             </div>
         </header>
 
@@ -129,8 +135,8 @@
         </footer>
     </div>
 
-    <script src="js/api.js?v=20260911h"></script>
-    <script src="js/default-characters.js?v=20260911h"></script>
-    <script src="js/chat.js?v=20260911h"></script>
+    <script src="js/api.js?v=20260911h2"></script>
+    <script src="js/default-characters.js?v=20260911h2"></script>
+    <script src="js/chat.js?v=20260911h2"></script>
 </body>
 </html>
