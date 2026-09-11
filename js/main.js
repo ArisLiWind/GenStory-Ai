@@ -115,21 +115,12 @@ async function initView() {
 
         // 只有主页才加载角色列表
         if (hasCharacterGrid) {
-            // 先用默认数据渲染（立即显示，不等待后端）
-            if (allCharacters.length === 0) {
-                allCharacters = [...DEFAULT_CHARACTERS];
-                filteredCharacters = [...allCharacters];
-                totalCharacters = allCharacters.length;
-                hasMore = false;
-                useBackendData = false;
-            }
-            renderCharacters(1);
-            setupInfiniteScroll();
-            // 异步加载后端数据，加载完成后替换
+            // 先显示加载状态，不渲染默认数据（避免闪现）
+            characterGrid.innerHTML = '<div style="grid-column: 1/-1; text-align:center; padding:60px; color:rgba(255,255,255,0.4);">加载中...</div>';
+            // 异步加载后端数据，加载完成后渲染
             loadCharactersFromBackend().then(() => {
-                if (useBackendData) {
-                    renderCharacters(1);
-                }
+                renderCharacters(1);
+                setupInfiniteScroll();
             });
         }
     } else {
@@ -141,20 +132,11 @@ async function initView() {
 
         // 只有主页才加载角色列表
         if (hasGuestGrid) {
-            // 先用默认数据渲染（立即显示，不等待后端）
-            if (allCharacters.length === 0) {
-                allCharacters = [...DEFAULT_CHARACTERS];
-                filteredCharacters = [...allCharacters];
-                totalCharacters = allCharacters.length;
-                hasMore = false;
-                useBackendData = false;
-            }
-            renderGuestCharacters();
-            // 异步加载后端数据，加载完成后替换
+            // 先显示加载状态，不渲染默认数据（避免闪现）
+            guestCharacterGrid.innerHTML = '<div style="grid-column: 1/-1; text-align:center; padding:60px; color:rgba(255,255,255,0.4);">加载中...</div>';
+            // 异步加载后端数据，加载完成后渲染
             loadCharactersFromBackend().then(() => {
-                if (useBackendData) {
-                    renderGuestCharacters();
-                }
+                renderGuestCharacters();
             });
         }
     }
@@ -172,11 +154,10 @@ async function loadCharactersFromBackend() {
             sortBy: currentSortBy
         });
 
-        if (result.code === 0 && result.data && Array.isArray(result.data.items)) {
-            const items = result.data.items;
-            allCharacters = items.map(normalizeCharFromBackend);
+        if (result.code === 0 && result.data && Array.isArray(result.data.items) && result.data.items.length > 0) {
+            allCharacters = result.data.items.map(normalizeCharFromBackend);
             filteredCharacters = [...allCharacters];
-            totalCharacters = result.data.total || items.length;
+            totalCharacters = result.data.total || allCharacters.length;
             hasMore = !!result.data.hasMore;
             useBackendData = true;
             isLoading = false;
@@ -186,12 +167,10 @@ async function loadCharactersFromBackend() {
         console.error('Failed to load characters from backend:', e);
     }
 
-    // 后端加载失败时，保留已有的默认角色数据，不清空
-    if (allCharacters.length === 0) {
-        allCharacters = [...DEFAULT_CHARACTERS];
-        filteredCharacters = [...allCharacters];
-        totalCharacters = allCharacters.length;
-    }
+    // 后端加载失败或返回空数据时，使用默认角色数据作为 fallback
+    allCharacters = [...DEFAULT_CHARACTERS];
+    filteredCharacters = [...allCharacters];
+    totalCharacters = allCharacters.length;
     hasMore = false;
     useBackendData = false;
     isLoading = false;

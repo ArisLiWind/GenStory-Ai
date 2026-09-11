@@ -189,18 +189,34 @@ async function sendMessage(request, env, sessionId) {
         const npcStates = await getOrCreateNpcStates(env, sessionId, character, worldState);
         const playerState = await getOrCreatePlayerState(env, sessionId, worldState);
 
-        // Step 2: Parse user action
-        const parsedAction = await parseAction(env, content.trim(), character, worldState);
+        // Step 2: Parse user action (non-fatal — if it fails, use fallback)
+        let parsedAction;
+        try {
+            parsedAction = await parseAction(env, content.trim(), character, worldState);
+        } catch (parseErr) {
+            console.warn('Action parse failed, using fallback:', parseErr.message);
+            parsedAction = {
+                action_type: 'other',
+                target: '',
+                content: content.trim(),
+                intent: '',
+                expected_effects: []
+            };
+        }
 
-        // Step 3: Update world state (simplified version)
+        // Step 3: Update world state
         await updateWorldStateAfterAction(env, sessionId, worldState, npcStates, playerState, parsedAction, character);
 
-        // Step 4: Generate RPG narrative
+        // Step 4: Generate RPG narrative (pass history WITHOUT the current message to avoid duplication)
         const updatedWorldState = await getOrCreateWorldState(env, sessionId, character);
         const updatedNpcStates = await getOrCreateNpcStates(env, sessionId, character, updatedWorldState);
         const updatedPlayerState = await getOrCreatePlayerState(env, sessionId, updatedWorldState);
 
-        reply = await generateNarrative(env, character, updatedWorldState, updatedNpcStates, updatedPlayerState, parsedAction, messages);
+        // Exclude the last user message from history (it was already saved to DB)
+        // generateNarrative will add the parsed action as the user message
+        const historyForNarrative = messages.slice(0, -1); // remove last (current user message)
+
+        reply = await generateNarrative(env, character, updatedWorldState, updatedNpcStates, updatedPlayerState, parsedAction, historyForNarrative);
 
         // Step 5: Parse status changes from narrative and update DB (best-effort)
         try {
@@ -216,7 +232,7 @@ async function sendMessage(request, env, sessionId) {
             reply = await callLLM(env, character, messages);
         } catch (llmErr) {
             console.error('LLM Fallback Error:', llmErr);
-            reply = '（抱歉，我现在有点忙，请稍后再试...）';
+            reply = '（抱歉，AI服务暂时不可用，请检查管理后台的API Key配置是否正确。错误信息：' + (llmErr.message || '未知错误') + '）';
         }
     }
 

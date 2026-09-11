@@ -1,13 +1,18 @@
 // ============================================
 // Admin Routes
 // ============================================
+// 架构说明：
+// - Admin Token：管理后台的访问密码，与 API Key 完全无关
+//   存储在 Cloudflare 环境变量 ADMIN_TOKEN 中（通过 wrangler secret 设置）
+//   如果未设置，默认使用 'gensphere-admin-2024'（仅用于开发环境）
+// - API Key：LLM 服务的密钥，存储在数据库 api_keys 表中
+//   在管理后台配置，用户聊天时自动调用
+// - 两者完全独立：Admin Token 只用于进入管理后台，API Key 只用于 AI 对话
 
 import { jsonResponse, errorResponse, parseBody, getCurrentUser, now, getTokenFromRequest, safeJsonParse } from '../utils.js';
 
 function checkAdmin(request, env) {
     const adminToken = request.headers.get('X-Admin-Token');
-    // Use ADMIN_TOKEN from Cloudflare environment (set via `wrangler secret put ADMIN_TOKEN`)
-    // Falls back to default for development convenience
     const envAdminToken = env.ADMIN_TOKEN || 'gensphere-admin-2024';
     if (adminToken && adminToken === envAdminToken) {
         return { isAdmin: true, viaToken: true };
