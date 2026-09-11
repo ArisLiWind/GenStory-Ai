@@ -657,23 +657,39 @@ async function startChatSession() {
                 }
             }
         } else {
-            throw new Error(result?.message || 'Failed to create session');
+            const error = new Error(result?.message || 'Failed to create session');
+            error.code = result?.code;
+            throw error;
         }
     } catch (error) {
         console.error('Session creation failed:', error);
-        
+
+        const isAuthError = error?.code === 401 || /登录|未登录|请先登录/.test(error?.message || '');
+
         // Backend not available - show error, NO mock responses
         if (messagesContainer) {
-            messagesContainer.innerHTML = `
-                <div style="text-align:center;padding:60px 20px;">
-                    <div style="font-size:48px;margin-bottom:16px;">⚠️</div>
-                    <h3 style="color:#fff;margin-bottom:8px;">AI服务未连接</h3>
-                    <p style="color:#888;font-size:14px;line-height:1.6;max-width:400px;margin:0 auto;">
-                        后端API服务尚未部署或未配置API密钥。<br>
-                        管理员请在 <a href="admin.html" style="color:#818cf8;">管理后台</a> 配置DeepSeek API密钥后重试。
-                    </p>
-                </div>
-            `;
+            if (isAuthError) {
+                messagesContainer.innerHTML = `
+                    <div style="text-align:center;padding:60px 20px;">
+                        <div style="font-size:48px;margin-bottom:16px;">🔐</div>
+                        <h3 style="color:#fff;margin-bottom:8px;">请先登录后开始聊天</h3>
+                        <p style="color:#888;font-size:14px;line-height:1.6;max-width:400px;margin:0 auto;">
+                            角色会话需要登录后保存剧情进度和历史记录。
+                        </p>
+                        <a href="login.html" style="display:inline-block;margin-top:18px;padding:10px 24px;background:linear-gradient(135deg,#6366f1,#8b5cf6);color:#fff;border-radius:12px;text-decoration:none;">去登录</a>
+                    </div>
+                `;
+            } else {
+                messagesContainer.innerHTML = `
+                    <div style="text-align:center;padding:60px 20px;">
+                        <div style="font-size:48px;margin-bottom:16px;">⚠️</div>
+                        <h3 style="color:#fff;margin-bottom:8px;">AI服务连接失败</h3>
+                        <p style="color:#888;font-size:14px;line-height:1.6;max-width:400px;margin:0 auto;">
+                            ${escapeHtml(error?.message || '后端服务暂时不可用，请稍后重试。')}
+                        </p>
+                    </div>
+                `;
+            }
         }
         
         // Still show the first message for preview
@@ -999,7 +1015,7 @@ async function sendMessage() {
             id: 'b_' + Date.now(),
             role: 'bot',
             name: currentCharacter.chatName || currentCharacter.title,
-            content: '(AI服务未连接，请稍后重试。)',
+            content: '(请先登录后开始聊天，或刷新页面重新连接会话。)',
             timestamp: Date.now(),
             verified: false
         };
