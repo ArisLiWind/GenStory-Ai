@@ -251,6 +251,7 @@ function parseRpgMessage(content) {
     };
 
     let text = content.trim();
+    const originalText = text;
 
     // ===== 1. Parse header: 【时间·地点】 =====
     const headerMatch = text.match(/^【([^】·]+)[·\s]+([^】]+)】/);
@@ -292,52 +293,92 @@ function parseRpgMessage(content) {
         });
     }
 
-    // Known status-type section names
-    const statusSectionNames = ['当前状态', '角色状态', '状态', '当前任务', '任务', '已知情报', '情报', '线索', '你可以', '行动选项', '选项', '任务分支', '可选行动', '状态变化', '角色状态更新', 'NPC反应', 'NPC 反应', 'npc反应'];
-
-    // ===== 3. Extract known sections and build scene text =====
-    // Strategy: remove known status sections from the text; everything left = scene description
+    // ===== 3. 提取所有 section 的内容 =====
     const sections = {};
-    const removeRanges = []; // [start, end] ranges to remove from text
-
     for (let i = 0; i < sectionPositions.length; i++) {
         const sec = sectionPositions[i];
         const nextStart = i < sectionPositions.length - 1
             ? sectionPositions[i + 1].start
             : text.length;
-        const sectionContent = text.substring(sec.end, nextStart).trim();
-        sections[sec.name] = sectionContent;
+        sections[sec.name] = text.substring(sec.end, nextStart).trim();
+    }
 
-        const isStatusType = statusSectionNames.some(s => sec.name.includes(s));
-        if (isStatusType) {
-            // Mark this section (marker + content) for removal
-            removeRanges.push([sec.start, nextStart]);
+    // ===== 4. 正向提取场景正文（核心修复） =====
+    // 策略：找到"顶部状态面板"的结束位置 和 "底部选项面板"的开始位置
+    // 中间的内容就是场景正文
+    const topStatusKeys = ['当前状态', '角色状态', '状态', '属性', '当前任务', '任务', '主线任务', '支线任务', '已知情报', '情报', '线索', '获得情报', '状态变化', '角色状态更新', '属性变化'];
+    const bottomStatusKeys = ['你可以', '行动选项', '选项', '任务分支', '可选行动', '选择', '下一步行动', '你选择', '请选择'];
+    const sceneKeys = ['场景', '场景描述', '场景正文', '叙述', '故事', '剧情', '正文', '场景标题'];
+
+    // 找到最后一个"顶部状态"section 的结束位置
+    let topStatusEnd = 0;
+    for (const sec of sectionPositions) {
+        const isTopStatus = topStatusKeys.some(k => sec.name.includes(k));
+        if (isTopStatus) {
+            const idx = sectionPositions.indexOf(sec);
+            const nextStart = idx < sectionPositions.length - 1
+                ? sectionPositions[idx + 1].start
+                : text.length;
+            topStatusEnd = Math.max(topStatusEnd, nextStart);
         }
     }
 
-    // Build scene description: text with known status sections removed
-    let sceneText = '';
-    let lastEnd = 0;
-    for (const [start, end] of removeRanges) {
-        sceneText += text.substring(lastEnd, start);
-        lastEnd = end;
+    // 找到第一个"底部状态"section 的开始位置
+    let bottomStatusStart = text.length;
+    for (const sec of sectionPositions) {
+        const isBottomStatus = bottomStatusKeys.some(k => sec.name.includes(k));
+        if (isBottomStatus) {
+            bottomStatusStart = Math.min(bottomStatusStart, sec.start);
+        }
     }
-    sceneText += text.substring(lastEnd); // remaining text after last removed section
-    sceneText = sceneText.trim();
 
-    // If sceneText is empty (all text was in status sections), use full original text
-    if (!sceneText && sectionPositions.length > 0) {
-        sceneText = text;
+    // 找到"场景类"section 的内容
+    let sceneSectionContent = '';
+    let sceneSectionEnd = 0;
+    for (const sec of sectionPositions) {
+        const isScene = sceneKeys.some(k => sec.name.includes(k));
+        if (isScene) {
+            const idx = sectionPositions.indexOf(sec);
+            const nextStart = idx < sectionPositions.length - 1
+                ? sectionPositions[idx + 1].start
+                : text.length;
+            const secContent = text.substring(sec.end, nextStart).trim();
+            // 取最长的场景 section 作为主场景
+            if (secContent.length > sceneSectionContent.length) {
+                sceneSectionContent = secContent;
+                sceneSectionEnd = nextStart;
+            }
+        }
+    }
+
+    // 提取场景正文：
+    // 优先用"场景类 section"的内容
+    // 否则用"顶部状态结束"到"底部状态开始"之间的内容
+    let sceneText = '';
+    if (sceneSectionContent) {
+        sceneText = sceneSectionContent;
+    } else if (topStatusEnd < bottomStatusStart) {
+        sceneText = text.substring(topStatusEnd, bottomStatusStart).trim();
+    }
+
+    // 清理分隔线和多余空行
+    sceneText = sceneText
+        .replace(/^[━─═\s…—]+$/gm, '')
+        .replace(/\n{3,}/g, '\n\n')
+        .trim();
+
+    // 【关键保障】如果场景正文太短或为空，直接使用完整原文
+    // 确保用户永远能看到完整内容，不会出现空白消息
+    if (!sceneText || sceneText.length < 30) {
+        sceneText = originalText;
     }
 
     result.sceneDesc = sceneText;
-    if (sceneText) {
-        result.isRpg = true;
-    }
+    result.npcReaction = sceneText;
 
-    // ===== 4. Extract specific status fields =====
+    // ===== 5. 提取状态面板数据 =====
     // Current status
-    for (const key of ['当前状态', '角色状态', '状态']) {
+    for (const key of ['当前状态', '角色状态', '状态', '属性']) {
         if (sections[key]) {
             result.isRpg = true;
             result.currentStatus = sections[key];
@@ -350,7 +391,7 @@ function parseRpgMessage(content) {
     }
 
     // Current quest
-    for (const key of ['当前任务', '任务']) {
+    for (const key of ['当前任务', '任务', '主线任务', '支线任务']) {
         if (sections[key]) {
             result.isRpg = true;
             result.currentQuest = sections[key];
@@ -359,18 +400,18 @@ function parseRpgMessage(content) {
     }
 
     // Known intel
-    for (const key of ['已知情报', '情报', '线索']) {
+    for (const key of ['已知情报', '情报', '线索', '获得情报']) {
         if (sections[key]) {
             result.isRpg = true;
             const lines = sections[key].split('\n').map(s => s.trim()).filter(s => s);
-            result.knownIntel = lines.map(l => l.replace(/^[-•▪▸►·]\s*/, '').trim()).filter(s => s);
+            result.knownIntel = lines.map(l => l.replace(/^[-•▪▸►·\d\.]\s*/, '').trim()).filter(s => s);
             if (result.knownIntel.length === 0) result.knownIntel = lines;
             break;
         }
     }
 
     // Status changes
-    for (const key of ['状态变化', '角色状态更新']) {
+    for (const key of ['状态变化', '角色状态更新', '属性变化']) {
         if (sections[key]) {
             result.isRpg = true;
             const lines = sections[key].split('\n').map(s => s.trim()).filter(s => s);
@@ -380,7 +421,7 @@ function parseRpgMessage(content) {
     }
 
     // Action options
-    for (const key of ['你可以', '行动选项', '选项', '任务分支', '可选行动']) {
+    for (const key of bottomStatusKeys) {
         if (sections[key]) {
             result.isRpg = true;
             result.actionOptions = parseOptionsText(sections[key]);
@@ -389,45 +430,60 @@ function parseRpgMessage(content) {
     }
 
     // NPC reaction
-    for (const key of ['NPC反应', 'NPC 反应', 'npc反应']) {
+    for (const key of ['NPC反应', 'NPC 反应', 'npc反应', '人物反应']) {
         if (sections[key]) {
             result.isRpg = true;
             result.npcReaction = sections[key];
             break;
         }
     }
-    if (!result.npcReaction && result.sceneDesc) {
-        result.npcReaction = result.sceneDesc;
-    }
 
-    // ===== 5. Check end-of-text options (no 【】 marker) =====
+    // ===== 6. 检查文末选项（没有【】标记的情况）=====
     if (result.actionOptions.length === 0) {
-        const opts = parseOptionsFromEnd(sceneText || text);
+        const opts = parseOptionsFromEnd(originalText);
         if (opts.length >= 2) {
             result.isRpg = true;
             result.actionOptions = opts;
-            const lastOptionIdx = findLastOptionStart(sceneText || text);
+            // 从场景描述末尾移除选项部分
+            const lastOptionIdx = findLastOptionStart(result.sceneDesc);
             if (lastOptionIdx > 0) {
-                result.sceneDesc = (sceneText || text).substring(0, lastOptionIdx).trim();
+                result.sceneDesc = result.sceneDesc.substring(0, lastOptionIdx).trim();
+                result.sceneDesc = result.sceneDesc.replace(/^[━─═\s…—]+$/gm, '').trim();
+                if (!result.sceneDesc || result.sceneDesc.length < 30) {
+                    result.sceneDesc = originalText;
+                }
                 if (!result.npcReaction) result.npcReaction = result.sceneDesc;
             }
         }
     }
 
-    // ===== 6. Fallback: if not RPG but has RPG-style formatting =====
+    // ===== 7. RPG 格式检测 =====
+    // 有 2 个以上【】标记判定为 RPG
+    if (!result.isRpg && sectionPositions.length >= 2) {
+        result.isRpg = true;
+    }
+
+    // 有选项列表也判定为 RPG
+    if (!result.isRpg && result.actionOptions.length >= 2) {
+        result.isRpg = true;
+    }
+
+    // 有动作描写 + 对话也判定为 RPG
     if (!result.isRpg && content) {
         const hasActions = /\*[^*]+\*/.test(content);
         const hasDialogue = /"[^"]+"/.test(content) || /「[^」]+」/.test(content);
-        if (hasActions && hasDialogue) {
+        const hasCircledNumbers = /[①②③④⑤]/.test(content);
+        if ((hasActions && hasDialogue) || hasCircledNumbers) {
             result.isRpg = true;
             result.npcReaction = content;
             result.sceneDesc = content;
         }
     }
 
-    // ===== 7. ULTIMATE FALLBACK: if isRpg but sceneDesc is empty, use rawContent =====
-    if (result.isRpg && !result.sceneDesc) {
+    // ===== 8. 最终兜底：确保场景描述永远有内容 =====
+    if (result.isRpg && (!result.sceneDesc || result.sceneDesc.length < 10)) {
         result.sceneDesc = content;
+        if (!result.npcReaction) result.npcReaction = content;
     }
 
     return result;
@@ -455,25 +511,39 @@ function parseOptionsText(optionsText) {
         }
         let optText = optionsText.substring(startIdx, endIdx).trim()
             .replace(/\n/g, ' ').replace(/\s+/g, ' ').trim();
-        // 跳过无效选项：自由行动、横线分隔符、空内容
+        // 跳过无效选项
         if (!optText) continue;
-        if (optText.includes('自由行动') || optText.includes('输入你想')) continue;
-        // 过滤纯横线/分隔符选项（如 ━━━, ───, ──）
-        if (/^[━─━│┃═]+$/.test(optText)) continue;
+        if (optText.includes('自由行动') || optText.includes('输入你想') || optText.includes('自由发挥')) continue;
+        if (/^[━─━│┃═\-…—]+$/.test(optText)) continue;
         if (optText.length < 2) continue;
         options.push(optText);
     }
 
-    // If no circled numbers, try numbered list
+    // If no circled numbers, try numbered list (1. 2. 3. 或 1、2、3、)
     if (!foundAny) {
         const lines = optionsText.split('\n').map(l => l.trim()).filter(l => l);
         for (const line of lines) {
-            const numMatch = line.match(/^\d+[\.、]\s*(.+)/);
+            const numMatch = line.match(/^\d+[\.、\)）]\s*(.+)/);
             if (numMatch) {
                 const opt = numMatch[1].trim();
                 if (!opt) continue;
-                if (opt.includes('自由行动') || opt.includes('输入你想')) continue;
-                if (/^[━─━│┃═]+$/.test(opt)) continue;
+                if (opt.includes('自由行动') || opt.includes('输入你想') || opt.includes('自由发挥')) continue;
+                if (/^[━─━│┃═\-…—]+$/.test(opt)) continue;
+                if (opt.length < 2) continue;
+                options.push(opt);
+            }
+        }
+    }
+
+    // 还没找到的话，尝试 - 开头的列表
+    if (options.length === 0) {
+        const lines = optionsText.split('\n').map(l => l.trim()).filter(l => l);
+        for (const line of lines) {
+            if (/^[-•▪▸►·]\s+/.test(line)) {
+                const opt = line.replace(/^[-•▪▸►·]\s+/, '').trim();
+                if (!opt) continue;
+                if (opt.includes('自由行动') || opt.includes('输入你想') || opt.includes('自由发挥')) continue;
+                if (/^[━─━│┃═\-…—]+$/.test(opt)) continue;
                 if (opt.length < 2) continue;
                 options.push(opt);
             }
@@ -603,14 +673,31 @@ window.selectActionOption = function(index) {
     const option = currentActionOptions[index];
     if (!option || isSending) return;
 
+    // 高亮被选中的按钮，给用户明确的视觉反馈
+    const allPills = document.querySelectorAll('.rpg-action-pill');
+    allPills.forEach((pill, i) => {
+        if (i === index) {
+            pill.classList.add('selected');
+        } else {
+            pill.classList.remove('selected');
+        }
+    });
+
     const input = document.getElementById('chatInput');
     if (input) {
         input.value = option;
         input.focus();
+        // 将光标移到文字末尾
+        input.setSelectionRange(option.length, option.length);
         autoResizeTextarea();
+        // 平滑滚动到底部，让用户看到输入框和已填入的内容
+        const messagesArea = document.querySelector('.messages-area');
+        if (messagesArea) {
+            messagesArea.scrollTo({ top: messagesArea.scrollHeight, behavior: 'smooth' });
+        }
     }
-    // Auto-send the selected option
-    sendMessage();
+    // 不自动发送，让用户确认后点击发送按钮
+    // 这样用户能感知到自己选择了什么，也可以修改后再发送
 };
 
 async function startChatSession() {
@@ -813,7 +900,15 @@ function renderMessage(msg) {
     const isRpg = rpgData?.isRpg && !isUser;
 
     if (isRpg) {
-        return renderRpgBotMessage(msg, rpgData, avatarText);
+        // 安全兜底：如果场景描述内容过少，说明解析可能有问题
+        // 降级为普通气泡渲染，确保用户总能看到完整内容
+        const sceneLen = (rpgData.sceneDesc || '').trim().length;
+        if (sceneLen < 20) {
+            console.warn('[RPG] 场景描述内容过少，降级为普通气泡渲染。sceneLen=', sceneLen);
+            // fall through to classic style below
+        } else {
+            return renderRpgBotMessage(msg, rpgData, avatarText);
+        }
     }
 
     // Bot message - classic bubble style (fallback)
@@ -855,10 +950,11 @@ function renderRpgBotMessage(msg, rpgData, avatarText) {
     const currentStatus = rpgData.currentStatus || '';
     const currentQuest = rpgData.currentQuest || '';
     const knownIntel = rpgData.knownIntel || [];
+    const hasStatusPanel = currentStatus || currentQuest || knownIntel.length > 0;
 
-    // If we have status sections but no scene description,
-    // fall back to raw content so the user always sees the full text
-    if (!sceneDesc && (currentStatus || currentQuest || knownIntel.length > 0) && rpgData.rawContent) {
+    // 关键修复：如果场景描述为空，直接使用原始内容
+    // 确保用户总能看到完整文本，不会出现空白消息
+    if (!sceneDesc && rpgData.rawContent) {
         sceneDesc = rpgData.rawContent;
     }
 
@@ -874,7 +970,7 @@ function renderRpgBotMessage(msg, rpgData, avatarText) {
     }
 
     // 分隔线（场景正文和状态面板之间）
-    if (sceneDesc && (currentStatus || currentQuest || knownIntel.length > 0)) {
+    if (sceneDesc && hasStatusPanel) {
         bodyHtml += `<div class="rpg-turn-divider"><span>━━━</span></div>`;
     }
 
@@ -908,8 +1004,10 @@ function renderRpgBotMessage(msg, rpgData, avatarText) {
         `;
     }
 
-    // Turn divider
-    bodyHtml += `<div class="rpg-turn-divider"><span>— 回合结束 —</span></div>`;
+    // Turn divider - 只有在有内容时才显示
+    if (bodyHtml) {
+        bodyHtml += `<div class="rpg-turn-divider"><span>— 回合结束 —</span></div>`;
+    }
 
     return `
         <div class="message bot rpg-turn" data-msg-id="${msg.id}">

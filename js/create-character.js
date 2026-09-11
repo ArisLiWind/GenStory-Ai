@@ -112,6 +112,7 @@ async function loadCharacterForEdit(id) {
                 selectedTags = [...char.tags];
                 renderTags();
                 updatePreviewTags();
+                updateSuggestionChipsState();
             }
             
             // Set rating
@@ -235,7 +236,12 @@ function setupTags() {
     const chips = tagSuggestions.querySelectorAll('.tag-chip');
     chips.forEach(chip => {
         chip.addEventListener('click', () => {
-            addTag(chip.textContent.trim());
+            const tagText = chip.textContent.trim();
+            if (selectedTags.includes(tagText)) {
+                removeTag(tagText);
+            } else {
+                addTag(tagText);
+            }
         });
     });
     
@@ -252,6 +258,22 @@ function setupTags() {
     });
 }
 
+// 更新推荐标签的选中状态
+function updateSuggestionChipsState() {
+    const tagSuggestions = document.getElementById('tagSuggestions');
+    if (!tagSuggestions) return;
+    
+    const chips = tagSuggestions.querySelectorAll('.tag-chip');
+    chips.forEach(chip => {
+        const tagText = chip.textContent.trim();
+        if (selectedTags.includes(tagText)) {
+            chip.classList.add('selected');
+        } else {
+            chip.classList.remove('selected');
+        }
+    });
+}
+
 function isValidTag(tag) {
     const regex = /^[a-zA-Z0-9\u4e00-\u9fa5]{2,21}$/;
     return regex.test(tag) && !selectedTags.includes(tag) && selectedTags.length < maxTags;
@@ -264,12 +286,14 @@ function addTag(tag) {
     selectedTags.push(tag);
     renderTags();
     updatePreviewTags();
+    updateSuggestionChipsState();
 }
 
 function removeTag(tag) {
     selectedTags = selectedTags.filter(t => t !== tag);
     renderTags();
     updatePreviewTags();
+    updateSuggestionChipsState();
 }
 
 function renderTags() {
@@ -459,13 +483,13 @@ function setupCreateButton() {
 }
 
 // ===== 图片压缩 =====
-// 目标：压缩到 < 50KB base64（约 37KB 实际图片数据）
-// 这是为了确保 D1 数据库能正常存储（D1 对大文本值有限制）
+// 目标：压缩到 < 200KB base64（约 150KB 实际图片数据）
+// D1 数据库支持较大的文本值，适当提高质量保证预览清晰
 async function compressImageIfNeeded(dataUrl) {
     console.log('[Compress] Input size:', dataUrl.length, 'chars');
     
-    // 如果图片小于 40KB，直接返回
-    if (dataUrl.length < 40000) {
+    // 如果图片小于 150KB，直接返回（保证质量）
+    if (dataUrl.length < 150000) {
         console.log('[Compress] Small enough, skipping compression');
         return dataUrl;
     }
@@ -476,13 +500,15 @@ async function compressImageIfNeeded(dataUrl) {
         img.onload = () => {
             console.log('[Compress] Image loaded, dimensions:', img.width, 'x', img.height);
             
-            // 从小到大尝试，找到第一个 < 50KB 的结果
+            // 从大到小尝试，找到第一个 < 200KB 的结果（尽量保持高质量）
             const configs = [
-                { maxSize: 256, quality: 0.6 },
-                { maxSize: 192, quality: 0.5 },
-                { maxSize: 150, quality: 0.4 },
-                { maxSize: 100, quality: 0.3 },
-                { maxSize: 80, quality: 0.2 },
+                { maxSize: 512, quality: 0.85 },
+                { maxSize: 448, quality: 0.8 },
+                { maxSize: 384, quality: 0.75 },
+                { maxSize: 320, quality: 0.7 },
+                { maxSize: 256, quality: 0.65 },
+                { maxSize: 224, quality: 0.6 },
+                { maxSize: 192, quality: 0.55 },
             ];
             
             for (const config of configs) {
@@ -504,14 +530,14 @@ async function compressImageIfNeeded(dataUrl) {
                 const compressed = canvas.toDataURL('image/jpeg', config.quality);
                 console.log(`[Compress] ${width}x${height} q=${config.quality}: ${compressed.length} chars`);
                 
-                if (compressed.length < 50000) {
+                if (compressed.length < 200000) {
                     console.log('[Compress] Success! Final size:', compressed.length, 'chars');
                     resolve(compressed);
                     return;
                 }
             }
             
-            // 如果所有配置都超过 50KB，返回最后一个结果（已经是最小了）
+            // 如果所有配置都超过 200KB，返回最后一个结果（已经是最小合理尺寸了）
             const lastConfig = configs[configs.length - 1];
             let { width, height } = img;
             const ratio = lastConfig.maxSize / Math.max(width, height);
@@ -524,17 +550,15 @@ async function compressImageIfNeeded(dataUrl) {
             const ctx = canvas.getContext('2d');
             ctx.drawImage(img, 0, 0, width, height);
             
-            const finalResult = canvas.toDataURL('image/jpeg', 0.15);
+            const finalResult = canvas.toDataURL('image/jpeg', 0.5);
             console.log('[Compress] Fallback final size:', finalResult.length, 'chars');
             resolve(finalResult);
         };
         
         img.onerror = () => {
             console.error('[Compress] Image failed to load');
-            // 如果压缩完全失败，尝试直接截取原始数据的前 50KB
-            // base64 截断会导致图片损坏，所以返回空
-            // 后端会使用默认图片
-            resolve('');
+            // 如果压缩完全失败，返回原始数据（至少保证有图片）
+            resolve(dataUrl);
         };
         
         img.src = dataUrl;

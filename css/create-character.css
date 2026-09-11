@@ -144,21 +144,22 @@
     background: rgba(255, 255, 255, 0.03);
     border: 1px solid rgba(255, 255, 255, 0.06);
     border-radius: 16px;
-    padding: 20px;
+    padding: 24px 20px;
 }
 
 .preview-label {
     font-size: 13px;
     font-weight: 600;
     color: #c4b5fd;
-    margin-bottom: 12px;
+    margin-bottom: 16px;
     text-transform: uppercase;
     letter-spacing: 0.5px;
 }
 
 .preview-card {
     width: 100%;
-    margin: 0;
+    max-width: 320px;
+    margin: 0 auto;
 }
 
 .card-image-placeholder {
@@ -487,6 +488,20 @@
     background: rgba(99, 102, 241, 0.15);
     border-color: rgba(99, 102, 241, 0.4);
     color: #c4b5fd;
+}
+
+.tag-chip.selected {
+    background: linear-gradient(135deg, rgba(99, 102, 241, 0.3) 0%, rgba(139, 92, 246, 0.3) 100%);
+    border-color: #8b5cf6;
+    color: #ffffff;
+    box-shadow: 0 0 12px rgba(139, 92, 246, 0.3);
+}
+
+.tag-chip.selected::after {
+    content: '✓';
+    margin-left: 6px;
+    font-size: 12px;
+    font-weight: bold;
 }
 
 .selected-tags {
