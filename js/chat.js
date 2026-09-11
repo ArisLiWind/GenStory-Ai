@@ -252,7 +252,7 @@ function parseRpgMessage(content) {
 
     let text = content.trim();
 
-    // ===== 1. Parse header: 【时间·地点】 or time/location/weather in text =====
+    // ===== 1. Parse header: 【时间·地点】 =====
     const headerMatch = text.match(/^【([^】·]+)[·\s]+([^】]+)】/);
     if (headerMatch) {
         result.isRpg = true;
@@ -264,7 +264,7 @@ function parseRpgMessage(content) {
         text = text.substring(headerMatch[0].length).trim();
     }
 
-    // Try to extract time/weather/location from first line (e.g. "第12日 · 黄昏 · 暴雨 · 灰岩镇")
+    // Try "第12日 · 黄昏 · 暴雨 · 灰岩镇" format
     if (!result.worldState) {
         const firstLineMatch = text.match(/^([^\n]+·[^\n]+·[^\n]+·[^\n]+)\n/);
         if (firstLineMatch) {
@@ -280,8 +280,7 @@ function parseRpgMessage(content) {
         }
     }
 
-    // ===== 2. Parse all sections by 【section name】 markers =====
-    const sections = {};
+    // ===== 2. Find all 【section name】 markers =====
     const sectionRegex = /【([^】]+)】/g;
     const sectionPositions = [];
     let match;
@@ -293,233 +292,129 @@ function parseRpgMessage(content) {
         });
     }
 
-    for (let i = 0; i < sectionPositions.length; i++) {
-        const sec = sectionPositions[i];
-        const nextStart = i < sectionPositions.length - 1
-            ? sectionPositions[i + 1].start
-            : text.length;
-        const rawContent = text.substring(sec.end, nextStart).trim();
-        sections[sec.name] = rawContent;
-    }
+    // Known status-type section names
+    const statusSectionNames = ['当前状态', '角色状态', '状态', '当前任务', '任务', '已知情报', '情报', '线索', '你可以', '行动选项', '选项', '任务分支', '可选行动', '状态变化', '角色状态更新', 'NPC反应', 'NPC 反应', 'npc反应'];
 
-    // ===== 3. Extract scene description =====
-    // Collect ALL narrative text that doesn't belong to recognized status sections.
-    // This includes: text before first section, between sections, after last section,
-    // AND narrative lines mixed inside status sections (split from status data).
-    const statusSectionNames = ['当前状态', '状态', '角色状态', '当前任务', '任务', '已知情报', '情报', '线索', '你可以', '行动选项', '选项', '任务分支', '可选行动', '状态变化', '角色状态更新'];
-    let sceneParts = [];
-    let cursor = 0;
+    // ===== 3. Extract known sections and build scene text =====
+    // Strategy: remove known status sections from the text; everything left = scene description
+    const sections = {};
+    const removeRanges = []; // [start, end] ranges to remove from text
 
     for (let i = 0; i < sectionPositions.length; i++) {
         const sec = sectionPositions[i];
         const nextStart = i < sectionPositions.length - 1
             ? sectionPositions[i + 1].start
             : text.length;
+        const sectionContent = text.substring(sec.end, nextStart).trim();
+        sections[sec.name] = sectionContent;
 
-        // Text before this section marker (gap from cursor to marker start)
-        const gap = text.substring(cursor, sec.start).trim();
-        if (gap) {
-            sceneParts.push(gap);
-        }
-
-        // Check if this is a recognized status-type section
         const isStatusType = statusSectionNames.some(s => sec.name.includes(s));
-
         if (isStatusType) {
-            // Split section content: status data vs narrative text
-            // Status data: lines with colons (key:value), bullet points, short labels
-            // Narrative: lines with *actions*, "dialogue", long sentences
-            const sectionRaw = text.substring(sec.end, nextStart);
-            const lines = sectionRaw.split('\n');
-            const statusLines = [];
-            const narrativeLines = [];
-            let inNarrative = false;
-
-            for (const line of lines) {
-                const trimmed = line.trim();
-                if (!trimmed) {
-                    // Empty line - if we're already in narrative, keep the paragraph break
-                    if (inNarrative) narrativeLines.push('');
-                    continue;
-                }
-
-                // Is this a status-like line?
-                const isStatusLine = (
-                    /^[^*「」""（()]{1,20}[：:][^*「」""（()]+/.test(trimmed) || // key: value
-                    /^[-•▪▸►·■◆]/.test(trimmed) || // bullet point
-                    /^【[^】]+】/.test(trimmed) || // sub-marker
-                    (trimmed.length <= 10 && !/[*「」""（）()]/.test(trimmed)) // very short label
-                );
-
-                // Is this a narrative-like line?
-                const isNarrativeLine = (
-                    /\*[^*]+\*/.test(trimmed) || // *action*
-                    /"[^"]+"/.test(trimmed) || // "dialogue"
-                    /「[^」]+」/.test(trimmed) || // 「dialogue」
-                    trimmed.length > 25 // long sentence
-                ) && !isStatusLine;
-
-                if (isNarrativeLine) {
-                    inNarrative = true;
-                    narrativeLines.push(trimmed);
-                } else if (inNarrative) {
-                    // Once we've started narrative, non-status lines continue as narrative
-                    if (isStatusLine && narrativeLines.length > 0) {
-                        // A status line after narrative - could be new status block
-                        // Keep it as narrative if it's long, otherwise stop
-                        if (trimmed.length > 15) {
-                            narrativeLines.push(trimmed);
-                        } else {
-                            inNarrative = false;
-                            statusLines.push(trimmed);
-                        }
-                    } else {
-                        narrativeLines.push(trimmed);
-                    }
-                } else {
-                    statusLines.push(trimmed);
-                }
-            }
-
-            // Update section content to only status data
-            sections[sec.name] = statusLines.join('\n').trim();
-
-            // Collect narrative lines into sceneParts
-            const narrative = narrativeLines.join('\n').trim();
-            if (narrative) {
-                sceneParts.push(narrative);
-            }
-        }
-        // Non-status sections keep their full content in sections[]
-
-        cursor = nextStart;
-    }
-
-    // Text after the last section
-    if (cursor < text.length) {
-        const tail = text.substring(cursor).trim();
-        if (tail) {
-            sceneParts.push(tail);
+            // Mark this section (marker + content) for removal
+            removeRanges.push([sec.start, nextStart]);
         }
     }
 
-    // Assemble sceneDesc
-    if (sectionPositions.length === 0) {
-        // No sections found - all text is scene desc
-        result.sceneDesc = text.trim();
-    } else {
-        result.sceneDesc = sceneParts.join('\n\n').trim();
+    // Build scene description: text with known status sections removed
+    let sceneText = '';
+    let lastEnd = 0;
+    for (const [start, end] of removeRanges) {
+        sceneText += text.substring(lastEnd, start);
+        lastEnd = end;
+    }
+    sceneText += text.substring(lastEnd); // remaining text after last removed section
+    sceneText = sceneText.trim();
+
+    // If sceneText is empty (all text was in status sections), use full original text
+    if (!sceneText && sectionPositions.length > 0) {
+        sceneText = text;
     }
 
-    if (result.sceneDesc) {
+    result.sceneDesc = sceneText;
+    if (sceneText) {
         result.isRpg = true;
     }
 
-    // ===== 4. Extract NPC reaction =====
-    // In new format, NPC dialog is embedded in scene description
-    const npcKeys = ['NPC反应', 'NPC 反应', 'npc反应'];
-    for (const key of npcKeys) {
+    // ===== 4. Extract specific status fields =====
+    // Current status
+    for (const key of ['当前状态', '角色状态', '状态']) {
+        if (sections[key]) {
+            result.isRpg = true;
+            result.currentStatus = sections[key];
+            const locMatch = sections[key].match(/当前位置[：:]\s*([^\n｜|]+)/);
+            if (locMatch && result.worldState) result.worldState.location = locMatch[1].trim();
+            const timeMatch = sections[key].match(/时间[：:]\s*([^\n｜|]+)/);
+            if (timeMatch && result.worldState) result.worldState.time = timeMatch[1].trim();
+            break;
+        }
+    }
+
+    // Current quest
+    for (const key of ['当前任务', '任务']) {
+        if (sections[key]) {
+            result.isRpg = true;
+            result.currentQuest = sections[key];
+            break;
+        }
+    }
+
+    // Known intel
+    for (const key of ['已知情报', '情报', '线索']) {
+        if (sections[key]) {
+            result.isRpg = true;
+            const lines = sections[key].split('\n').map(s => s.trim()).filter(s => s);
+            result.knownIntel = lines.map(l => l.replace(/^[-•▪▸►·]\s*/, '').trim()).filter(s => s);
+            if (result.knownIntel.length === 0) result.knownIntel = lines;
+            break;
+        }
+    }
+
+    // Status changes
+    for (const key of ['状态变化', '角色状态更新']) {
+        if (sections[key]) {
+            result.isRpg = true;
+            const lines = sections[key].split('\n').map(s => s.trim()).filter(s => s);
+            result.statusChanges = lines.map(l => l.replace(/^[-•▪▸►]\s*/, '').trim()).filter(s => s);
+            break;
+        }
+    }
+
+    // Action options
+    for (const key of ['你可以', '行动选项', '选项', '任务分支', '可选行动']) {
+        if (sections[key]) {
+            result.isRpg = true;
+            result.actionOptions = parseOptionsText(sections[key]);
+            break;
+        }
+    }
+
+    // NPC reaction
+    for (const key of ['NPC反应', 'NPC 反应', 'npc反应']) {
         if (sections[key]) {
             result.isRpg = true;
             result.npcReaction = sections[key];
             break;
         }
     }
-    // If no separate NPC section, the scene desc itself contains NPC interaction
     if (!result.npcReaction && result.sceneDesc) {
         result.npcReaction = result.sceneDesc;
     }
 
-    // ===== 5. Extract current status =====
-    const currentStatusKeys = ['当前状态', '角色状态', '状态'];
-    for (const key of currentStatusKeys) {
-        if (sections[key]) {
-            result.isRpg = true;
-            result.currentStatus = sections[key].trim();
-            // Also parse for world state updates
-            const locMatch = sections[key].match(/当前位置[：:]\s*([^\n｜|]+)/);
-            if (locMatch && result.worldState) {
-                result.worldState.location = locMatch[1].trim();
-            }
-            const timeMatch = sections[key].match(/时间[：:]\s*([^\n｜|]+)/);
-            if (timeMatch && result.worldState) {
-                result.worldState.time = timeMatch[1].trim();
-            }
-            break;
-        }
-    }
-
-    // ===== 6. Extract current quest =====
-    const questKeys = ['当前任务', '任务'];
-    for (const key of questKeys) {
-        if (sections[key]) {
-            result.isRpg = true;
-            result.currentQuest = sections[key].trim();
-            break;
-        }
-    }
-
-    // ===== 7. Extract known intel =====
-    const intelKeys = ['已知情报', '情报', '线索'];
-    for (const key of intelKeys) {
-        if (sections[key]) {
-            result.isRpg = true;
-            const intelText = sections[key];
-            const lines = intelText.split('\n').map(s => s.trim()).filter(s => s);
-            const intel = [];
-            for (const line of lines) {
-                const cleaned = line.replace(/^[-•▪▸►·]\s*/, '').trim();
-                if (cleaned) intel.push(cleaned);
-            }
-            result.knownIntel = intel.length > 0 ? intel : lines;
-            break;
-        }
-    }
-
-    // ===== 8. Extract status changes =====
-    const statusKeys = ['状态变化', '角色状态更新'];
-    for (const key of statusKeys) {
-        if (sections[key]) {
-            result.isRpg = true;
-            const statusText = sections[key];
-            const lines = statusText.split('\n').map(s => s.trim()).filter(s => s);
-            const changes = [];
-            for (const line of lines) {
-                const cleaned = line.replace(/^[-•▪▸►]\s*/, '').trim();
-                if (cleaned) changes.push(cleaned);
-            }
-            result.statusChanges = changes.length > 0 ? changes : lines;
-            break;
-        }
-    }
-
-    // ===== 9. Extract action options =====
-    const optionKeys = ['你可以', '行动选项', '选项', '任务分支', '可选行动'];
-    for (const key of optionKeys) {
-        if (sections[key]) {
-            result.isRpg = true;
-            const optionsText = sections[key];
-            result.actionOptions = parseOptionsText(optionsText);
-            break;
-        }
-    }
-
-    // ===== 10. If no sections found, check end-of-text options =====
+    // ===== 5. Check end-of-text options (no 【】 marker) =====
     if (result.actionOptions.length === 0) {
-        const opts = parseOptionsFromEnd(text);
+        const opts = parseOptionsFromEnd(sceneText || text);
         if (opts.length >= 2) {
             result.isRpg = true;
             result.actionOptions = opts;
-            // Remove options from scene desc
-            const lastOptionIdx = findLastOptionStart(text);
+            const lastOptionIdx = findLastOptionStart(sceneText || text);
             if (lastOptionIdx > 0) {
-                result.sceneDesc = text.substring(0, lastOptionIdx).trim();
+                result.sceneDesc = (sceneText || text).substring(0, lastOptionIdx).trim();
                 if (!result.npcReaction) result.npcReaction = result.sceneDesc;
             }
         }
     }
 
-    // ===== 11. Fallback: detect RPG-style from formatting =====
+    // ===== 6. Fallback: if not RPG but has RPG-style formatting =====
     if (!result.isRpg && content) {
         const hasActions = /\*[^*]+\*/.test(content);
         const hasDialogue = /"[^"]+"/.test(content) || /「[^」]+」/.test(content);
@@ -528,6 +423,11 @@ function parseRpgMessage(content) {
             result.npcReaction = content;
             result.sceneDesc = content;
         }
+    }
+
+    // ===== 7. ULTIMATE FALLBACK: if isRpg but sceneDesc is empty, use rawContent =====
+    if (result.isRpg && !result.sceneDesc) {
+        result.sceneDesc = content;
     }
 
     return result;
