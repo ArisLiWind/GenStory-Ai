@@ -414,11 +414,11 @@ function hideLoginModal() {
     document.body.style.overflow = '';
 }
 
-modalClose.addEventListener('click', hideLoginModal);
-modalOverlay.addEventListener('click', hideLoginModal);
+if (modalClose) modalClose.addEventListener('click', hideLoginModal);
+if (modalOverlay) modalOverlay.addEventListener('click', hideLoginModal);
 
 document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape' && loginModal.classList.contains('visible')) {
+    if (loginModal && e.key === 'Escape' && loginModal.classList.contains('visible')) {
         hideLoginModal();
     }
 });
@@ -440,7 +440,7 @@ function closeUserDropdown() {
     }
 }
 
-userAvatar.addEventListener('click', (e) => {
+if (userAvatar) userAvatar.addEventListener('click', (e) => {
     e.stopPropagation();
     if (userDropdown.classList.contains('visible')) {
         closeUserDropdown();
@@ -450,7 +450,7 @@ userAvatar.addEventListener('click', (e) => {
 });
 
 document.addEventListener('click', (e) => {
-    if (!userDropdown.contains(e.target) && !userAvatar.contains(e.target)) {
+    if (userDropdown && !userDropdown.contains(e.target) && userAvatar && !userAvatar.contains(e.target)) {
         closeUserDropdown();
     }
 });
@@ -460,7 +460,7 @@ if (drawerOverlay) {
 }
 
 // ===== Logout =====
-logoutBtn.addEventListener('click', async () => {
+if (logoutBtn) logoutBtn.addEventListener('click', async () => {
     closeUserDropdown();
     
     // 调用登出 API
@@ -472,8 +472,8 @@ logoutBtn.addEventListener('click', async () => {
     localStorage.setItem(AUTO_LOGIN_KEY, 'false');
     
     // 重置并重新初始化
-    characterGrid.innerHTML = '';
-    guestCharacterGrid.innerHTML = '';
+    if (characterGrid) characterGrid.innerHTML = '';
+    if (guestCharacterGrid) guestCharacterGrid.innerHTML = '';
     initView();
     window.scrollTo({ top: 0 });
 });
@@ -561,6 +561,8 @@ sortOptions.forEach(option => {
 
 // ===== Back to Top =====
 function setupBackToTop() {
+    if (!backToTopBtn) return;
+    
     window.addEventListener('scroll', () => {
         if (window.scrollY > 500) {
             backToTopBtn.classList.add('visible');
@@ -576,9 +578,9 @@ function setupBackToTop() {
 
 // ===== Navbar scroll effect =====
 window.addEventListener('scroll', () => {
-    if (window.scrollY > 50) {
+    if (navbar && window.scrollY > 50) {
         navbar.classList.add('scrolled');
-    } else {
+    } else if (navbar) {
         navbar.classList.remove('scrolled');
     }
 });
