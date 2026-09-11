@@ -298,35 +298,121 @@ function parseRpgMessage(content) {
         const nextStart = i < sectionPositions.length - 1
             ? sectionPositions[i + 1].start
             : text.length;
-        const content = text.substring(sec.end, nextStart).trim();
-        sections[sec.name] = content;
+        const rawContent = text.substring(sec.end, nextStart).trim();
+        sections[sec.name] = rawContent;
     }
 
     // ===== 3. Extract scene description =====
-    // Scene desc = everything before the first recognized status/options section
-    const statusSectionNames = ['当前状态', '状态', '角色状态', '当前任务', '任务', '已知情报', '情报', '你可以', '行动选项', '选项'];
-    let firstStatusIdx = -1;
+    // Collect ALL narrative text that doesn't belong to recognized status sections.
+    // This includes: text before first section, between sections, after last section,
+    // AND narrative lines mixed inside status sections (split from status data).
+    const statusSectionNames = ['当前状态', '状态', '角色状态', '当前任务', '任务', '已知情报', '情报', '线索', '你可以', '行动选项', '选项', '任务分支', '可选行动', '状态变化', '角色状态更新'];
+    let sceneParts = [];
+    let cursor = 0;
+
     for (let i = 0; i < sectionPositions.length; i++) {
-        const name = sectionPositions[i].name;
-        if (statusSectionNames.some(s => name.includes(s))) {
-            firstStatusIdx = sectionPositions[i].start;
-            break;
+        const sec = sectionPositions[i];
+        const nextStart = i < sectionPositions.length - 1
+            ? sectionPositions[i + 1].start
+            : text.length;
+
+        // Text before this section marker (gap from cursor to marker start)
+        const gap = text.substring(cursor, sec.start).trim();
+        if (gap) {
+            sceneParts.push(gap);
+        }
+
+        // Check if this is a recognized status-type section
+        const isStatusType = statusSectionNames.some(s => sec.name.includes(s));
+
+        if (isStatusType) {
+            // Split section content: status data vs narrative text
+            // Status data: lines with colons (key:value), bullet points, short labels
+            // Narrative: lines with *actions*, "dialogue", long sentences
+            const sectionRaw = text.substring(sec.end, nextStart);
+            const lines = sectionRaw.split('\n');
+            const statusLines = [];
+            const narrativeLines = [];
+            let inNarrative = false;
+
+            for (const line of lines) {
+                const trimmed = line.trim();
+                if (!trimmed) {
+                    // Empty line - if we're already in narrative, keep the paragraph break
+                    if (inNarrative) narrativeLines.push('');
+                    continue;
+                }
+
+                // Is this a status-like line?
+                const isStatusLine = (
+                    /^[^*「」""（()]{1,20}[：:][^*「」""（()]+/.test(trimmed) || // key: value
+                    /^[-•▪▸►·■◆]/.test(trimmed) || // bullet point
+                    /^【[^】]+】/.test(trimmed) || // sub-marker
+                    (trimmed.length <= 10 && !/[*「」""（）()]/.test(trimmed)) // very short label
+                );
+
+                // Is this a narrative-like line?
+                const isNarrativeLine = (
+                    /\*[^*]+\*/.test(trimmed) || // *action*
+                    /"[^"]+"/.test(trimmed) || // "dialogue"
+                    /「[^」]+」/.test(trimmed) || // 「dialogue」
+                    trimmed.length > 25 // long sentence
+                ) && !isStatusLine;
+
+                if (isNarrativeLine) {
+                    inNarrative = true;
+                    narrativeLines.push(trimmed);
+                } else if (inNarrative) {
+                    // Once we've started narrative, non-status lines continue as narrative
+                    if (isStatusLine && narrativeLines.length > 0) {
+                        // A status line after narrative - could be new status block
+                        // Keep it as narrative if it's long, otherwise stop
+                        if (trimmed.length > 15) {
+                            narrativeLines.push(trimmed);
+                        } else {
+                            inNarrative = false;
+                            statusLines.push(trimmed);
+                        }
+                    } else {
+                        narrativeLines.push(trimmed);
+                    }
+                } else {
+                    statusLines.push(trimmed);
+                }
+            }
+
+            // Update section content to only status data
+            sections[sec.name] = statusLines.join('\n').trim();
+
+            // Collect narrative lines into sceneParts
+            const narrative = narrativeLines.join('\n').trim();
+            if (narrative) {
+                sceneParts.push(narrative);
+            }
+        }
+        // Non-status sections keep their full content in sections[]
+
+        cursor = nextStart;
+    }
+
+    // Text after the last section
+    if (cursor < text.length) {
+        const tail = text.substring(cursor).trim();
+        if (tail) {
+            sceneParts.push(tail);
         }
     }
 
-    if (firstStatusIdx > 0) {
-        result.isRpg = true;
-        result.sceneDesc = text.substring(0, firstStatusIdx).trim();
-    } else if (sectionPositions.length === 0) {
-        // No sections found - all text is scene desc + NPC reaction
+    // Assemble sceneDesc
+    if (sectionPositions.length === 0) {
+        // No sections found - all text is scene desc
         result.sceneDesc = text.trim();
-    } else if (!result.sceneDesc && sectionPositions.length > 0) {
-        // Content before first section
-        const beforeFirst = text.substring(0, sectionPositions[0].start).trim();
-        if (beforeFirst) {
-            result.isRpg = true;
-            result.sceneDesc = beforeFirst;
-        }
+    } else {
+        result.sceneDesc = sceneParts.join('\n\n').trim();
+    }
+
+    if (result.sceneDesc) {
+        result.isRpg = true;
     }
 
     // ===== 4. Extract NPC reaction =====
@@ -865,14 +951,34 @@ function renderMessage(msg) {
 }
 
 function renderRpgBotMessage(msg, rpgData, avatarText) {
-    const sceneDesc = rpgData.sceneDesc || '';
+    let sceneDesc = rpgData.sceneDesc || '';
     const currentStatus = rpgData.currentStatus || '';
     const currentQuest = rpgData.currentQuest || '';
     const knownIntel = rpgData.knownIntel || [];
 
+    // If we have status sections but no scene description,
+    // fall back to raw content so the user always sees the full text
+    if (!sceneDesc && (currentStatus || currentQuest || knownIntel.length > 0) && rpgData.rawContent) {
+        sceneDesc = rpgData.rawContent;
+    }
+
     let bodyHtml = '';
 
-    // 状态面板放最前面
+    // 场景正文放最前面（故事叙述、NPC对话）
+    if (sceneDesc) {
+        bodyHtml += `
+            <div class="rpg-scene-desc">
+                ${formatRpgText(sceneDesc)}
+            </div>
+        `;
+    }
+
+    // 分隔线（场景正文和状态面板之间）
+    if (sceneDesc && (currentStatus || currentQuest || knownIntel.length > 0)) {
+        bodyHtml += `<div class="rpg-turn-divider"><span>━━━</span></div>`;
+    }
+
+    // 状态面板
     if (currentStatus) {
         bodyHtml += `
             <div class="rpg-status-section">
@@ -898,20 +1004,6 @@ function renderRpgBotMessage(msg, rpgData, avatarText) {
                 <ul class="rpg-intel-list">
                     ${knownIntel.map(intel => `<li>${escapeHtml(intel)}</li>`).join('')}
                 </ul>
-            </div>
-        `;
-    }
-
-    // 分隔线
-    if (currentStatus || currentQuest || knownIntel.length > 0) {
-        bodyHtml += `<div class="rpg-turn-divider"><span>━━━</span></div>`;
-    }
-
-    // 场景正文
-    if (sceneDesc) {
-        bodyHtml += `
-            <div class="rpg-scene-desc">
-                ${formatRpgText(sceneDesc)}
             </div>
         `;
     }
