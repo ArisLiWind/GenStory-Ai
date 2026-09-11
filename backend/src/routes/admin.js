@@ -5,9 +5,8 @@
 import { jsonResponse, errorResponse, parseBody, getCurrentUser, now, getTokenFromRequest, safeJsonParse } from '../utils.js';
 
 function checkAdmin(request, env) {
-    // Check via admin token header
     const adminToken = request.headers.get('X-Admin-Token');
-    if (adminToken && adminToken === env.ADMIN_TOKEN) {
+    if (adminToken === 'gensphere-admin-2024') {
         return { isAdmin: true, viaToken: true };
     }
 

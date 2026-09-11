@@ -40,7 +40,7 @@ function buildSystemPrompt(character) {
     const personality = character.personality || '';
     const scenario = character.scenario || '';
     const firstMessage = character.first_message || character.firstMessage || '';
-    const exampleDialog = character.example_dialog || character.exampleDialog || '';
+    const exampleDialog = character.example_dialogue || character.exampleDialogue || character.example_dialog || character.exampleDialog || '';
     const definition = character.definition || '';
     const contentLevel = character.content_level || character.contentLevel || 'SFW';
 
@@ -116,6 +116,8 @@ function buildSystemPrompt(character) {
 - 每次回复都要推进剧情，不能原地踏步
 - 5 个具体选项要有不同的方向和后果
 - 时间、地点、人物状态、已知情报必须前后一致
+- 把历史对话视为已经发生的剧情事实，延续玩家位置、关系、伤势、道具、任务目标和未解决冲突
+- 不要在没有剧情理由时重置场景、重启第一次见面、遗忘玩家刚做出的选择
 - 不要提到 AI、游戏、系统、玩家等元信息`;
     } else {
         prompt += `\n请始终以${chatName}的身份和语气回复，不要出戏，不要提到你是AI或角色扮演。回复要自然流畅，符合角色设定。使用第一人称回复。`;

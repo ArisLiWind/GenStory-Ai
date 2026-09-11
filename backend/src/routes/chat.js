@@ -67,6 +67,24 @@ async function createSession(request, env) {
 
     if (!character) return errorResponse(404, '角色不存在');
 
+    const existingSession = await env.DB.prepare(`
+        SELECT * FROM chat_sessions
+        WHERE user_id = ? AND character_id = ?
+        ORDER BY updated_at DESC
+        LIMIT 1
+    `).bind(user.id, characterId).first();
+
+    if (existingSession) {
+        const messages = await getMessagesForSession(env, existingSession.id);
+        return jsonResponse({
+            id: existingSession.id,
+            sessionId: existingSession.id,
+            characterId,
+            title: existingSession.title,
+            messages
+        });
+    }
+
     const sessionId = generateId('chat');
     const createdAt = now();
 
@@ -87,7 +105,8 @@ async function createSession(request, env) {
         ).bind(sessionId).run();
     }
 
-    return jsonResponse({ id: sessionId, characterId, title: character.title }, 201);
+    const messages = await getMessagesForSession(env, sessionId);
+    return jsonResponse({ id: sessionId, sessionId, characterId, title: character.title, messages }, 201);
 }
 
 async function getSessionMessages(request, env, sessionId) {
@@ -101,16 +120,9 @@ async function getSessionMessages(request, env, sessionId) {
 
     if (!session) return errorResponse(404, '会话不存在');
 
-    const result = await env.DB.prepare(`
-        SELECT id, role, content, created_at
-        FROM chat_messages
-        WHERE session_id = ?
-        ORDER BY created_at ASC
-    `).bind(sessionId).all();
-
     return jsonResponse({
         sessionId,
-        messages: result.results || []
+        messages: await getMessagesForSession(env, sessionId)
     });
 }
 
@@ -156,14 +168,14 @@ async function sendMessage(request, env, sessionId) {
         VALUES (?, 'user', ?, ?)
     `).bind(sessionId, content.trim(), userMsgTime).run();
 
-    // Get conversation history (last 20 messages for context)
+    // Get conversation history (last 40 messages for RPG continuity)
     const historyResult = await env.DB.prepare(`
         SELECT role, content FROM (
             SELECT id, role, content, created_at
             FROM chat_messages
             WHERE session_id = ?
             ORDER BY created_at DESC
-            LIMIT 20
+            LIMIT 40
         ) ORDER BY created_at ASC
     `).bind(sessionId).all();
 
@@ -509,7 +521,10 @@ async function getOrCreateSession(request, env, characterId) {
     `).bind(user.id, characterId).first();
 
     if (session) {
-        return jsonResponse({ sessionId: session.id });
+        return jsonResponse({
+            sessionId: session.id,
+            messages: await getMessagesForSession(env, session.id)
+        });
     }
 
     // Create new session
@@ -537,5 +552,19 @@ async function getOrCreateSession(request, env, characterId) {
         ).bind(sessionId).run();
     }
 
-    return jsonResponse({ sessionId }, 201);
+    return jsonResponse({
+        sessionId,
+        messages: await getMessagesForSession(env, sessionId)
+    }, 201);
+}
+
+async function getMessagesForSession(env, sessionId) {
+    const result = await env.DB.prepare(`
+        SELECT id, role, content, created_at
+        FROM chat_messages
+        WHERE session_id = ?
+        ORDER BY created_at ASC, id ASC
+    `).bind(sessionId).all();
+
+    return result.results || [];
 }

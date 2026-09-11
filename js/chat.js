@@ -604,7 +604,9 @@ async function startChatSession() {
         messagesContainer.innerHTML = '<div style="text-align:center;padding:40px;color:#666;">正在连接AI服务...</div>';
     }
     
-    // Try to use real API session - pass full character data
+    messages = [];
+
+    // Try to use a persistent session for this character.
     try {
         const result = await GenSphereAPI.chat.createSession(currentCharacter.id, currentCharacter);
         
@@ -620,7 +622,7 @@ async function startChatSession() {
             // If session returned messages, use them
             if (result.data.messages && result.data.messages.length > 0) {
                 messages = result.data.messages.map((m, i) => ({
-                    id: 'msg_' + i,
+                    id: m.id || 'msg_' + i,
                     role: m.role === 'assistant' ? 'bot' : 'user',
                     name: m.role === 'assistant' ? (currentCharacter.chatName || currentCharacter.title) : '我',
                     content: m.content,
