@@ -589,8 +589,8 @@ async function insertSampleCharacters(env) {
 
         if (existing) {
             await env.DB.prepare(
-                'UPDATE characters SET creator_name = ?, verified = 1, updated_at = ? WHERE id = ?'
-            ).bind(creatorName, ts, existing.id).run();
+                'UPDATE characters SET creator_name = ?, verified = 1, updated_at = ? WHERE creator_id = ? AND title = ?'
+            ).bind(creatorName, ts, sysUserId, c.title).run();
             continue;
         }
 
