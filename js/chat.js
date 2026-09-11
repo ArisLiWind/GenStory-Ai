@@ -957,6 +957,18 @@ function renderRpgBotMessage(msg, rpgData, avatarText) {
         </div>
     `;
 
+    // DEBUG: 如果内容为空，显示一个明显的错误提示
+    if (!fullContent || fullContent.trim().length < 5) {
+        bodyHtml += `
+            <div style="padding:12px;background:rgba(239,68,68,0.2);border:1px solid rgba(239,68,68,0.4);border-radius:8px;color:#fca5a5;font-size:13px;">
+                ⚠️ 内容为空 DEBUG<br>
+                msg.content length: ${(msg.content || '').length}<br>
+                rpgData.rawContent length: ${(rpgData.rawContent || '').length}<br>
+                isRpg: ${rpgData.isRpg}
+            </div>
+        `;
+    }
+
     // 分隔线
     if (hasStatusPanel || hasOptions) {
         bodyHtml += `<div class="rpg-panel-divider"><span>游戏面板</span></div>`;
