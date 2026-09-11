@@ -6,7 +6,10 @@ import { jsonResponse, errorResponse, parseBody, getCurrentUser, now, getTokenFr
 
 function checkAdmin(request, env) {
     const adminToken = request.headers.get('X-Admin-Token');
-    if (adminToken === 'gensphere-admin-2024') {
+    // Use ADMIN_TOKEN from Cloudflare environment (set via `wrangler secret put ADMIN_TOKEN`)
+    // Falls back to default for development convenience
+    const envAdminToken = env.ADMIN_TOKEN || 'gensphere-admin-2024';
+    if (adminToken && adminToken === envAdminToken) {
         return { isAdmin: true, viaToken: true };
     }
 

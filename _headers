@@ -1,0 +1,20 @@
+# HTML files: no cache (always fetch latest to get updated version strings)
+/*.html
+  Cache-Control: public, max-age=0, must-revalidate
+
+# JavaScript files: short cache (4 hours, must revalidate)
+# Combined with version strings in HTML, ensures browsers always get latest
+/*.js
+  Cache-Control: public, max-age=14400, must-revalidate
+
+# CSS files: short cache (4 hours, must revalidate)
+/*.css
+  Cache-Control: public, max-age=14400, must-revalidate
+
+# Static assets (images): long cache
+/assets/*
+  Cache-Control: public, max-age=2592000, immutable
+
+# API routes: no cache
+/api/*
+  Cache-Control: no-store, no-cache, must-revalidate

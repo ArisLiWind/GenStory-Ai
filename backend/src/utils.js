@@ -118,10 +118,23 @@ export function now() {
 
 // ===== Database Auto-Initialization =====
 let _dbInitPromise = null;
+let _sampleRefreshed = false;
 
 export async function ensureDBInitialized(env) {
     if (!env.DB) return;
-    if (_dbInitPromise) return _dbInitPromise;
+    if (_dbInitPromise) {
+        // Tables already created — refresh sample characters once per isolate
+        // to ensure creator_name and other fields stay up to date
+        if (!_sampleRefreshed) {
+            try {
+                await insertSampleCharacters(env);
+                _sampleRefreshed = true;
+            } catch (e) {
+                console.error('[DB] Sample refresh error:', e.message);
+            }
+        }
+        return _dbInitPromise;
+    }
 
     _dbInitPromise = (async () => {
         try {

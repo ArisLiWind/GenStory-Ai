@@ -2,32 +2,14 @@
 // LLM Service - Multi-key rotation with RPG support
 // ============================================
 
-const KEY_ROTATION = {
-    index: 0,
-    keys: []
-};
-
-// Load active API keys
+// Load active API keys from database
 async function loadKeys(env) {
     const result = await env.DB.prepare(`
         SELECT * FROM api_keys
         WHERE is_active = 1
         ORDER BY priority ASC, id ASC
     `).all();
-    KEY_ROTATION.keys = result.results || [];
-    KEY_ROTATION.index = 0;
-    return KEY_ROTATION.keys;
-}
-
-// Get next API key (round-robin)
-async function getNextKey(env) {
-    await loadKeys(env);
-    if (KEY_ROTATION.keys.length === 0) {
-        throw new Error('No API keys configured');
-    }
-    const key = KEY_ROTATION.keys[KEY_ROTATION.index % KEY_ROTATION.keys.length];
-    KEY_ROTATION.index++;
-    return key;
+    return result.results || [];
 }
 
 // Build system prompt based on character data
@@ -128,118 +110,10 @@ function safeJsonParse(str, defaultValue) {
     try { return JSON.parse(str); } catch { return defaultValue; }
 }
 
-// Call LLM API
+// Call LLM API — tries all available keys in sequence
 export async function callLLM(env, character, messages) {
-    const apiKey = await getNextKey(env);
-
     const systemPrompt = buildSystemPrompt(character);
-
-    // Format messages for API
-    const apiMessages = [
-        { role: 'system', content: systemPrompt },
-        ...messages.map(m => ({
-            role: m.role === 'assistant' ? 'assistant' : 'user',
-            content: m.content
-        }))
-    ];
-
-    const baseUrl = apiKey.base_url || 'https://api.openai.com/v1';
-    const model = apiKey.model || 'gpt-3.5-turbo';
-
-    try {
-        const response = await fetch(`${baseUrl}/chat/completions`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${apiKey.api_key}`
-            },
-            body: JSON.stringify({
-                model,
-                messages: apiMessages,
-                temperature: 0.8,
-                max_tokens: 4000,
-                presence_penalty: 0.3,
-                frequency_penalty: 0.3
-            })
-        });
-
-        if (!response.ok) {
-            const errorText = await response.text();
-            console.error(`LLM API Error (${apiKey.provider}):`, response.status, errorText);
-            throw new Error(`LLM API error: ${response.status}`);
-        }
-
-        const data = await response.json();
-        const reply = data.choices?.[0]?.message?.content || '';
-
-        // Update key usage
-        await env.DB.prepare(`
-            UPDATE api_keys SET usage_count = usage_count + 1, last_used_at = ?
-            WHERE id = ?
-        `).bind(Date.now(), apiKey.id).run();
-
-        return reply.trim();
-    } catch (err) {
-        console.error('LLM call failed:', err.message);
-        // Try next key on failure
-        if (KEY_ROTATION.keys.length > 1) {
-            console.log('Trying next API key...');
-            const nextKey = await getNextKey(env);
-            if (nextKey.id !== apiKey.id) {
-                try {
-                    return await callLLMWithKey(env, nextKey, character, messages);
-                } catch (e2) {
-                    throw new Error('All API keys failed');
-                }
-            }
-        }
-        throw err;
-    }
-}
-
-async function callLLMWithKey(env, apiKey, character, messages) {
-    const systemPrompt = buildSystemPrompt(character);
-    return callLLMWithKeyAndPrompt(env, apiKey, systemPrompt, messages);
-}
-
-// Generic LLM call with custom system prompt (reused by parseAction / generateNarrative)
-async function callLLMWithKeyAndPrompt(env, apiKey, systemPrompt, messages) {
-    const apiMessages = [
-        { role: 'system', content: systemPrompt },
-        ...messages.map(m => ({
-            role: m.role === 'assistant' ? 'assistant' : 'user',
-            content: m.content
-        }))
-    ];
-
-    const baseUrl = apiKey.base_url || 'https://api.openai.com/v1';
-    const model = apiKey.model || 'gpt-3.5-turbo';
-
-    const response = await fetch(`${baseUrl}/chat/completions`, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${apiKey.api_key}`
-        },
-        body: JSON.stringify({
-            model,
-            messages: apiMessages,
-            temperature: 0.8,
-            max_tokens: 4000
-        })
-    });
-
-    if (!response.ok) throw new Error(`LLM API error: ${response.status}`);
-
-    const data = await response.json();
-    const reply = data.choices?.[0]?.message?.content || '';
-
-    await env.DB.prepare(`
-        UPDATE api_keys SET usage_count = usage_count + 1, last_used_at = ?
-        WHERE id = ?
-    `).bind(Date.now(), apiKey.id).run();
-
-    return reply.trim();
+    return callLLMWithPrompt(env, systemPrompt, messages, 0.8);
 }
 
 // Try all keys with a custom system prompt
